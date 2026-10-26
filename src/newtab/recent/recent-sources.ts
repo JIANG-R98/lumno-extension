@@ -3,7 +3,6 @@
 // change history dialog and the recent context menu's copy.
 import type { RecentSite, RecentSiteOptions, RecentSiteSources } from '../../domain/recent-sites-store';
 import type * as RecentSitesStore from '../../domain/recent-sites-store';
-import type { BrowserIconIndex } from '../../domain/favicon/favicon-utils';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type {
@@ -13,6 +12,7 @@ import type {
 } from '../react/recent-history-dialog';
 import type { RecentContextTarget, StartupRecentSourceReads } from './recent-types';
 import { getRecentHistoryDialogApi } from '../react/recent-history-dialog-lazy';
+import type { BrowserIconIndex } from '../../domain/favicon/types';
 
 interface RecentSourcesState {
   recentContextMenu: ContextMenuParts | null;

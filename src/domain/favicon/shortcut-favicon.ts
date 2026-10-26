@@ -1,10 +1,11 @@
 // Icons for shortcuts and site search providers: the bundled artwork for
 // known sites, picking the best icon a page declares, reading an icon
 // file's dimensions, and the saved icon snapshots keyed by page.
-import * as faviconUtils from './favicon-utils';
 import type { SiteSearchProvider } from '../search/types';
 import type { ShortcutIconMap } from '../shortcut-icon-map';
 import type { ShortcutItem, ShortcutLink } from '../shortcuts-store';
+import * as FaviconCanonical from './canonical';
+import * as FaviconUrlKinds from './url-kinds';
 
 // What the icon helpers read from a site search provider.
 type IconProvider = Partial<Pick<SiteSearchProvider, 'key' | 'builtinKey' | 'template' | 'icon' | 'iconUrl'>>;
@@ -275,7 +276,7 @@ function getCacheKey(pageUrl: unknown): string {
 
 function normalizeIconSourceUrl(value: unknown): string {
   const raw = String(value || '').trim();
-  if (faviconUtils.isSafeVirtualFaviconRequestUrl(raw)) {
+  if (FaviconUrlKinds.isSafeVirtualFaviconRequestUrl(raw)) {
     try { return new URL(raw).href; } catch (_error) { return ''; }
   }
   return normalizePageUrl(raw);
@@ -283,8 +284,8 @@ function normalizeIconSourceUrl(value: unknown): string {
 
 function getCachedIconSource(entry: Partial<CachedIcon> | null | undefined): CachedIconSource {
   const sourceUrl = String(entry && entry.sourceUrl || '');
-  if (faviconUtils.isFaviconIsUrl(sourceUrl)) return 'favicon-is';
-  return !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) && faviconUtils.isFaviconProxyUrl(sourceUrl)
+  if (FaviconUrlKinds.isFaviconIsUrl(sourceUrl)) return 'favicon-is';
+  return !FaviconUrlKinds.isSafeVirtualFaviconRequestUrl(sourceUrl) && FaviconUrlKinds.isFaviconProxyUrl(sourceUrl)
     ? 'service' : 'cache';
 }
 
@@ -298,20 +299,20 @@ function isCachedIconForPage(entry: Partial<CachedIcon> | null | undefined, page
   // entries once, since their page-to-icon mapping cannot be verified.
   if (!sourceUrl) return isOriginPage;
   // The chrome://favicon2 local-storage branch ignores fallbackToHost=0.
-  if (faviconUtils.isChromeMonogramFaviconUrl(sourceUrl)) return false;
-  if (faviconUtils.isFaviconProxyUrl(sourceUrl) || faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
-    const target = normalizePageUrl(faviconUtils.getPageUrlFromFaviconProxyUrl(sourceUrl));
-    if (target && faviconUtils.isFaviconIsUrl(sourceUrl)) {
+  if (FaviconUrlKinds.isChromeMonogramFaviconUrl(sourceUrl)) return false;
+  if (FaviconUrlKinds.isFaviconProxyUrl(sourceUrl) || FaviconUrlKinds.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
+    const target = normalizePageUrl(FaviconCanonical.getPageUrlFromFaviconProxyUrl(sourceUrl));
+    if (target && FaviconUrlKinds.isFaviconIsUrl(sourceUrl)) {
       return new URL(target).hostname === parsedPage.hostname;
     }
     // Remote services are asked about the site, never the page, so their
     // icon stands for every page on it.
-    if (target && !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) &&
+    if (target && !FaviconUrlKinds.isSafeVirtualFaviconRequestUrl(sourceUrl) &&
         target === normalizePageUrl(`${parsedPage.origin}/`)) {
       return true;
     }
     if (!target || target !== page) return false;
-    if (faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
+    if (FaviconUrlKinds.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
       return new URL(sourceUrl).searchParams.get('fallbackToHost') === '0';
     }
   }

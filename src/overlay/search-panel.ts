@@ -1,6 +1,5 @@
 import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as COMMUNITY_LINKS from '../platform/community-links';
-import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
@@ -70,6 +69,8 @@ import {
 } from '../domain/settings/search';
 import { createSettingPort } from '../platform/settings-store';
 import { createOverlaySettings } from './overlay-settings';
+import * as FaviconDecisionLog from '../domain/favicon/decision-log';
+import * as FaviconHostPolicy from '../domain/favicon/host-policy';
 
 // Favicon data and preloaded icons the overlay resolved, kept across its
 // openings in this page.
@@ -591,7 +592,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     SHORTCUT_FAVICON,
     siteSearchIconCacheOptions,
-    FAVICON_UTILS,
     faviconDataCache,
     overlayState
   });
@@ -694,7 +694,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const TOAST_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/toast.css');
   const EXTERNAL_LINK_ICON_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/external-link-icon.css');
   const OVERLAY_SUGGESTIONS_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/overlay/suggestions-view.css');
-  const logOverlayFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' });
+  const logOverlayFaviconDecision = FaviconDecisionLog.createFaviconDecisionLogger({ surface: 'overlay' });
 
   const {
     normalizeOverlaySearchBlacklistItems,
@@ -710,7 +710,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     isBlockedOverlayFaviconUrl,
     isLocalNetworkInput
   } = PANEL_FAVICON_POLICY.createFaviconPolicy({
-    FAVICON_UTILS,
     SETTINGS,
     SEARCH_UTILS,
     logOverlayFaviconDecision,
@@ -785,7 +784,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     applyMarkVariables,
     preloadThemeFromFavicon
   } = PANEL_SUGGESTION_THEMES.createSuggestionThemes({
-    FAVICON_UTILS,
     themeColorCache,
     themeHostCache,
     getOverlayFaviconUrlResolver,
@@ -1318,7 +1316,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getGstaticFaviconUrl,
     getChromeFaviconUrl,
     shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost,
-    shouldAvoidDirectFaviconForHost: FAVICON_UTILS.shouldAvoidDirectFaviconForHost,
+    shouldAvoidDirectFaviconForHost: FaviconHostPolicy.shouldAvoidDirectFaviconForHost,
     shouldBlockOverlayFaviconForHost,
     isEnhancedFaviconFetchEnabled: isOverlayEnhancedFaviconFetchEnabled,
     getStrictFaviconReason: getOverlayStrictFaviconReason,

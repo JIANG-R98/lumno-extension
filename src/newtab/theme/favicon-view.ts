@@ -1,8 +1,6 @@
 // The New Tab's favicons: each image tries its icon sources in turn, falls
 // back to a link icon, and is rescued later when a source recovers.
 import type { FaviconDataEntry, FaviconUrlEntry } from '../../domain/favicon/favicon-cache';
-import * as LumnoFaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconPlanCandidate, FaviconResolverOptions } from '../../domain/favicon/favicon-utils';
 import type { MessageRuntime } from '../../platform/messaging';
 import * as LumnoFaviconViewCore from '../../shared/favicon/favicon-view-core';
 import type {
@@ -13,6 +11,9 @@ import type {
 } from '../../shared/favicon/favicon-view-core';
 import type { FaviconAttachOptions } from '../newtab-types';
 import { queryHtmlTags } from '../../shared/dom-lookup';
+import type { FaviconPlanCandidate, FaviconResolverOptions } from '../../domain/favicon/types';
+import * as FaviconCanonical from '../../domain/favicon/canonical';
+import * as FaviconResolver from '../../domain/favicon/resolver';
 
 // An icon image with the attach state this runtime keeps on it; tests read
 // the session to tell an attach was replaced.
@@ -130,8 +131,7 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   const shortcutFaviconOptionsByImage = new WeakMap<HTMLImageElement, FaviconAttachOptions>();
   const missingIconCache = config.missingIconCache || new Set<string>();
   const missingIconDebugEnabled = config.missingIconDebugEnabled === true;
-  const faviconUtils = LumnoFaviconUtils;
-  const faviconUrlResolver = faviconUtils.createFaviconUrlResolver({
+  const faviconUrlResolver = FaviconResolver.createFaviconUrlResolver({
     chromeApi,
     size: 128,
     getExtensionFaviconUrl,
@@ -329,7 +329,7 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
     img._xThemeFaviconSession = (img._xThemeFaviconSession || 0) + 1;
     const session = img._xThemeFaviconSession;
     const hostKey = host || getHostFromUrl(url);
-    const cacheKey = faviconUtils.getFaviconPersistCacheKey(url, hostKey);
+    const cacheKey = FaviconCanonical.getFaviconPersistCacheKey(url, hostKey);
     const skipPersisted = Boolean(optionsArg && optionsArg.skipPersisted === true);
     const persistedDataEntry = !skipPersisted && cacheKey
       ? getPersistedFaviconDataEntry(cacheKey)
@@ -340,7 +340,7 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
     const previousSrc = getLastWorkingFaviconSrc(img);
     const previousPage = img.getAttribute('data-x-nt-favicon-page-url') || '';
     const canReusePrevious = previousPage
-      ? faviconUtils.getFaviconPersistCacheKey(previousPage) === faviconUtils.getFaviconPersistCacheKey(url)
+      ? FaviconCanonical.getFaviconPersistCacheKey(previousPage) === FaviconCanonical.getFaviconPersistCacheKey(url)
       : !String(previousSrc || '').startsWith('data:');
     const reusablePreviousSrc = canReusePrevious ? previousSrc : '';
     const previousWorkingSrc = optionsArg && optionsArg.sourceProfile === 'shortcut'

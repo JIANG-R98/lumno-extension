@@ -1,9 +1,9 @@
 // Shapes the input mode controller (search-input-mode.ts) hands to several
 // of its modules here.
-import type { ThemeRgb } from '../../../domain/favicon/favicon-utils';
 import type { AggregateSearch } from '../../../domain/search/aggregate-search-store';
 import type { SearchSourceType, SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
 import type { RemixIconName } from '../../ui/remix-icon';
+import type { ThemeRgb } from '../../../domain/favicon/types';
 
 // Message text by key, with {name} placeholders filled from values.
 type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;

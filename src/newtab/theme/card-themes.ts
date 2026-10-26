@@ -1,9 +1,9 @@
 // Accent colors for recent cards, bookmark cards and shortcut icons.
-import type { ThemeRgb } from '../../domain/favicon/favicon-utils';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import type { BookmarkCardElement } from '../react/bookmarks';
 import type { SiteThemeResolver } from './site-theme-resolver';
+import type { ThemeRgb } from '../../domain/favicon/types';
 
 // A theme as a card or tile holds it; parts may be missing.
 type CardTheme = Partial<ThemeVariant> | null | undefined;

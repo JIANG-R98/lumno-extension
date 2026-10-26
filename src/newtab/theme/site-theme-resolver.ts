@@ -1,8 +1,6 @@
 // Resolves per-site accent themes from favicons and brand colors, caches them,
 // and applies them to suggestion rows, shortcut tiles and bookmark/recent cards.
 import type { SiteThemeEntry } from '../../domain/favicon/favicon-cache';
-import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
@@ -16,6 +14,12 @@ import type { SearchModeController } from '../search/search-mode-controller';
 import type { SiteSearchProviders } from '../search/site-search-providers';
 import type { ThemeConfidence, ThemeSource, ThemeSubject } from './theme-types';
 import { themeColorCache, themeHostCache } from '../../shared/favicon/theme-caches';
+import * as FaviconCanonical from '../../domain/favicon/canonical';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import * as FaviconThemeColor from '../../domain/favicon/theme-color';
+import * as FaviconThemedCandidates from '../../domain/favicon/themed-candidates';
+import type { ThemeRgb } from '../../domain/favicon/types';
+import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 
 interface SiteThemeResolverState {
   siteSearchState: SiteSearchProvider | null;
@@ -42,13 +46,6 @@ interface SiteThemeResolverDeps {
     | 'isFaviconProxyUrl'
     | 'getThemeForMode'
     | 'getHoverColors'>;
-  FAVICON_UTILS: Pick<typeof FaviconUtils,
-    | 'normalizeFaviconHost'
-    | 'isFaviconProxyUrl'
-    | 'getCanonicalPageUrlForFavicon'
-    | 'isNeutralThemeColor'
-    | 'isPlaceholderFaviconColor'
-    | 'getThemeFaviconCandidateUrls'>;
   normalizeHost(hostname: string): string;
   parseCssColor: typeof FaviconTheme.parseCssColor;
   defaultAccentColor: ThemeRgb;
@@ -117,7 +114,6 @@ interface ThemeResolutionItem {
 function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const {
     NEWTAB_FAVICON_THEME,
-    FAVICON_UTILS,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,
@@ -153,9 +149,9 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const buildTheme = NEWTAB_FAVICON_THEME.buildTheme;
   const getBrandAccentForHost = NEWTAB_FAVICON_THEME.getBrandAccentForHost;
   const getThemeFingerprint = NEWTAB_FAVICON_THEME.getThemeFingerprint;
-  const normalizeFaviconHost = FAVICON_UTILS.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
+  const normalizeFaviconHost = FaviconUrlKinds.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
 
-  const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
+  const isFaviconProxyUrl = FaviconUrlKinds.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
 
   const siteThemeRequestPending = new Map<string, Promise<ThemeResult | null>>();
   const themeFaviconCandidateRequestPending = new Map<string, Promise<string[]>>();
@@ -186,7 +182,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   }
 
   function getCanonicalPageUrlForFavicon(url: string): string {
-    return FAVICON_UTILS.getCanonicalPageUrlForFavicon(url);
+    return FaviconCanonical.getCanonicalPageUrlForFavicon(url);
   }
 
   // An RGB triple of whole channels from 0 to 255; null for anything else.
@@ -207,7 +203,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     if (!rgb) {
       return false;
     }
-    return FAVICON_UTILS.isNeutralThemeColor(rgb);
+    return FaviconThemeColor.isNeutralThemeColor(rgb);
   }
 
   function normalizeThemeConfidence(value: unknown, accentRgb: unknown): ThemeConfidence {
@@ -462,7 +458,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
       return null;
     }
     // Entries saved before placeholder globes were filtered out.
-    if (normalizeThemeSource(entry.source) === 'favicon' && FAVICON_UTILS.isPlaceholderFaviconColor(accentRgb)) {
+    if (normalizeThemeSource(entry.source) === 'favicon' && FaviconThemeColor.isPlaceholderFaviconColor(accentRgb)) {
       return null;
     }
     const theme = buildThemeFromThemeResult(entry, entry.source);
@@ -510,7 +506,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   }
 
   function getThemeFaviconCandidateUrls(urls: readonly string[]): string[] {
-    return FAVICON_UTILS.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
+    return FaviconThemedCandidates.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
   }
 
   function requestThemeFaviconCandidates(pageUrl: string, hostKey: string): Promise<string[]> {
@@ -645,7 +641,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
         const avg = extractAverageColor(image);
         // A generic globe says nothing about the site; treat it as unresolved so
         // it neither tints this consumer nor leaks into the host cache.
-        if (!avg || FAVICON_UTILS.isPlaceholderFaviconColor(avg)) {
+        if (!avg || FaviconThemeColor.isPlaceholderFaviconColor(avg)) {
           themeColorCache.set(url, defaultTheme);
           finish(defaultTheme);
           return;

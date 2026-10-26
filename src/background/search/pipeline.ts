@@ -1,7 +1,6 @@
 // A local search for the overlay and New Tab: reads the sources the reader
 // keeps on, collects one row per page, ranks them, and falls back to other
 // keyboard layouts when nothing matched.
-import * as FAVICON_UTILS from '../../domain/favicon/favicon-utils';
 import type { BlacklistRule } from '../../domain/blacklist-utils';
 import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type {
@@ -40,6 +39,7 @@ import {
   loadSearchResultSourceTypes
 } from './text-matching';
 import type { BookmarkItem, OpenTabItem, SearchSuggestionOptions, SourceItem, SuggestionRow } from './types';
+import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
 
 // The matches of each source for one query.
 interface SourceMatches {
@@ -189,7 +189,7 @@ async function getSearchSuggestions(query: unknown, options?: SearchSuggestionOp
   }
   const scoreOptions: SearchRankingOptions = {
     titleMatcher: getTitleTextMatcher() || undefined,
-    isLocalNetworkHost: FAVICON_UTILS.isLocalNetworkHost,
+    isLocalNetworkHost: FaviconHostPolicy.isLocalNetworkHost,
     isOwnExtensionUrl
   };
   const sourceTypes = await readSourceTypes(requestOptions);

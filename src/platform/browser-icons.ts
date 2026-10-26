@@ -1,7 +1,7 @@
+import type { BrowserIconIndex } from '../domain/favicon/types';
 // Fills a browser icon index (domain/favicon/favicon-utils.ts) from the
 // icons Firefox reports for top sites and open tabs, its only way to share
 // its icon cache with extensions.
-import type { BrowserIconIndex } from '../domain/favicon/favicon-utils';
 
 interface BrowserIconChromeApi {
   topSites: {

@@ -2,7 +2,6 @@
 // the trigger/scope lookups used by the search input.
 import type { CachedIconMap, IconCacheOptions } from '../../domain/favicon/shortcut-favicon';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
-import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type { OpenDisposition } from '../../domain/messages';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateScopeProvider, AggregateSearch } from '../../domain/search/aggregate-search-store';
@@ -25,6 +24,7 @@ import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope } from './search-types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.

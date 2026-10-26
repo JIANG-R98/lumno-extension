@@ -1,9 +1,11 @@
-import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
+import * as BoundedCache from '../../domain/bounded-cache';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import type { ThemeRgb } from '../../domain/favicon/types';
+import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 
 interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
@@ -13,7 +15,6 @@ interface SuggestionThemesState {
 }
 
 interface SuggestionThemesDeps {
-  FAVICON_UTILS: Pick<typeof FaviconUtils, 'setBoundedCacheEntry' | 'isFaviconProxyUrl' | 'isChromeMonogramFaviconUrl'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'normalizeHostIdentity' | 'getSiteSearchProviderHost'>;
   SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderPageUrl'>;
   // Themes by icon address and by host, kept across panel sessions.
@@ -42,7 +43,6 @@ interface ThemedSuggestion {
 // their average color, and the theme each suggestion row and mark uses.
 function createSuggestionThemes(deps: SuggestionThemesDeps) {
   const {
-    FAVICON_UTILS,
     themeColorCache,
     themeHostCache,
     getOverlayFaviconUrlResolver,
@@ -62,7 +62,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
   const OVERLAY_THEME_COLOR_CACHE_MAX_ENTRIES = 384;
   const OVERLAY_THEME_HOST_CACHE_MAX_ENTRIES = 256;
   function cacheOverlayThemeColor(key: string, value: ThemeVariant): ThemeVariant {
-    return FAVICON_UTILS.setBoundedCacheEntry(
+    return BoundedCache.setBoundedCacheEntry(
       themeColorCache,
       key,
       value,
@@ -70,7 +70,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     );
   }
   function cacheOverlayThemeHost(key: string, value: ThemeVariant): ThemeVariant {
-    return FAVICON_UTILS.setBoundedCacheEntry(
+    return BoundedCache.setBoundedCacheEntry(
       themeHostCache,
       key,
       value,
@@ -238,11 +238,11 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
   }
 
   function isFaviconProxyUrl(url: string): boolean {
-    return FAVICON_UTILS.isFaviconProxyUrl(url);
+    return FaviconUrlKinds.isFaviconProxyUrl(url);
   }
 
   function isChromeMonogramFaviconUrl(url: string): boolean {
-    return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
+    return FaviconUrlKinds.isChromeMonogramFaviconUrl(url);
   }
 
   // The theme of an icon: from the caches, a brand accent, or the icon's

@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { HAN_VARIANT_PAIRS } from '../../domain/search/han-variants.generated';
 import { installHanVariantPairs } from '../../domain/search/han-variants';
 import * as searchInputModeModule from '../search/search-input-mode';
-import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import type { ModeMenuItem } from '../search/input-mode/types';
 import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { CursorTooltipController } from '../ui/cursor-tooltip';
@@ -12,6 +11,7 @@ import { FakeAnimation } from '../../../tests/react/fake-animation';
 import { expectSvg, getElement, getElements, getSvgs, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';
 import { createSearchInput } from './search-input';
+import * as FaviconResolver from '../../domain/favicon/resolver';
 
 // A pinyin-pro stand-in with the readings these tests type.
 const testPinyinApi: PinyinApi = {
@@ -71,7 +71,7 @@ afterEach(() => {
 describe('Shared search scope menu', () => {
   it('checks current favicon policy before assigning prefix and menu images', () => {
     let enhanced = true;
-    const resolver = faviconUtils.createFaviconUrlResolver({
+    const resolver = FaviconResolver.createFaviconUrlResolver({
       getRuntimeUrl: (path: string) => `chrome-extension://abc${path}`,
       isEnhancedFaviconFetchEnabled: () => enhanced
     });

@@ -46,8 +46,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function setBoundedCacheEntry\s*[<(]/),
-  ['src/domain/favicon/favicon-utils.ts'],
-  'bounded favicon cache writes belong to favicon-utils'
+  ['src/domain/bounded-cache.ts'],
+  'bounded cache writes belong to the bounded cache module'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function describeFolderIcon\(/),

@@ -2,10 +2,13 @@
 // blacklists, local network hosts, and the display limit for results.
 import * as LumnoBlacklistUtils from '../../domain/blacklist-utils';
 import type { BlacklistRule } from '../../domain/blacklist-utils';
-import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconDecisionLogger, FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as Settings from '../../domain/settings';
+import * as FaviconCanonical from '../../domain/favicon/canonical';
+import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
+import * as FaviconResolver from '../../domain/favicon/resolver';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import type { FaviconDecisionLogger } from '../../domain/favicon/types';
 
 interface FaviconPolicyState {
   // Results under these addresses are left out of search.
@@ -17,9 +20,6 @@ interface FaviconPolicyState {
 }
 
 interface FaviconPolicyDeps {
-  FAVICON_UTILS: Pick<typeof FaviconUtils,
-    'getCanonicalPageUrlForFavicon' | 'isLocalNetworkHost' | 'shouldBlockFaviconForHost' |
-    'createFaviconUrlResolver' | 'shouldAvoidDirectFaviconForHost' | 'isBlockedLocalFaviconUrl'>;
   SETTINGS: Pick<typeof Settings, 'searchResultDisplayLimit'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'limitSearchSuggestionsForDisplay'>;
   logOverlayFaviconDecision: FaviconDecisionLogger;
@@ -34,7 +34,6 @@ interface FilterableSuggestion {
 
 function createFaviconPolicy(deps: FaviconPolicyDeps) {
   const {
-    FAVICON_UTILS,
     SETTINGS,
     SEARCH_UTILS,
     logOverlayFaviconDecision
@@ -53,7 +52,7 @@ function createFaviconPolicy(deps: FaviconPolicyDeps) {
 
   function getOverlayFaviconMatchUrl(url: string): string {
     const raw = String(url || '').trim();
-    return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw);
+    return String(FaviconCanonical.getCanonicalPageUrlForFavicon(raw) || raw);
   }
 
   function isUrlExcludedFromOverlayFaviconRequests(url: string): boolean {
@@ -125,11 +124,11 @@ function createFaviconPolicy(deps: FaviconPolicyDeps) {
   }
 
   function isLocalNetworkHost(hostname: string): boolean {
-    return FAVICON_UTILS.isLocalNetworkHost(hostname);
+    return FaviconHostPolicy.isLocalNetworkHost(hostname);
   }
 
   function shouldBlockFaviconForHost(hostname: string): boolean {
-    return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
+    return FaviconHostPolicy.shouldBlockFaviconForHost(hostname);
   }
 
   function shouldBlockOverlayFaviconForHost(hostname: string): boolean {
@@ -140,15 +139,15 @@ function createFaviconPolicy(deps: FaviconPolicyDeps) {
 
   function getOverlayFaviconUrlResolver(): FaviconUrlResolver {
     if (!overlayFaviconUrlResolver) {
-      overlayFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
+      overlayFaviconUrlResolver = FaviconResolver.createFaviconUrlResolver({
         chromeApi: chrome,
         size: 128,
         shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost,
-        shouldAvoidDirectFaviconForHost: FAVICON_UTILS.shouldAvoidDirectFaviconForHost,
+        shouldAvoidDirectFaviconForHost: FaviconHostPolicy.shouldAvoidDirectFaviconForHost,
         isEnhancedFaviconFetchEnabled: isOverlayEnhancedFaviconFetchEnabled,
         getStrictFaviconReason: getOverlayStrictFaviconReason,
         logFaviconDecision: logOverlayFaviconDecision,
-        isBlockedLocalFaviconUrl: FAVICON_UTILS.isBlockedLocalFaviconUrl
+        isBlockedLocalFaviconUrl: FaviconHostPolicy.isBlockedLocalFaviconUrl
       });
     }
     return overlayFaviconUrlResolver;

@@ -1,7 +1,6 @@
 // The search input's mode controller: site search and local scope
 // prefixes, the tab hint for site search, the placeholder and caret color
 // per mode, and the cached provider icons the prefixes show.
-import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type { SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
 import type { NewtabOpenInNewTab } from '../../domain/settings';
@@ -13,6 +12,7 @@ import type { InputModeConfig, InputModeController } from '../../shared/search/s
 import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { ActiveLocalScope, RenderSuggestions } from './search-types';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 
 // An option the input mode controller is handed as it is.
 type ModeOption<K extends keyof InputModeConfig> = NonNullable<InputModeConfig[K]>;

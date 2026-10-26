@@ -1,10 +1,10 @@
 // What the New Tab and overlay favicons share: loading an icon into an
 // <img> with its reveal motion, optical centering, the data URL cache the
 // background fills, preloading, and the fallback icon beside an image.
-import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
 import { isHtmlElement } from '../dom-guards';
+import * as BoundedCache from '../../domain/bounded-cache';
 
 // A favicon <img>; the load token tells a finished load whether a newer
 // one started since. The surfaces read it too.
@@ -127,7 +127,7 @@ function createFaviconViewCore(options?: FaviconViewCoreOptions | null) {
   const iconPreloadCacheMaxEntries = readLimit(config.iconPreloadCacheMaxEntries, 192);
   const placeholderProbeCacheMaxEntries = readLimit(config.placeholderProbeCacheMaxEntries, 32);
   function cacheFaviconData(url: string, dataUrl: string): string {
-    return faviconUtils.setBoundedCacheEntry(
+    return BoundedCache.setBoundedCacheEntry(
       faviconDataCache,
       url,
       dataUrl,
@@ -214,7 +214,7 @@ function createFaviconViewCore(options?: FaviconViewCoreOptions | null) {
     if (cached) {
       return cached;
     }
-    return faviconUtils.setBoundedCacheEntry(
+    return BoundedCache.setBoundedCacheEntry(
       extensionFaviconPlaceholderProbeCache,
       probeUrl,
       loadImageSignature(probeUrl),
@@ -584,7 +584,7 @@ function createFaviconViewCore(options?: FaviconViewCoreOptions | null) {
     img.decoding = 'async';
     img.referrerPolicy = 'no-referrer';
     img.src = url;
-    faviconUtils.setBoundedCacheEntry(iconPreloadCache, url, img, iconPreloadCacheMaxEntries);
+    BoundedCache.setBoundedCacheEntry(iconPreloadCache, url, img, iconPreloadCacheMaxEntries);
   }
 
   // Starts loading the icons (and the theme icons) of results about to show.

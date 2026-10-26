@@ -14,7 +14,6 @@ import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_CACHE from '../platform/favicon-cache';
 import * as LumnoBrowserIcons from '../platform/browser-icons';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
-import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_ICON_MAP from '../domain/shortcut-icon-map';
 import * as SHORTCUTS_STORE from '../domain/shortcuts-store';
 import { faviconEnhancedFetchEnabled, faviconRequestBlacklist } from '../domain/settings';
@@ -26,7 +25,6 @@ import './browser-urls-service';
 import type { BlacklistRule } from '../domain/blacklist-utils';
 import type { FaviconCacheRuntime } from '../platform/favicon-cache';
 import type { ShortcutFaviconStore } from '../platform/shortcut-favicon-store';
-import type { FaviconUrlResolver, ShortcutFetchCandidate, ShortcutFetchCandidateKind, ThemeRgb } from '../domain/favicon/favicon-utils';
 import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { ShortcutIconMap } from '../domain/shortcut-icon-map';
@@ -35,6 +33,17 @@ import type { ShortcutFaviconData, SiteThemeColor } from '../domain/messages';
 import { faviconVisitDirty } from '../domain/settings/search';
 import { NEWTAB_SHORTCUT_LIST_SETTINGS, newtabShortcutFaviconCache, newtabShortcutIcons, newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
 import * as SearchSettings from '../domain/settings/search';
+import * as BoundedCache from '../domain/bounded-cache';
+import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
+import * as FaviconCanonical from '../domain/favicon/canonical';
+import * as FaviconDecisionLog from '../domain/favicon/decision-log';
+import * as FaviconEnhancedFetchPolicy from '../domain/favicon/enhanced-fetch-policy';
+import * as FaviconHostPolicy from '../domain/favicon/host-policy';
+import * as FaviconResolver from '../domain/favicon/resolver';
+import type { FaviconUrlResolver } from '../domain/favicon/resolver';
+import * as FaviconTypes from '../domain/favicon/types';
+import type { ShortcutFetchCandidate, ShortcutFetchCandidateKind, ThemeRgb } from '../domain/favicon/types';
+import * as FaviconUrlKinds from '../domain/favicon/url-kinds';
 
 // What the favicon policy allows for a page and its host.
 type FaviconTargetPolicy =
@@ -96,7 +105,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const SITE_SEARCH_ICON_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
 const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
 const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS));
-const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
+const logBackgroundFaviconDecision = FaviconDecisionLog.createFaviconDecisionLogger({ surface: 'background' });
 
 const FAVICON_VISIT_DIRTY_TTL_MS = 1000 * 60 * 60 * 24;
 
@@ -285,7 +294,7 @@ export function getBackgroundFaviconCacheRuntime(): FaviconCacheRuntime {
       windowObj: globalThis,
       normalizeFaviconHost,
       isBlockedLocalFaviconUrl,
-      isChromeMonogramFaviconUrl: FAVICON_UTILS.isChromeMonogramFaviconUrl
+      isChromeMonogramFaviconUrl: FaviconUrlKinds.isChromeMonogramFaviconUrl
     });
     if (backgroundFaviconCacheRuntime &&
         typeof backgroundFaviconCacheRuntime.ensureCachesReady === 'function') {
@@ -303,7 +312,7 @@ function isFaviconEnhancedFetchKnownEnabled(): boolean {
 
 export function getBackgroundFaviconUrlResolver(): FaviconUrlResolver {
   if (!backgroundFaviconUrlResolver) {
-    backgroundFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
+    backgroundFaviconUrlResolver = FaviconResolver.createFaviconUrlResolver({
       chromeApi: chrome,
       size: FAVICON_PROXY_SIZE,
       shouldBlockFaviconForHost,
@@ -371,7 +380,7 @@ export function getHostFaviconUrl(hostname: unknown): string {
 }
 
 function isFaviconProxyUrl(url: unknown): boolean {
-  return FAVICON_UTILS.isFaviconProxyUrl(url);
+  return FaviconUrlKinds.isFaviconProxyUrl(url);
 }
 
 export function getFaviconFallbackHost(rawInput: unknown): string {
@@ -394,15 +403,15 @@ export function getFaviconFallbackHost(rawInput: unknown): string {
 }
 
 export function shouldBlockFaviconForHost(hostname: unknown): boolean {
-  return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
+  return FaviconHostPolicy.shouldBlockFaviconForHost(hostname);
 }
 
 function shouldAvoidDirectFaviconForHost(hostname: unknown): boolean {
-  return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
+  return FaviconHostPolicy.shouldAvoidDirectFaviconForHost(hostname);
 }
 
 function isAllowedFaviconProxyRequestUrl(url: unknown): boolean {
-  return FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url);
+  return FaviconHostPolicy.isAllowedFaviconProxyRequestUrl(url);
 }
 
 function isFaviconRequestBlockedByBlacklist(url: unknown): boolean {
@@ -410,12 +419,12 @@ function isFaviconRequestBlockedByBlacklist(url: unknown): boolean {
 }
 
 export function isBlockedLocalFaviconUrl(url: unknown): boolean {
-  const blockedByLocalRules = FAVICON_UTILS.isBlockedLocalFaviconUrl(url);
+  const blockedByLocalRules = FaviconHostPolicy.isBlockedLocalFaviconUrl(url);
   return blockedByLocalRules || isFaviconRequestBlockedByBlacklist(url);
 }
 
-function getFaviconHostPolicy(hostname: unknown): FAVICON_UTILS.FaviconHostPolicy {
-  return FAVICON_UTILS.getFaviconHostPolicy(hostname, {
+function getFaviconHostPolicy(hostname: unknown): FaviconTypes.FaviconHostPolicy {
+  return FaviconHostPolicy.getFaviconHostPolicy(hostname, {
     shouldBlockFaviconForHost,
     shouldAvoidDirectFaviconForHost
   });
@@ -453,7 +462,7 @@ function getFaviconTargetPolicy(targetUrl: unknown, hostOverride: unknown): Favi
 }
 
 export function normalizeFaviconHost(hostname: unknown): string {
-  return FAVICON_UTILS.normalizeFaviconHost(hostname);
+  return FaviconUrlKinds.normalizeFaviconHost(hostname);
 }
 
 export function normalizeThemeAccentRgb(value: unknown): ThemeRgb | null {
@@ -656,7 +665,7 @@ function fetchShortcutFaviconResource(
 // Firefox has no _favicon endpoint. Its own icon cache is reachable through
 // open tabs and top sites; like Chrome's cache it never contacts the site.
 async function getFirefoxBrowserFaviconUrl(pageUrl: string): Promise<string> {
-  const browserIcons = FAVICON_UTILS.createBrowserIconIndex();
+  const browserIcons = FaviconBrowserIconIndex.createBrowserIconIndex();
   await LumnoBrowserIcons.loadBrowserIcons(browserIcons, chrome);
   return browserIcons.get(pageUrl);
 }
@@ -742,10 +751,10 @@ async function resolveShortcutFaviconData(
           url: candidate.placeholderUrl,
           kind: candidate.kind,
           declaredSize: 128
-        }, FAVICON_UTILS.getPageUrlFromFaviconProxyUrl(candidate.placeholderUrl), signal);
+        }, FaviconCanonical.getPageUrlFromFaviconProxyUrl(candidate.placeholderUrl), signal);
         placeholderData = placeholder ? placeholder.data : undefined;
         if (placeholderData) {
-          FAVICON_UTILS.setBoundedCacheEntry(faviconDataCache, candidate.placeholderUrl,
+          BoundedCache.setBoundedCacheEntry(faviconDataCache, candidate.placeholderUrl,
             placeholderData, BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES);
         }
       }
@@ -807,7 +816,7 @@ export function fetchShortcutFaviconData(
   }).then((result) => {
     if (result && policyRevision === shortcutFaviconPolicyRevision &&
         (refresh === true || shortcutFaviconDataCache.get(cacheKey) === cachedResultAtStart)) {
-      FAVICON_UTILS.setBoundedCacheEntry(
+      BoundedCache.setBoundedCacheEntry(
         shortcutFaviconDataCache,
         cacheKey,
         result,
@@ -1069,7 +1078,7 @@ export function fetchFaviconData(requestedUrl: unknown, pageUrl?: unknown): Prom
     const canonicalPageUrl = getFaviconRequestMatchUrl(pageUrl || url);
     const requestExcluded = isUrlBlockedByFaviconRequestBlacklist(canonicalPageUrl);
     const effectiveEnhancedFetchEnabled = enhancedFetchEnabled && !requestExcluded;
-    const sourceAllowedByMode = FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, {
+    const sourceAllowedByMode = FaviconEnhancedFetchPolicy.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, {
       chromeApi: chrome,
       allowThirdPartyFetch: !requestExcluded
     });
@@ -1111,7 +1120,7 @@ export function fetchFaviconData(requestedUrl: unknown, pageUrl?: unknown): Prom
     }
     const sourceUrl = url;
     const promise = fetchFaviconDataUrl(sourceUrl).then((dataUrl): string | null | Promise<string | null> => {
-      if (!dataUrl || !FAVICON_UTILS.isExtensionFaviconEndpointUrl(sourceUrl)) {
+      if (!dataUrl || !FaviconUrlKinds.isExtensionFaviconEndpointUrl(sourceUrl)) {
         return dataUrl;
       }
       // Chromium answers an unknown page with its default globe; web-page
@@ -1122,7 +1131,7 @@ export function fetchFaviconData(requestedUrl: unknown, pageUrl?: unknown): Prom
     })
       .then((dataUrl) => {
         if (dataUrl) {
-          FAVICON_UTILS.setBoundedCacheEntry(
+          BoundedCache.setBoundedCacheEntry(
             faviconDataCache,
             sourceUrl,
             dataUrl,
@@ -1152,7 +1161,7 @@ export function inlineExtensionFaviconsForWebPage<T extends { favIconUrl?: unkno
   const timeoutMs = typeof waitMs === 'number' && Number.isFinite(waitMs) ? Math.max(0, waitMs) : 400;
   return Promise.all(list.map((item): T | Promise<T> => {
     const iconUrl = item && typeof item.favIconUrl === 'string' ? item.favIconUrl : '';
-    if (!FAVICON_UTILS.isExtensionFaviconEndpointUrl(iconUrl)) {
+    if (!FaviconUrlKinds.isExtensionFaviconEndpointUrl(iconUrl)) {
       return item;
     }
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -1188,7 +1197,7 @@ function fetchExtensionFaviconPlaceholderData(faviconUrl: string): Promise<strin
     }
     return dataUrl;
   });
-  FAVICON_UTILS.setBoundedCacheEntry(extensionFaviconPlaceholderData, placeholderUrl, pending, 16);
+  BoundedCache.setBoundedCacheEntry(extensionFaviconPlaceholderData, placeholderUrl, pending, 16);
   return pending;
 }
 
@@ -1242,7 +1251,7 @@ function getFaviconRequestMatchUrl(url: unknown): string {
   if (!raw) {
     return '';
   }
-  return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim();
+  return String(FaviconCanonical.getCanonicalPageUrlForFavicon(raw) || raw).trim();
 }
 
 function isUrlBlockedByFaviconRequestBlacklist(url: unknown): boolean {

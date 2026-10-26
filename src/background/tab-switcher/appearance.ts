@@ -1,7 +1,5 @@
 // How a tab looks in the switcher: its icon (the browser's own logo for
 // Firefox's about: pages) and its accent color.
-import * as FAVICON_UTILS from '../../domain/favicon/favicon-utils';
-import type { ThemeRgb } from '../../domain/favicon/favicon-utils';
 import type { SiteThemeColor } from '../../domain/messages';
 import { getSwitcherRegistrableThemeHost, getSwitcherThemeHostCandidates } from '../../domain/tab-switcher-model';
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
@@ -19,6 +17,9 @@ import {
   siteThemeColorPending
 } from '../favicon-service';
 import type { SwitcherTab } from './types';
+import * as BoundedCache from '../../domain/bounded-cache';
+import * as FaviconThemeColor from '../../domain/favicon/theme-color';
+import type { ThemeRgb } from '../../domain/favicon/types';
 
 // Firefox gives its about: pages chrome:// icons that web pages cannot load,
 // and those monochrome icons would vanish on a dark switcher anyway. The
@@ -110,7 +111,7 @@ function getPersistedSiteThemeColorForSwitcher(host: unknown): SiteThemeColor | 
         accentRgb,
         source: entry.source || 'cache',
         neutral: entry.neutral === true,
-        confidence: entry.confidence || FAVICON_UTILS.getThemeColorConfidence(accentRgb)
+        confidence: entry.confidence || FaviconThemeColor.getThemeColorConfidence(accentRgb)
       };
     }
   }
@@ -131,7 +132,7 @@ function persistSiteThemeColorForSwitcher(host: string, result: SiteThemeColor |
     accentRgb,
     source: result.source || 'meta',
     neutral: result.neutral === true,
-    confidence: result.confidence || FAVICON_UTILS.getThemeColorConfidence(accentRgb)
+    confidence: result.confidence || FaviconThemeColor.getThemeColorConfidence(accentRgb)
   });
 }
 
@@ -152,7 +153,7 @@ function normalizeSwitcherAccentRgbForPayload(accentRgb: unknown): ThemeRgb | nu
   if (!rgb) {
     return null;
   }
-  if (FAVICON_UTILS.getThemeColorConfidence(rgb) === 'neutral') {
+  if (FaviconThemeColor.getThemeColorConfidence(rgb) === 'neutral') {
     return normalizeThemeAccentRgb(NEWTAB_FAVICON_THEME.defaultAccentColor) || [59, 130, 246];
   }
   return rgb;
@@ -189,7 +190,7 @@ function warmSwitcherTabThemeColor(host: unknown, url: string): void {
       const sharedHost = getSwitcherRegistrableThemeHost(normalizedHost);
       if (result && accentRgb && sharedHost && sharedHost !== normalizedHost) {
         const sharedKey = `${sharedHost}::${parsed.origin}::auto`;
-        FAVICON_UTILS.setBoundedCacheEntry(
+        BoundedCache.setBoundedCacheEntry(
           siteThemeColorCache,
           sharedKey,
           result,

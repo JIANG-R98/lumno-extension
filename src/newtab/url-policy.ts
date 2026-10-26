@@ -3,13 +3,14 @@
 import type { BlacklistRule } from '../domain/blacklist-utils';
 import type * as BlacklistUtils from '../domain/blacklist-utils';
 import type * as ExtensionRoutes from '../domain/extension-routes';
-import type * as FaviconUtils from '../domain/favicon/favicon-utils';
-import type { FaviconUrlResolver } from '../domain/favicon/favicon-utils';
 import type * as LumnoSettings from '../domain/settings';
 import type * as SearchUtils from '../domain/search/search-utils';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoUrlGuards from '../platform/url-guards';
 import type { Translate } from './newtab-types';
+import * as FaviconCanonical from '../domain/favicon/canonical';
+import * as FaviconHostPolicy from '../domain/favicon/host-policy';
+import type { FaviconUrlResolver } from '../domain/favicon/resolver';
 
 // What the search blacklist reads from a suggestion.
 interface BlacklistableSuggestion {
@@ -28,8 +29,6 @@ interface UrlPolicyDeps {
   EXTENSION_ROUTES: Pick<typeof ExtensionRoutes, 'classifyExtensionUrl'>;
   t: Translate;
   getPageFaviconUrlResolver(): FaviconUrlResolver | null;
-  FAVICON_UTILS: Pick<typeof FaviconUtils,
-    'isLocalNetworkHost' | 'shouldBlockFaviconForHost' | 'shouldAvoidDirectFaviconForHost' | 'getCanonicalPageUrlForFavicon'>;
   BLACKLIST_UTILS: Pick<typeof BlacklistUtils, 'normalizeItems' | 'isUrlBlocked'>;
   SETTINGS: Pick<typeof LumnoSettings, 'faviconEnhancedFetchEnabled'>;
   storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
@@ -47,7 +46,6 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
     EXTENSION_ROUTES,
     t,
     getPageFaviconUrlResolver,
-    FAVICON_UTILS,
     BLACKLIST_UTILS,
     SETTINGS,
     storageArea,
@@ -204,15 +202,15 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
   }
 
   function isLocalNetworkHost(hostname: string): boolean {
-    return FAVICON_UTILS.isLocalNetworkHost(hostname);
+    return FaviconHostPolicy.isLocalNetworkHost(hostname);
   }
 
   function shouldBlockFaviconForHost(hostname: string): boolean {
-    return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
+    return FaviconHostPolicy.shouldBlockFaviconForHost(hostname);
   }
 
   function shouldAvoidDirectFaviconForHost(hostname: string): boolean {
-    return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
+    return FaviconHostPolicy.shouldAvoidDirectFaviconForHost(hostname);
   }
 
   function normalizeSearchBlacklistItems(items: unknown): BlacklistRule[] {
@@ -252,7 +250,7 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
     if (!raw) {
       return '';
     }
-    return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim();
+    return String(FaviconCanonical.getCanonicalPageUrlForFavicon(raw) || raw).trim();
   }
 
   function isUrlBlockedByFaviconRequestBlacklist(url: unknown): boolean {

@@ -4,7 +4,6 @@ import * as FOLDER_BINDINGS from '../platform/bookmark-folder-bindings';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoCommunityLinks from '../platform/community-links';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
-import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as LumnoBrowserIcons from '../platform/browser-icons';
@@ -217,6 +216,7 @@ import { newtabShortcutFaviconCache, newtabShortcutsLocalOverflow, shortcutFolde
 import { createSettingPort, createSettingsStore, getContextSettingsStore } from '../platform/settings-store';
 import * as SearchSettings from '../domain/settings/search';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
+import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -781,7 +781,6 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
     applyMarkVariables
   } = NEWTAB_SITE_THEME_RESOLVER.createSiteThemeResolver({
     NEWTAB_FAVICON_THEME,
-    FAVICON_UTILS,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,
@@ -812,7 +811,7 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
   // Firefox: index the browser's own cached icons, which stand in for the
   // missing _favicon endpoint (see createBrowserIconIndex).
   pageState.firefoxBrowserIcons = BROWSER_PROFILE.isFirefoxExtensionRuntime()
-    ? FAVICON_UTILS.createBrowserIconIndex()
+    ? FaviconBrowserIconIndex.createBrowserIconIndex()
     : null;
   pageState.firefoxBrowserIconsReady = pageState.firefoxBrowserIcons
     ? LumnoBrowserIcons.loadBrowserIcons(pageState.firefoxBrowserIcons, chrome).catch(() => {})
@@ -848,7 +847,6 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
     EXTENSION_ROUTES,
     t,
     getPageFaviconUrlResolver: (...args) => getPageFaviconUrlResolver(...args),
-    FAVICON_UTILS,
     BLACKLIST_UTILS,
     SETTINGS,
     storageArea,
@@ -1725,7 +1723,6 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
     getThemeSource,
     isLowConfidenceTheme,
     normalizeThemeConfidence,
-    FAVICON_UTILS,
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,
     getChromeFaviconUrl,
@@ -2003,7 +2000,6 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
     sendRuntimeMessage,
     shortcutFaviconStore,
     faviconCacheRuntime,
-    FAVICON_UTILS,
     getPersistedFaviconDataEntry,
     t,
     hideShortcutTooltip,

@@ -1,8 +1,6 @@
 // Site search providers and aggregate searches in the overlay: their
 // URLs and icons, running an interactive provider, recording a selection,
 // and loading and reloading both lists.
-import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
@@ -20,6 +18,8 @@ import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-st
 import * as LumnoMessaging from '../../platform/messaging';
 import type { ActivationEvent } from './result-activation';
 import type { Translate } from './types';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 
 interface SiteSearchProvidersState {
   settings: Pick<OverlaySettings, 'store' | 'loaded' | 'get'>;
@@ -43,7 +43,6 @@ interface SiteSearchProvidersDeps {
     'isInteractiveSiteSearchProvider' | 'mergeCustomProviders'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider'>;
   SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderIcon' | 'getSiteSearchProviderPageUrl'>;
-  FAVICON_UTILS: Pick<typeof FaviconUtils, 'isExtensionFaviconEndpointUrl'>;
   getHelpCenterLocale(): string;
   showOverlayToast(message: string, isError?: boolean): void;
   t: Translate;
@@ -68,7 +67,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     getOverlayFaviconUrlResolver,
     SHORTCUT_FAVICON,
     siteSearchIconCacheOptions,
-    FAVICON_UTILS,
     faviconDataCache
   } = deps;
 
@@ -206,7 +204,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   // load the browser's _favicon cache; those arrive as data: URLs from the
   // background, and the provider keeps its glyph until one is cached.
   function toPageRenderableIconUrl(iconUrl: string, pageUrl: string): string {
-    if (!FAVICON_UTILS.isExtensionFaviconEndpointUrl(iconUrl)) {
+    if (!FaviconUrlKinds.isExtensionFaviconEndpointUrl(iconUrl)) {
       return iconUrl;
     }
     const cachedData = faviconDataCache.get(iconUrl);

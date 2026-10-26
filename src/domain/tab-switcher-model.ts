@@ -1,9 +1,9 @@
 // The recent-tab switcher's rules apart from the browser: which tab it opens
 // on, how a page answers the worker's requests, how its thumbnails are kept,
 // and the site whose colors a tab's card takes.
-import { normalizeFaviconHost } from './favicon/favicon-utils';
 import type { TabSwitcherItem, TabSwitcherThumbnailStatus } from './messages';
 import { tabSwitcherThumbnail } from './settings/features';
+import { normalizeFaviconHost } from './favicon/url-kinds';
 
 // 1 moves to older tabs, -1 back toward newer ones.
 type SwitcherOffset = 1 | -1;

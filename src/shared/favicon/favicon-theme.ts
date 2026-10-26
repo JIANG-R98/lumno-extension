@@ -1,7 +1,9 @@
+import * as FaviconThemeColor from '../../domain/favicon/theme-color';
+import * as FaviconThemedCandidates from '../../domain/favicon/themed-candidates';
+import type { ThemeRgb } from '../../domain/favicon/types';
+import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 // Accent colors and the light and dark color themes built from them: the
 // tint a result row, tag or button takes from its site's icon or brand.
-import * as faviconUtils from '../../domain/favicon/favicon-utils';
-import type { ThemeRgb } from '../../domain/favicon/favicon-utils';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -430,7 +432,7 @@ function normalizeHost(hostname: unknown): string {
 }
 
 function normalizeFaviconHost(hostname: unknown): string {
-  return faviconUtils.normalizeFaviconHost(hostname);
+  return FaviconUrlKinds.normalizeFaviconHost(hostname);
 }
 
 function getBrandAccentForHost(hostname: unknown): ThemeRgb | null {
@@ -475,15 +477,15 @@ function getThemeFingerprint(theme: ThemeLike | null | undefined): string {
 }
 
 function hasThemeTokenInUrl(url: unknown, token: string): boolean {
-  return faviconUtils.hasThemeTokenInUrl(url, token);
+  return FaviconThemedCandidates.hasThemeTokenInUrl(url, token);
 }
 
 function shouldSkipThemeUpgradeCandidate(candidateUrl: unknown, preferredTheme: unknown, currentUrl: unknown): boolean {
-  return faviconUtils.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
+  return FaviconThemedCandidates.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
 }
 
-function getKnownThemedFaviconCandidates(hostname: unknown, preferredTheme: unknown): ReturnType<typeof faviconUtils.getKnownThemedFaviconCandidateUrls> {
-  return faviconUtils.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
+function getKnownThemedFaviconCandidates(hostname: unknown, preferredTheme: unknown): ReturnType<typeof FaviconThemedCandidates.getKnownThemedFaviconCandidateUrls> {
+  return FaviconThemedCandidates.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
     getRuntimeUrl: (path) => {
       const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
       return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
@@ -494,11 +496,11 @@ function getKnownThemedFaviconCandidates(hostname: unknown, preferredTheme: unkn
 }
 
 function hostHasExplicitDarkFavicon(hostname: unknown): boolean {
-  return faviconUtils.hostHasExplicitDarkFavicon(hostname);
+  return FaviconThemeColor.hostHasExplicitDarkFavicon(hostname);
 }
 
 function isFaviconProxyUrl(url: unknown): boolean {
-  return faviconUtils.isFaviconProxyUrl(url);
+  return FaviconUrlKinds.isFaviconProxyUrl(url);
 }
 
 function extractAverageColor(image: CanvasImageSource): ThemeRgb | null {

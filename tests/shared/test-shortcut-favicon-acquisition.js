@@ -1,5 +1,5 @@
 const assert = require('assert');
-const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
+const faviconUtils = require('../helpers/favicon-utils.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const faviconCache = require('../../src/platform/favicon-cache.ts');

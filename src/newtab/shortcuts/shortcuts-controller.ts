@@ -1,8 +1,6 @@
 // Shortcut storage, favicons, loading, persistence, rendering and the add/edit
 // dialog.
 import type { FaviconDataEntry } from '../../domain/favicon/favicon-cache';
-import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
-import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
@@ -50,6 +48,8 @@ import type * as ShortcutIconStoreModule from './shortcut-icon-store';
 import type { ShortcutIconMap, ShortcutIconStore } from './shortcut-icon-store';
 import type { ShortcutPageActions } from './shortcut-page-actions';
 import type { PersistShortcuts, PersistShortcutsOptions, ShortcutIconChange, ShortcutSite } from './shortcut-types';
+import * as FaviconCanonical from '../../domain/favicon/canonical';
+import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 
 interface ShortcutsControllerState {
   newtabShortcuts: ShortcutItem[];
@@ -125,7 +125,6 @@ interface ShortcutsControllerDeps {
   sendRuntimeMessage: SendRuntimeMessage;
   shortcutFaviconStore: Pick<ShortcutFaviconStore, 'readAll' | 'mergeAll' | 'retainAll'>;
   faviconCacheRuntime: Pick<FaviconCacheRuntime, 'ensureCachesReady'>;
-  FAVICON_UTILS: Pick<typeof FaviconUtils, 'getFaviconPersistCacheKey'>;
   getPersistedFaviconDataEntry(cacheKey: string): FaviconDataEntry | null;
   t: Translate;
   hideShortcutTooltip(): void;
@@ -314,7 +313,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     sendRuntimeMessage,
     shortcutFaviconStore,
     faviconCacheRuntime,
-    FAVICON_UTILS,
     getPersistedFaviconDataEntry,
     t,
     hideShortcutTooltip,
@@ -924,7 +922,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       if (savedDataUrl) {
         return savedDataUrl;
       }
-      const cacheKey = FAVICON_UTILS.getFaviconPersistCacheKey(normalizedPageUrl);
+      const cacheKey = FaviconCanonical.getFaviconPersistCacheKey(normalizedPageUrl);
       const existingEntry = getPersistedFaviconDataEntry(cacheKey);
       // The page favicon cache keeps no source URL.
       if (!iconSource && existingEntry && SHORTCUT_FAVICON.isCachedIconForPage(existingEntry, normalizedPageUrl) &&

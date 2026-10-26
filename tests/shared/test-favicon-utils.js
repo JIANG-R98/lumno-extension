@@ -8,8 +8,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(moduleScript('src/domain/favicon/favicon-utils.ts', 'LumnoFaviconUtils'), sandbox, {
-  filename: 'src/domain/favicon/favicon-utils.ts'
+vm.runInNewContext(moduleScript('tests/helpers/favicon-utils.ts', 'LumnoFaviconUtils'), sandbox, {
+  filename: 'tests/helpers/favicon-utils.ts'
 });
 
 {

@@ -9,7 +9,7 @@
 import type { KeyDescriptor } from './shortcut-key-matcher';
 import type { SearchSourceType, SiteSearchProvider, SuggestionLike } from './search/types';
 import type { HelpSearchResult } from './search/help-center-search';
-import type { ThemeColorConfidence, ThemeRgb } from './favicon/favicon-utils';
+import type { ThemeColorConfidence, ThemeRgb } from './favicon/types';
 
 // A message that carries nothing besides its action.
 type NoFields = Record<never, never>;

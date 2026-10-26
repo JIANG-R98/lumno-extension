@@ -7,7 +7,7 @@
 
 const settings = require('../../src/domain/settings/index.ts');
 const faviconCache = require('../../src/domain/favicon/favicon-cache.ts');
-const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
+const faviconUtils = require('../helpers/favicon-utils.ts');
 const { loadBackground } = require('./background-harness');
 const { createNewtabPage } = require('./newtab-page');
 const { newtabShortcutFaviconCache } = require('../../src/domain/settings/newtab-shortcuts.ts');

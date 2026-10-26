@@ -1,6 +1,5 @@
 // Matching titles to a query: the title matcher with its pinyin readings,
 // the query context, and where a result's title shows the query.
-import * as FAVICON_UTILS from '../../domain/favicon/favicon-utils';
 import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import * as SETTINGS from '../../domain/settings';
 import { searchResultSourceTypes } from '../../domain/settings';
@@ -16,6 +15,7 @@ import type {
 } from '../../domain/search/types';
 import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { SuggestionRow } from './types';
+import * as BoundedCache from '../../domain/bounded-cache';
 
 // Titles whose units (and pinyin readings) were built for matching, about
 // 1 KB each. It holds the Han-title history and the bookmarks, so typing one
@@ -79,7 +79,7 @@ function getTitleHanReadings(_text: string, characters: string[]): string[][] | 
       return cached;
     }
     const readings = SEARCH_UTILS.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
-    FAVICON_UTILS.setBoundedCacheEntry(
+    BoundedCache.setBoundedCacheEntry(
       hanCharacterFuzzyReadingsCache,
       character,
       readings,
@@ -101,7 +101,7 @@ function getHanCharacterReadings(pinyinApi: PinyinApi, character: string): strin
     v: true
   });
   const readings = Array.isArray(converted) ? converted : [];
-  FAVICON_UTILS.setBoundedCacheEntry(
+  BoundedCache.setBoundedCacheEntry(
     hanCharacterReadingsCache,
     character,
     readings,

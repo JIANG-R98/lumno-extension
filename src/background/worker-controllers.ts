@@ -4,7 +4,6 @@
 //
 // They are created here and started by background.ts, which wires the
 // browser events, so starting them keeps its place in the worker's startup.
-import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as LumnoNewtabRecentSitesStore from '../domain/recent-sites-store';
 import * as LumnoProgressHistory from '../domain/progress-history';
 import * as LumnoProgressMatch from '../domain/progress-match';
@@ -18,6 +17,7 @@ import {
   providerStorageRuntime,
   workerSettings
 } from './worker-context';
+import * as FaviconCanonical from '../domain/favicon/canonical';
 
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
 function isProgressTrackingEnabled(): boolean {
@@ -50,7 +50,7 @@ const popupRecentPin = LumnoPopupRecentPin.createController({
   settingsStore: workerSettings,
   storeOptions: {
     normalizeHost,
-    getCanonicalPageUrlForFavicon: FAVICON_UTILS.getCanonicalPageUrlForFavicon,
+    getCanonicalPageUrlForFavicon: FaviconCanonical.getCanonicalPageUrlForFavicon,
     maxPinned: 3
   },
   probeSeries: (url) => (isProgressTrackingEnabled() ? progressTracker.probeSeries(url) : Promise.resolve(false)),
