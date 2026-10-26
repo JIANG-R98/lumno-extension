@@ -91,7 +91,7 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
         key: openInNewTab.storageKey,
         title: {
           text: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),
-          info: getMessage('settings_newtab_open_in_new_tab_desc', '未勾选的在当前页打开，Cmd/Ctrl 或中键点击总在后台打开')
+          info: getMessage('settings_newtab_open_in_new_tab_desc', '勾选后，点击会新开标签页并切换过去；不勾选则在当前页打开')
         },
         groupId: '_x_extension_newtab_open_in_new_tab_2026_unique_',
         ariaLabel: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),

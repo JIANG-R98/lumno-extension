@@ -3444,7 +3444,7 @@
     "message": "Open in a new tab when clicked"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Unchecked items open in the current tab. Cmd/Ctrl-click or middle-click always opens in the background."
+    "message": "When checked, clicking opens a new tab and switches to it; unchecked items open in the current tab."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Search results"

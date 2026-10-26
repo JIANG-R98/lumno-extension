@@ -3444,7 +3444,7 @@
     "message": "Abrir en una pestaña nueva al hacer clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Los no marcados se abren en la pestaña actual. Cmd/Ctrl + clic o clic central abre siempre en segundo plano."
+    "message": "Si está marcado, al hacer clic se abre una pestaña nueva y se cambia a ella; si no, se abre en la pestaña actual."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de búsqueda"

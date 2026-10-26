@@ -3444,7 +3444,7 @@
     "message": "Ouvrir dans un nouvel onglet au clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Les éléments non cochés s’ouvrent dans l’onglet actuel. Cmd/Ctrl + clic ou clic du milieu ouvre toujours en arrière-plan."
+    "message": "Coché, un clic ouvre un nouvel onglet et y bascule ; sinon, le lien s’ouvre dans l’onglet actuel."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Résultats de recherche"
