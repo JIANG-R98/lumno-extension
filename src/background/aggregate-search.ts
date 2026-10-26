@@ -5,7 +5,7 @@ import type { AggregateSearch, AggregateSearchAvailability } from '../domain/sea
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { AggregateSearchReply, OpenDisposition } from '../domain/messages';
 import type { MessageSender } from './message-router';
-import type { SubmitResult } from './ai-provider-submit';
+import type { SubmitResult } from '../domain/ai-prompt-strategy';
 import type { TabPlacement } from './search-result-tabs';
 
 type GetEntryUrl = (provider: SiteSearchProvider, query: string) => string;

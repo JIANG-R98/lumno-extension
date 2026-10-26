@@ -11,7 +11,8 @@ const INJECTED_APP_PATHS = Object.freeze({
   'link-preview': 'build/injected/link-preview.js',
   'pip-picker': 'build/injected/pip-picker.js',
   'page-shortcut-toast': 'build/injected/page-shortcut-toast.js',
-  'copy-url-listener': 'build/injected/copy-url-listener.js'
+  'copy-url-listener': 'build/injected/copy-url-listener.js',
+  'ai-prompt-submit': 'build/injected/ai-prompt-submit.js'
 });
 
 type InjectedAppName = keyof typeof INJECTED_APP_PATHS;

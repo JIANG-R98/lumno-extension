@@ -60,6 +60,7 @@ const ENTRIES = [
   { name: 'pip-picker', kind: 'injected', source: 'src/content/document-pip-picker.ts' },
   { name: 'page-shortcut-toast', kind: 'injected', source: 'src/content/page-shortcut-toast.ts' },
   { name: 'copy-url-listener', kind: 'injected', source: 'src/content/hotkey-listener.ts' },
+  { name: 'ai-prompt-submit', kind: 'injected', source: 'src/content/ai-prompt-submit.ts' },
   { name: 'selection-quick-actions', kind: 'classic', source: 'src/content/selection-quick-actions.ts' },
 
   // Manifest content scripts

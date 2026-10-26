@@ -14,7 +14,7 @@ const STRING_RE = /(['"`])((?:\\.|(?!\1|\\)[\s\S])*?)\1/g;
 
 const ALLOWLIST = [
   'brand/provider names in assets/data/site-search.json and provider defaults',
-  'AI provider remote page selector probes in src/background/ai-provider-submit.ts',
+  'AI provider remote page selector probes in src/domain/ai-prompt-strategy.ts',
   'localized onboarding content model in src/onboarding/onboarding-content.ts',
   'localized update notice fallback model in src/shared/update-notice.ts',
   'localized selection prompt model in src/domain/selection-intent.ts',
@@ -108,7 +108,7 @@ function stripHtmlTags(value) {
 }
 
 function isAllowlistedLine(file, line) {
-  if (file === 'src/background/ai-provider-submit.ts') {
+  if (file === 'src/domain/ai-prompt-strategy.ts') {
     return true;
   }
   if (file === 'src/domain/search/search-utils.ts' || file.startsWith('src/domain/search/utils/') ||

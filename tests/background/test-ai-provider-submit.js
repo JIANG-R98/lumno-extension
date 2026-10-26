@@ -1,5 +1,9 @@
 const assert = require('assert');
-const submitRuntime = require('../../src/background/ai-provider-submit.ts');
+const submitRuntime = {
+  ...require('../../src/background/ai-provider-submit.ts'),
+  ...require('../../src/domain/ai-prompt-strategy.ts')
+};
+const promptSubmitApp = require('../../src/content/ai-prompt-submit.ts');
 
 class FakeEvent {
   constructor(type, options) {
@@ -223,7 +227,7 @@ function submitWithFakeChrome(strategyName, prompt, options) {
   observations.tabGetCount = 0;
   observations.executeCount = 0;
   const chromeApi = {
-    runtime: {},
+    runtime: { getURL: (path) => `chrome-extension://lumno/${path}` },
     tabs: {
       get(tabId, callback) {
         observations.tabGetCount += 1;
@@ -233,7 +237,8 @@ function submitWithFakeChrome(strategyName, prompt, options) {
     scripting: {
       executeScript(details, callback) {
         observations.executeCount += 1;
-        Promise.resolve(details.func(...details.args))
+        // The injected module runs the command it is given (details.args[1]).
+        Promise.resolve(promptSubmitApp.run(details.args[1]))
           .then((result) => callback([{ result }]))
           .catch((error) => callback([{ result: { ok: false, reason: error.message } }]));
       }
