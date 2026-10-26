@@ -126,7 +126,7 @@
         "assets/data/site-search.json",
         "assets/data/shortcut-rules.json",
         "assets/vendor/pinyin-pro.js",
-        "src/shared/search/search-han-variants.js",
+        "build/han-variants.js",
         "assets/remixicon/fonts/remixicon.css",
         "assets/remixicon/fonts/remixicon.woff2",
         "assets/remixicon/icons/*.svg",

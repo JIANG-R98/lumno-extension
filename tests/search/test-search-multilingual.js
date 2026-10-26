@@ -3,7 +3,8 @@ const assert = require('assert');
 // How local search reads titles in other languages: letters a reader sees
 // as the same, marks that can or cannot be left out, words and initials in
 // every script that writes words apart, Japanese kana and Korean jamo.
-require('../../src/shared/search/search-han-variants.js');
+const { installHanVariantPairs } = require('../../src/domain/search/han-variants.ts');
+installHanVariantPairs(require('../../src/domain/search/han-variants.generated.ts').HAN_VARIANT_PAIRS);
 const search = require('../../src/domain/search/search-utils.ts');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 

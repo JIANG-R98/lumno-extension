@@ -52,7 +52,10 @@ function bundleEntryPlugin(bundle, sharedModules) {
     },
     load(loadId) {
       if (loadId !== id) return null;
-      const lines = bundle.files.map((file) => `import ${JSON.stringify(path.join(repoRoot, file))};`);
+      // An ES module bundle re-exports its files; a classic one runs them.
+      const lines = bundle.files.map((file) => (bundle.format === 'es'
+        ? `export * from ${JSON.stringify(path.join(repoRoot, file))};`
+        : `import ${JSON.stringify(path.join(repoRoot, file))};`));
       (sharedModules || []).forEach((file, index) => {
         lines.splice(index, 0, `import * as shared${index} from ${JSON.stringify(path.join(repoRoot, file))};`);
       });
@@ -106,10 +109,10 @@ function inputOptions({ bundle, sharedModules, external }) {
   };
 }
 
-function outputOptions({ outdir, minify }) {
+function outputOptions({ outdir, minify }, bundle) {
   return {
     dir: outdir,
-    format: 'iife',
+    format: bundle.format || 'iife',
     entryFileNames: '[name].js',
     charset: 'utf8',
     minify: Boolean(minify),
@@ -130,8 +133,8 @@ async function buildOne(bundle, options, extra = {}) {
   const build = await rolldown(inputOptions({ bundle, ...extra }));
   try {
     const output = options.write === false
-      ? await build.generate(outputOptions(options))
-      : await build.write(outputOptions(options));
+      ? await build.generate(outputOptions(options, bundle))
+      : await build.write(outputOptions(options, bundle));
     return output.output;
   } finally {
     await build.close();
@@ -169,7 +172,7 @@ async function watchBundles() {
   const shared = await collectSharedModules(BUNDLES, common);
   const watcher = watch(BUNDLES.map((bundle) => ({
     ...inputOptions({ bundle, ...extraFor(bundle, shared) }),
-    output: outputOptions(common)
+    output: outputOptions(common, bundle)
   })));
   watcher.on('event', (event) => {
     if (event.code === 'ERROR') {

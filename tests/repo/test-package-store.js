@@ -101,11 +101,7 @@ BUNDLES.forEach((bundle) => {
 ].forEach((file) => {
   assert(!entries.includes(file), `store package should ship ${file} only inside its bundle`);
 });
-[
-  'src/shared/search/search-han-variants.js'
-].forEach((file) => {
-  assert(entries.includes(file), `store package should keep ${file}, which pages load by URL`);
-});
+assert(entries.includes('build/han-variants.js'), 'store package should ship the Han variant table pages import by URL');
 assert(entries.includes('build/pip-page-bridge.js'), 'store package should ship the registered page bridge bundle');
 assert(!entries.includes('src/content/youtube-auto-pip-page.js'), 'the page bridge should ship only as its bundle');
 const { getBackgroundServiceFiles } = require('../helpers/background-source');

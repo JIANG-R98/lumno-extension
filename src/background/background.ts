@@ -21,8 +21,8 @@ import '../shared/wallpaper-local-store';
 import '../domain/webdav-contract';
 import * as LumnoWebDavSync from './webdav-sync';
 import * as UPDATE_NOTICE from '../platform/update-notice';
-// Folds traditional characters to simplified ones for local search matching.
-import '../shared/search/search-han-variants.js';
+import { HAN_VARIANT_PAIRS } from '../domain/search/han-variants.generated';
+import { installHanVariantPairs } from '../domain/search/han-variants';
 import '../domain/search/utils/direct-navigation';
 import '../domain/search/utils/text-normalize';
 import '../domain/search/utils/text-index';
@@ -197,6 +197,9 @@ import {
   storageArea,
   warnBackgroundFailure
 } from './worker-context';
+
+// Folds traditional characters to simplified ones for local search matching.
+installHanVariantPairs(HAN_VARIANT_PAIRS);
 
 // See PINYIN_PRO_SCRIPT_PATH: the worker imports pinyin-pro while installing
 // so that it may import it again on first use.

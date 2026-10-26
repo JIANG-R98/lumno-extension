@@ -117,15 +117,6 @@ export default tseslint.config(
     }
   },
   {
-    // Pages load these by URL as classic scripts, outside the bundles.
-    files: [
-      'src/shared/search/search-han-variants.js'
-    ],
-    languageOptions: {
-      sourceType: 'script'
-    }
-  },
-  {
     // Node tooling. Tests also hand functions to the pages they drive, so
     // they see the browser's globals too.
     files: ['scripts/**/*.js', 'tests/**/*.js'],

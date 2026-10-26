@@ -27,12 +27,6 @@ const EXTENSION_ROOTS = [
   'THIRD_PARTY_NOTICES.md'
 ];
 
-// Scripts pages and content scripts load by URL; every other script in src/
-// runs from a bundle.
-const SOURCE_RUNTIME_SCRIPTS = new Set([
-  'src/shared/search/search-han-variants.js'
-]);
-
 function toRepoPath(file) {
   return path.relative(repoRoot, file).split(path.sep).join('/');
 }
@@ -49,7 +43,8 @@ function isExtensionFile(repoPath) {
   if (repoPath === 'src/package.json') {
     return false;
   }
-  if (repoPath.startsWith('src/') && /\.(?:tsx?|js|mjs)$/.test(repoPath) && !SOURCE_RUNTIME_SCRIPTS.has(repoPath)) {
+  // Every script in src/ runs from a bundle.
+  if (repoPath.startsWith('src/') && /\.(?:tsx?|js|mjs)$/.test(repoPath)) {
     return false;
   }
   return repoPath !== 'assets/images/readme' && !repoPath.startsWith('assets/images/readme/');
@@ -100,7 +95,6 @@ module.exports = {
   BUILT_DIRECTORIES,
   EXTENSION_OUTPUT,
   EXTENSION_ROOTS,
-  SOURCE_RUNTIME_SCRIPTS,
   copyExtensionFiles,
   extensionFilePath,
   extensionOutputPath,

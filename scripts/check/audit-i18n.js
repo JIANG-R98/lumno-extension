@@ -21,7 +21,7 @@ const ALLOWLIST = [
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default',
   'Chinese search-intent tokens in src/domain/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
-  'generated traditional-to-simplified character table in src/shared/search/search-han-variants.js',
+  'generated traditional-to-simplified character table in src/domain/search/han-variants.generated.ts',
   'question filler words dropped from help center queries in src/domain/search/help-center-search.ts',
   'episode and chapter title patterns in src/domain/progress-match.ts',
   'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
@@ -112,7 +112,7 @@ function isAllowlistedLine(file, line) {
     return true;
   }
   if (file === 'src/domain/search/search-utils.ts' || file.startsWith('src/domain/search/utils/') ||
-      file === 'src/shared/search/search-han-variants.js') {
+      file === 'src/domain/search/han-variants.generated.ts') {
     return true;
   }
   if (file === 'src/domain/selection-intent.ts') {

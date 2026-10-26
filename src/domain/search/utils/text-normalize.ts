@@ -1,6 +1,8 @@
 // Normalizing text for matching: folding case, width, accents and
 // traditional Han characters, splitting terms and title words, and the Han
 // readings and fuzzy pinyin variants a query may be typed as.
+import { getHanVariantPairs } from '../han-variants';
+
 function createTextNormalize() {
   // Han ideographs: the unified block, its Extension A and the compatibility block.
   const SEARCH_HAN_PATTERN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
@@ -15,16 +17,16 @@ function createTextNormalize() {
   const searchFoldedTexts = new Map<string, string>();
   const searchNormalizedTexts = new Map<string, string>();
 
-  // Traditional characters fold to simplified ones where the variant table is
-  // loaded (the background worker loads search-han-variants.js, pages load it
-  // with the pinyin runtime). Each character stays one character, so highlight
+  // Traditional characters fold to simplified ones once the variant table is
+  // installed (han-variants.ts: the worker installs it at start, pages when
+  // they first need it). Each character stays one character, so highlight
   // ranges keep their places.
   function getSearchHanVariantMap(): Map<string, string> | null {
     if (searchHanVariantMap) {
       return searchHanVariantMap;
     }
-    const pairs = typeof globalThis !== 'undefined' ? globalThis.LumnoSearchHanVariants : '';
-    if (typeof pairs !== 'string' || !pairs) {
+    const pairs = getHanVariantPairs();
+    if (!pairs) {
       return null;
     }
     searchHanVariantMap = new Map();
@@ -149,11 +151,10 @@ function createTextNormalize() {
     return folded;
   }
 
-  // Pages load the variant table later than this file; once it is there,
-  // building the map empties the caches folded without it.
+  // Pages install the variant table later than this file loads; once it is
+  // there, building the map empties the caches folded without it.
   function ensureSearchHanVariants(): void {
-    if (!searchHanVariantMap && typeof globalThis !== 'undefined' &&
-        typeof globalThis.LumnoSearchHanVariants === 'string') {
+    if (!searchHanVariantMap && getHanVariantPairs()) {
       getSearchHanVariantMap();
     }
   }

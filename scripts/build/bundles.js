@@ -10,6 +10,9 @@
 // are ready. Injected and content scripts load one bundle each, after
 // src/react/overlay-islands.js where they draw React views.
 //
+// format 'es' makes a bundle an ES module that re-exports its files, for
+// code that imports it by URL; every other bundle is a classic script.
+//
 // sharedFrom names bundles the page loads before this one: this bundle uses
 // their instances of the modules they run instead of copies of its own.
 
@@ -95,7 +98,10 @@ const BUNDLES = [
   { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.ts'] },
 
   // Registered by the background in the page's main world
-  { name: 'pip-page-bridge', files: ['src/content/pip-page-bridge.ts'] }
+  { name: 'pip-page-bridge', files: ['src/content/pip-page-bridge.ts'] },
+
+  // ES modules that pages and injected scripts import by URL on first use
+  { name: 'han-variants', format: 'es', files: ['src/domain/search/han-variants.generated.ts'] }
 ];
 
 module.exports = {

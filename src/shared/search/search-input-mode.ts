@@ -3,6 +3,7 @@
 // mode menu (the search scope panel). The parts live in search/input-mode/;
 // this file builds them around one shared state.
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
+import { getHanVariantPairs, installHanVariantPairs, readHanVariantModule } from '../../domain/search/han-variants';
 import * as LumnoCursorTooltip from '../ui/cursor-tooltip';
 import * as INPUT_MODE_MODE_MENU_ICONS from './input-mode/mode-menu-icons';
 import * as INPUT_MODE_MODE_MENU_LANGUAGE from './input-mode/mode-menu-language';
@@ -135,6 +136,9 @@ type InputModeState = ModeMenuIconsState &
   PrefixTextState &
   PrefixVisualState;
 
+// The traditional-to-simplified table, built as its own module so pages load
+// it only when the scope panel's filter first needs it.
+const HAN_VARIANTS_MODULE_PATH = 'build/han-variants.js';
 const DEFAULT_ACCENT_RGB: Rgb = [59, 130, 246];
 const DEFAULT_PREFIX_GAP = 8;
 const DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;
@@ -501,15 +505,20 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   // The traditional-to-simplified table the shared matcher folds with, so
   // 臺灣 finds a card named 台湾 and the other way round.
   function ensureModeMenuHanVariants(): Promise<boolean | null> | null {
-    const loaded = globalThis.LumnoSearchHanVariants;
     const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
-    if (loaded || !chromeApi || !chromeApi.runtime ||
+    if (getHanVariantPairs() || !chromeApi || !chromeApi.runtime ||
         typeof chromeApi.runtime.getURL !== 'function') {
       return null;
     }
     try {
-      return import(chromeApi.runtime.getURL('src/shared/search/search-han-variants.js'))
-        .then(() => true)
+      return import(chromeApi.runtime.getURL(HAN_VARIANTS_MODULE_PATH))
+        .then((loaded: unknown) => {
+          const pairs = readHanVariantModule(loaded);
+          if (pairs) {
+            installHanVariantPairs(pairs);
+          }
+          return Boolean(pairs);
+        })
         .catch(() => null);
     } catch (_error) {
       return null;

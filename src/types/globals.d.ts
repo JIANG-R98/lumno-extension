@@ -56,9 +56,6 @@ declare global {
   interface Uint8ArrayConstructor {
     fromBase64?(base64: string): Uint8Array<ArrayBuffer>;
   }
-  // The traditional-to-simplified Han table as pairs of characters, set by
-  // src/shared/search/search-han-variants.js once a page or the worker loads it.
-  var LumnoSearchHanVariants: string | undefined;
   // Whether motion effects are on, as first read by src/shared/motion-preload.ts.
   var LumnoMotionPreferenceReady: Promise<boolean> | undefined;
   // Set by the React islands entry of each page that has React.

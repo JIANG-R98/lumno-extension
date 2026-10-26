@@ -4,7 +4,7 @@
 // Each traditional character followed by the simplified one search reads it
 // as, so "台湾" finds "臺灣" and "臺灣" finds "台湾". 2903 pairs, one
 // character each.
-globalThis.LumnoSearchHanVariants = [
+const HAN_VARIANT_PAIRS: string = [
   '㑳㑇㘚㘎㠏㟆㥮㤘㩜㨫㩳㧐䃮鿎䊷䌶䋙䌺䋻䌾䝼䞍䥑鿏䬗扬䯀䯅䰾鲃䱽䲝䲁鳚䲘鳤䴉鹮䶧咬丟丢並并乾干亂乱亙亘亞亚佇伫佈布佔占併并來来侖仑',
   '侶侣侷局俁俣係系俔伣俠侠俬私俱具倀伥倆俩倈俫倉仓個个們们倖幸倣仿倫伦偉伟側侧偵侦偽伪傑杰傖伧傘伞備备傢家傭佣傯偬傳传傴伛債债傷伤',
   '傾倾僂偻僅仅僇戮僉佥僑侨僕仆僞伪僥侥僨偾僱雇價价儀仪儂侬億亿儈侩儉俭儐傧儔俦儕侪儘尽償偿優优儲储儷俪儸㑩儺傩儻傥儼俨兇凶兌兑兒儿',
@@ -97,3 +97,5 @@ globalThis.LumnoSearchHanVariants = [
   '鹼碱鹽盐麗丽麤粗麥麦麩麸麯曲麴麹麵面麼么麽么黃黄黌黉點点黨党黲黪黴霉黶黡黷黩黽黾黿鼋鼇鳌鼈鳖鼉鼍鼕冬鼴鼹齊齐齋斋齎赍齏齑齒齿齔龀',
   '齕龁齗龂齙龅齜龇齟龃齠龆齡龄齣出齦龈齧啮齩咬齪龊齬龉齲龋齶腭齷龌龍龙龎厐龐庞龑䶮龔龚龕龛龜龟'
 ].join('');
+
+export { HAN_VARIANT_PAIRS };

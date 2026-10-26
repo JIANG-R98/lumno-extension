@@ -1,8 +1,8 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-// The Han variant table is a classic script that leaves a global.
-import '../search/search-han-variants.js';
+import { HAN_VARIANT_PAIRS } from '../../domain/search/han-variants.generated';
+import { installHanVariantPairs } from '../../domain/search/han-variants';
 import * as searchInputModeModule from '../search/search-input-mode';
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import type { ModeMenuItem } from '../search/input-mode/types';
@@ -43,6 +43,7 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
+installHanVariantPairs(HAN_VARIANT_PAIRS);
 const LumnoSearchInputMode = searchInputModeModule;
 
 // The search input's parts as a surface renders them.

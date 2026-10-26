@@ -366,6 +366,21 @@ async function pipPageBridge({ browser, fixtures }) {
     'the bridge should answer in the page world');
 }
 
+// Pages import the traditional-to-simplified table by URL as an ES module the
+// first time the scope panel's filter needs it; the module exports the pairs
+// and leaves no global behind.
+async function hanVariantsModule({ browser }) {
+  const newtab = await browser.openPage(browser.extensionUrl('newtab.html'));
+  const result = await newtab.evaluate(`import(chrome.runtime.getURL('build/han-variants.js')).then((module) => ({
+    length: module.HAN_VARIANT_PAIRS.length,
+    first: module.HAN_VARIANT_PAIRS.slice(0, 2),
+    global: 'LumnoSearchHanVariants' in globalThis
+  }))`);
+  assert.strictEqual(result.length, 2903 * 2);
+  assert.strictEqual(result.first.length, 2);
+  assert.strictEqual(result.global, false);
+}
+
 module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
@@ -374,5 +389,6 @@ module.exports = {
   'tab-switcher': tabSwitcher,
   'link-preview': linkPreview,
   diagnostics,
-  'pip-page-bridge': pipPageBridge
+  'pip-page-bridge': pipPageBridge,
+  'han-variants-module': hanVariantsModule
 };
