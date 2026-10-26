@@ -276,80 +276,101 @@ function createEngagementNoticeDefinition(surface: unknown): Readonly<FeatureHin
   });
 }
 
-function createEngagementNotice(options?: EngagementNoticeOptions | null): EngagementNoticeController | null {
-  const config: EngagementNoticeOptions = options || {};
-  if (!ENGAGEMENT_NOTICE_ENABLED && config.forceEnabledForTesting !== true) {
-    return null;
-  }
-  const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
-  const featureHints = config.featureHints || LumnoFeatureHints;
-  const chromeApi: EngagementChromeApi | null = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
-  const surface = readSurface(config.surface);
-  if (!documentObj) {
-    return null;
-  }
+// One invitation on one page, from its first scheduling to destroy().
+interface EngagementNoticeContext {
+  config: EngagementNoticeOptions;
+  chromeApi: EngagementChromeApi | null;
+  surface: EngagementSurface;
+  now: () => number;
+  windowObj: Partial<Pick<Window, 'setTimeout' | 'clearTimeout'>> | null;
+  delayMs: number;
+  state: EngagementState;
+  destroyed: boolean;
+  suppressed: boolean;
+  meaningfulUseRecorded: boolean;
+  stateLoaded: boolean;
+  showTimer: number;
+  hint: FeatureHintController | null;
+}
 
-  const definition = createEngagementNoticeDefinition(surface);
-  const now = typeof config.now === 'function' ? config.now : () => Date.now();
-  const windowObj = config.windowObj ||
-    documentObj.defaultView ||
-    (typeof window !== 'undefined' ? window : null);
+function createEngagementNoticeContext(config: EngagementNoticeOptions, documentObj: Document): EngagementNoticeContext {
+  const surface = readSurface(config.surface);
   const delayMs = typeof config.delayMs === 'number' && Number.isFinite(config.delayMs)
     ? Math.max(0, config.delayMs)
     : (surface === 'overlay' ? 1200 : 1800);
+  return {
+    config,
+    chromeApi: config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null),
+    surface,
+    now: typeof config.now === 'function' ? config.now : () => Date.now(),
+    windowObj: config.windowObj || documentObj.defaultView || (typeof window !== 'undefined' ? window : null),
+    delayMs,
+    state: normalizeEngagementState(null),
+    destroyed: false,
+    suppressed: false,
+    meaningfulUseRecorded: false,
+    stateLoaded: false,
+    showTimer: 0,
+    hint: null
+  };
+}
+
+function clearShowTimer(ctx: EngagementNoticeContext): void {
+  const windowObj = ctx.windowObj;
+  if (ctx.showTimer && windowObj && typeof windowObj.clearTimeout === 'function') {
+    windowObj.clearTimeout(ctx.showTimer);
+  }
+  ctx.showTimer = 0;
+}
+
+function canShowNow(ctx: EngagementNoticeContext): boolean {
+  if (ctx.destroyed || ctx.suppressed) {
+    return false;
+  }
+  // The invitation is built around rating Lumno; skip it if there is no
+  // store page to rate.
+  if (!getReviewUrl()) {
+    return false;
+  }
+  return typeof ctx.config.canShow === 'function'
+    ? ctx.config.canShow() !== false
+    : true;
+}
+
+function markCompleted(ctx: EngagementNoticeContext): Promise<EngagementState> {
+  ctx.state.completedAt = Math.max(1, Number(ctx.now()) || Date.now());
+  return setStoredEngagementState(ctx.chromeApi, ctx.state);
+}
+
+function finishAction(ctx: EngagementNoticeContext, actionId: EngagementAction, event: MouseEvent): void {
+  const config = ctx.config;
+  if (ctx.hint) {
+    ctx.hint.dismiss();
+  }
+  markCompleted(ctx);
+  if (actionId === 'review' && typeof config.onReview === 'function') {
+    config.onReview(event);
+  }
+  if (actionId === 'community' && typeof config.onCommunity === 'function') {
+    config.onCommunity(event);
+  }
+  if (typeof config.onAction === 'function') {
+    config.onAction(actionId, event);
+  }
+}
+
+function createNoticeHint(ctx: EngagementNoticeContext, documentObj: Document): FeatureHintController | null {
+  const { config, chromeApi } = ctx;
+  const featureHints = config.featureHints || LumnoFeatureHints;
   const communityChannel = getCommunityChannel(config.locale);
-  let state = normalizeEngagementState(null);
-  let destroyed = false;
-  let suppressed = false;
-  let meaningfulUseRecorded = false;
-  let stateLoaded = false;
-  let showTimer = 0;
-
-  function clearShowTimer(): void {
-    if (showTimer && windowObj && typeof windowObj.clearTimeout === 'function') {
-      windowObj.clearTimeout(showTimer);
-    }
-    showTimer = 0;
-  }
-
-  function canShowNow(): boolean {
-    if (destroyed || suppressed) {
-      return false;
-    }
-    // The invitation is built around rating Lumno; skip it if there is no
-    // store page to rate.
-    if (!getReviewUrl()) {
-      return false;
-    }
-    return typeof config.canShow === 'function'
-      ? config.canShow() !== false
-      : true;
-  }
-
-  function markCompleted(): Promise<EngagementState> {
-    state.completedAt = Math.max(1, Number(now()) || Date.now());
-    return setStoredEngagementState(chromeApi, state);
-  }
-
-  function finishAction(actionId: EngagementAction, event: MouseEvent): void {
-    if (hintController) {
-      hintController.dismiss();
-    }
-    markCompleted();
-    if (actionId === 'review' && typeof config.onReview === 'function') {
-      config.onReview(event);
-    }
-    if (actionId === 'community' && typeof config.onCommunity === 'function') {
-      config.onCommunity(event);
-    }
-    if (typeof config.onAction === 'function') {
-      config.onAction(actionId, event);
-    }
-  }
-
-  const hintController = featureHints.createFeatureHint({
+  const wordmarkSrc = getExtensionAssetUrl(
+    chromeApi,
+    'assets/images/lumno-wordmark-mask.svg',
+    '../../assets/images/lumno-wordmark-mask.svg'
+  );
+  return featureHints.createFeatureHint({
     documentObj,
-    definition,
+    definition: createEngagementNoticeDefinition(ctx.surface),
     chromeApi,
     t: config.t,
     badgeIconImageSrc: getExtensionAssetUrl(
@@ -357,16 +378,8 @@ function createEngagementNotice(options?: EngagementNoticeOptions | null): Engag
       'assets/images/lumno.png',
       '../../assets/images/lumno.png'
     ),
-    badgeWordmarkImageSrc: getExtensionAssetUrl(
-      chromeApi,
-      'assets/images/lumno-wordmark-mask.svg',
-      '../../assets/images/lumno-wordmark-mask.svg'
-    ),
-    badgeWordmarkDarkImageSrc: getExtensionAssetUrl(
-      chromeApi,
-      'assets/images/lumno-wordmark-mask.svg',
-      '../../assets/images/lumno-wordmark-mask.svg'
-    ),
+    badgeWordmarkImageSrc: wordmarkSrc,
+    badgeWordmarkDarkImageSrc: wordmarkSrc,
     initiallyVisible: false,
     actions: [
       {
@@ -376,111 +389,129 @@ function createEngagementNotice(options?: EngagementNoticeOptions | null): Engag
         labelFallback: 'leave 5 stars',
         variant: 'primary',
         onClick(event) {
-          finishAction('review', event);
+          finishAction(ctx, 'review', event);
         }
       },
       {
         id: 'community',
-        icon: communityChannel === 'wechat'
-          ? 'ri-wechat-fill'
-          : 'ri-twitter-x-line',
+        icon: communityChannel === 'wechat' ? 'ri-wechat-fill' : 'ri-twitter-x-line',
         labelKey: 'engagement_notice_community',
-        labelFallback: communityChannel === 'wechat'
-          ? 'join WeChat group'
-          : 'find us on X',
+        labelFallback: communityChannel === 'wechat' ? 'join WeChat group' : 'find us on X',
         variant: 'secondary',
         onClick(event) {
-          finishAction('community', event);
+          finishAction(ctx, 'community', event);
         }
       }
     ],
     onDismiss() {
-      markCompleted();
+      markCompleted(ctx);
       if (typeof config.onDismiss === 'function') {
         config.onDismiss();
       }
     }
   });
-  if (!hintController) {
-    return null;
-  }
-  const hint = hintController;
-  hint.element.setAttribute('data-engagement-surface', surface);
+}
 
-  function exposeIfEligible(): void {
-    showTimer = 0;
-    if (!shouldShowEngagementNotice(state, surface, now()) || !canShowNow()) {
-      return;
-    }
-    state.exposureCount += 1;
-    state.lastShownAt = Math.max(1, Number(now()) || Date.now());
-    setStoredEngagementState(chromeApi, state);
-    hint.setVisible(true);
+function exposeIfEligible(ctx: EngagementNoticeContext, hint: FeatureHintController): void {
+  ctx.showTimer = 0;
+  if (!shouldShowEngagementNotice(ctx.state, ctx.surface, ctx.now()) || !canShowNow(ctx)) {
+    return;
   }
+  ctx.state.exposureCount += 1;
+  ctx.state.lastShownAt = Math.max(1, Number(ctx.now()) || Date.now());
+  setStoredEngagementState(ctx.chromeApi, ctx.state);
+  hint.setVisible(true);
+}
 
-  function scheduleExposure(): void {
-    clearShowTimer();
-    if (!shouldShowEngagementNotice(state, surface, now()) || !canShowNow()) {
-      return;
-    }
-    if (!windowObj || typeof windowObj.setTimeout !== 'function') {
-      exposeIfEligible();
-      return;
-    }
-    showTimer = windowObj.setTimeout(exposeIfEligible, delayMs);
+function scheduleExposure(ctx: EngagementNoticeContext, hint: FeatureHintController): void {
+  clearShowTimer(ctx);
+  if (!shouldShowEngagementNotice(ctx.state, ctx.surface, ctx.now()) || !canShowNow(ctx)) {
+    return;
   }
+  const windowObj = ctx.windowObj;
+  if (!windowObj || typeof windowObj.setTimeout !== 'function') {
+    exposeIfEligible(ctx, hint);
+    return;
+  }
+  ctx.showTimer = windowObj.setTimeout(() => exposeIfEligible(ctx, hint), ctx.delayMs);
+}
 
-  getStoredEngagementState(chromeApi)
+// Counts this open, then waits for the exposure gate before scheduling.
+function loadStateAndSchedule(ctx: EngagementNoticeContext, hint: FeatureHintController): void {
+  getStoredEngagementState(ctx.chromeApi)
     .then((storedState) => {
-      if (destroyed) {
+      if (ctx.destroyed) {
         return null;
       }
-      state = recordSurfaceOpenInState(storedState, surface, now());
-      stateLoaded = true;
-      if (meaningfulUseRecorded) {
-        state = recordMeaningfulUseInState(state, surface, now());
+      ctx.state = recordSurfaceOpenInState(storedState, ctx.surface, ctx.now());
+      ctx.stateLoaded = true;
+      if (ctx.meaningfulUseRecorded) {
+        ctx.state = recordMeaningfulUseInState(ctx.state, ctx.surface, ctx.now());
       }
-      return setStoredEngagementState(chromeApi, state);
+      return setStoredEngagementState(ctx.chromeApi, ctx.state);
     })
     .then(() => {
-      if (destroyed) {
+      if (ctx.destroyed) {
         return null;
       }
-      return Promise.resolve(config.exposureGate).catch(() => null);
+      return Promise.resolve(ctx.config.exposureGate).catch(() => null);
     })
     .then(() => {
-      if (!destroyed) {
-        scheduleExposure();
+      if (!ctx.destroyed) {
+        scheduleExposure(ctx, hint);
       }
     });
+}
+
+function recordMeaningfulUse(ctx: EngagementNoticeContext, hint: FeatureHintController): void {
+  if (ctx.destroyed || ctx.meaningfulUseRecorded) {
+    return;
+  }
+  ctx.meaningfulUseRecorded = true;
+  ctx.suppressed = true;
+  clearShowTimer(ctx);
+  hint.setVisible(false);
+  if (!ctx.stateLoaded) {
+    return;
+  }
+  ctx.state = recordMeaningfulUseInState(ctx.state, ctx.surface, ctx.now());
+  setStoredEngagementState(ctx.chromeApi, ctx.state);
+}
+
+function createEngagementNotice(options?: EngagementNoticeOptions | null): EngagementNoticeController | null {
+  const config: EngagementNoticeOptions = options || {};
+  if (!ENGAGEMENT_NOTICE_ENABLED && config.forceEnabledForTesting !== true) {
+    return null;
+  }
+  const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
+  if (!documentObj) {
+    return null;
+  }
+  const ctx = createEngagementNoticeContext(config, documentObj);
+  const hint = createNoticeHint(ctx, documentObj);
+  if (!hint) {
+    return null;
+  }
+  ctx.hint = hint;
+  hint.element.setAttribute('data-engagement-surface', ctx.surface);
+  loadStateAndSchedule(ctx, hint);
 
   return Object.freeze({
     ...hint,
     destroy() {
-      destroyed = true;
-      clearShowTimer();
+      ctx.destroyed = true;
+      clearShowTimer(ctx);
       hint.destroy();
     },
     getState() {
-      return normalizeEngagementState(state);
+      return normalizeEngagementState(ctx.state);
     },
     recordMeaningfulUse() {
-      if (destroyed || meaningfulUseRecorded) {
-        return;
-      }
-      meaningfulUseRecorded = true;
-      suppressed = true;
-      clearShowTimer();
-      hint.setVisible(false);
-      if (!stateLoaded) {
-        return;
-      }
-      state = recordMeaningfulUseInState(state, surface, now());
-      setStoredEngagementState(chromeApi, state);
+      recordMeaningfulUse(ctx, hint);
     },
     suppressForSession() {
-      suppressed = true;
-      clearShowTimer();
+      ctx.suppressed = true;
+      clearShowTimer(ctx);
       hint.setVisible(false);
     }
   });
