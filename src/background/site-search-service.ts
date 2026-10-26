@@ -14,33 +14,9 @@ import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import {
-  AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-  AGGREGATE_SEARCH_STORAGE_KEY
-} from '../domain/settings';
+import { aggregateSearchAutoGroupEnabled, aggregateSearches } from '../domain/settings';
 import { getShortcutUrl, loadShortcutRules, storageArea, waitForTabComplete } from './worker-context';
-import {
-  abortSearchEngineSuggestionRequest,
-  buildDefaultSearchUrl,
-  clearPendingSearch,
-  consumeSearchEngineSuggestionRequest,
-  deleteHistoryUrlFromSearch,
-  getDirectNavigationUrl,
-  getSearchEngineSuggestionRequestKey,
-  getSearchEngineSuggestions,
-  getSearchSuggestions,
-  getSiteSearchProviderEntryUrl,
-  isInteractiveSiteSearchProvider,
-  loadSiteSearchProviders,
-  markPendingSearchTab,
-  pendingSearchTabId,
-  recordSearchSuggestionSelection,
-  releaseSearchEngineSuggestionRequest,
-  scheduleSearchEngineSuggestionPrefetch,
-  searchEngineSuggestionRequests,
-  shouldPrefetchSearchEngineSuggestions,
-  startSearchEngineSuggestionRequest
-} from './search-suggestions-service';
+import { abortSearchEngineSuggestionRequest, buildDefaultSearchUrl, clearPendingSearch, consumeSearchEngineSuggestionRequest, deleteHistoryUrlFromSearch, getDirectNavigationUrl, getSearchEngineSuggestionRequestKey, getSearchEngineSuggestions, getSearchSuggestions, getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, markPendingSearchTab, pendingSearchTabId, recordSearchSuggestionSelection, releaseSearchEngineSuggestionRequest, scheduleSearchEngineSuggestionPrefetch, searchEngineSuggestionRequests, shouldPrefetchSearchEngineSuggestions, startSearchEngineSuggestionRequest } from './search-suggestions-service';
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
 import type { AggregateSearchQueryRunner } from './aggregate-search';
 import type { CreatedTabCallback } from './tab-groups';
@@ -208,7 +184,7 @@ function runAggregateSearchQuery(
       chromeApi: chrome,
       loadAggregateSearches: () => LumnoAggregateSearchStorage.loadAggregateSearches(
         storageArea,
-        AGGREGATE_SEARCH_STORAGE_KEY,
+        aggregateSearches.key,
         chrome
       ),
       loadSiteSearchProviders,
@@ -217,7 +193,7 @@ function runAggregateSearchQuery(
         return LumnoSettingsStorage.readStorageValue(
           storageArea,
           chrome,
-          AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY
+          aggregateSearchAutoGroupEnabled.key
         );
       },
       openAggregateSearch: AGGREGATE_SEARCH.openAggregateSearch,

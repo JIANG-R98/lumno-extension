@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const pageTheme = require('../../src/overlay/page-theme.ts');
 const { parseCss } = require('../helpers/css-rules');
 const { readStylesheet } = require('../helpers/css-tokens');
@@ -10,7 +10,7 @@ const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 // The "adapt theme colors to each webpage" setting: its Settings row, the
 // overlay following it live, and the shared theme policy.
 
-const ADAPTATION_KEY = settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY;
+const ADAPTATION_KEY = settings.overlayPageThemeAdaptationEnabled.key;
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
 const ROW_ID = '_x_extension_overlay_page_theme_adaptation_row_2026_unique_';
 
@@ -87,14 +87,14 @@ async function testOverlayFollowsTheSettingLive() {
 }
 
 assert.strictEqual(
-  settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
+  settings.overlayPageThemeAdaptationEnabled.key,
   '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_'
 );
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(
-  settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY
+assert(settings.BROWSER_SYNC_KEYS.includes(
+  settings.overlayPageThemeAdaptationEnabled.key
 ));
-assert.strictEqual(settings.normalizeOverlayPageThemeAdaptationEnabled(undefined), true);
-assert.strictEqual(settings.normalizeOverlayPageThemeAdaptationEnabled(false), false);
+assert.strictEqual(settings.overlayPageThemeAdaptationEnabled.parse(undefined), true);
+assert.strictEqual(settings.overlayPageThemeAdaptationEnabled.parse(false), false);
 
 const cases = [
   [{ mode: 'system', pageTheme: 'light', systemTheme: 'dark' }, 'light'],

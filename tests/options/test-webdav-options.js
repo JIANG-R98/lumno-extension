@@ -40,7 +40,7 @@ async function run() {
         local: { kind: 'text', value: '#000000' }, remote: { kind: 'text', value: '#445566' } }] });
     callback({ ok: true });
   } }, storage: { onChanged: { addListener(fn) { listeners.push(fn); } } } };
-  window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
+  window.eval(moduleScript('src/domain/settings/index.ts', 'LumnoSettings'));
   window.eval(moduleScript('src/options/webdav-options.ts', 'LumnoWebDavOptions'));
   const messages = JSON.parse(fs.readFileSync('_locales/en/messages.json', 'utf8'));
   window.chrome = chrome;
@@ -151,7 +151,7 @@ async function run() {
   await actions.onAction('pause', 'a');
   model.syncRevision = 'dav-multi-1';
   model.connections = [];
-  const key = `${window.LumnoSettings.WEBDAV_STATUS_STORAGE_KEY}:b`;
+  const key = `${window.LumnoSettings.webdavStatus.key}:b`;
   listeners.forEach((fn) => fn({ [key]: {} }, 'local'));
   await new Promise((resolve) => setImmediate(resolve));
   assert.strictEqual(renderModel.connections.length, 0);

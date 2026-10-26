@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 // Where a search result opens: next to the tab the search came from, before
@@ -15,7 +15,7 @@ function createWorker(options = {}) {
   const grouped = [];
   const worker = loadBackground({
     tabs: options.closedSource ? [] : [Object.assign({}, SOURCE)],
-    sync: options.position ? { [settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: options.position } : {},
+    sync: options.position ? { [settings.searchResultTabPosition.key]: options.position } : {},
     configureChrome(chrome) {
       chrome.tabGroups = Object.assign({ TAB_GROUP_ID_NONE: -1 }, chrome.tabGroups || {});
       chrome.tabs.group = (properties, callback) => {
@@ -63,9 +63,9 @@ function createWorker(options = {}) {
 }
 
 async function run() {
-  assert.strictEqual(settings.normalizeSearchResultTabPosition(undefined), 'end');
-  assert.strictEqual(settings.normalizeSearchResultTabPosition('invalid'), 'end');
-  assert.strictEqual(settings.normalizeSearchResultTabPosition('beforeCurrent'), 'beforeCurrent');
+  assert.strictEqual(settings.searchResultTabPosition.parse(undefined), 'end');
+  assert.strictEqual(settings.searchResultTabPosition.parse('invalid'), 'end');
+  assert.strictEqual(settings.searchResultTabPosition.parse('beforeCurrent'), 'beforeCurrent');
 
   for (const [position, index] of [['afterCurrent', 6], ['beforeCurrent', 5]]) {
     for (const disposition of ['newTab', 'backgroundTab']) {

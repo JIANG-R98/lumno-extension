@@ -127,13 +127,6 @@ function getFolderIconState(folderIcon: Element): FolderIconState {
 }
 
 const DEFAULT_FOLDER_COLOR = '#5393FF';
-// Legacy device-only map keyed by bookmark id. Ids differ on every device,
-// so it is migrated into the synced reference map below.
-const FOLDER_COLORS_STORAGE_KEY = '_x_extension_bookmark_folder_colors_2026_unique_';
-// Synced map keyed by a hash of the folder's root and title path. The
-// creation time travels with browser bookmark sync and re-finds a folder
-// after it is renamed or moved.
-const FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
 // Keeps the synced value well under the 8 KB browser sync item quota.
 const MAX_FOLDER_COLOR_REFS = 100;
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1207,8 +1200,6 @@ function getFolderMorphParts(folderIcon: Element): readonly FolderMorphPart[] {
 
 export {
   DEFAULT_FOLDER_COLOR,
-  FOLDER_COLORS_STORAGE_KEY,
-  FOLDER_COLOR_REFS_STORAGE_KEY,
   MAX_FOLDER_COLOR_REFS,
   normalizeFolderColorMap,
   normalizeFolderColorRefs,

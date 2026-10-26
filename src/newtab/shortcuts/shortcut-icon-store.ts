@@ -1,14 +1,9 @@
 // Custom shortcut icons: reading a picked image file, fitting it into a
 // 128 px PNG, and keeping the images by shortcut id in local storage.
 import type { StorageAreaLike } from '../../domain/storage-port';
-import {
-  DEFAULT_STORAGE_KEY,
-  MAX_OUTPUT_BYTES,
-  getDataUrlByteLength,
-  normalizeIconDataUrl,
-  normalizeIconMap
-} from '../../domain/shortcut-icon-map';
+import { MAX_OUTPUT_BYTES, getDataUrlByteLength, normalizeIconDataUrl, normalizeIconMap } from '../../domain/shortcut-icon-map';
 import type { ShortcutIconMap } from '../../domain/shortcut-icon-map';
+import { newtabShortcutIcons } from '../../domain/settings/newtab-shortcuts';
 
 // An error with a code saying which step failed.
 type ShortcutIconError = Error & { code: string };
@@ -110,7 +105,7 @@ function createShortcutIconStore(options?: ShortcutIconStoreOptions) {
     ? opts.windowObj || null
     : (globalThis.window || globalThis);
   const storageArea = opts.storageArea || null;
-  const storageKey = String(Object.hasOwn(opts, 'storageKey') ? opts.storageKey : DEFAULT_STORAGE_KEY);
+  const storageKey = String(Object.hasOwn(opts, 'storageKey') ? opts.storageKey : newtabShortcutIcons.key);
 
   function getRuntimeError(): { message?: string } | null {
     const chromeApi = windowObj && windowObj.chrome ? windowObj.chrome : globalThis.chrome;
@@ -248,7 +243,6 @@ function createShortcutIconStore(options?: ShortcutIconStoreOptions) {
 }
 
 export {
-  DEFAULT_STORAGE_KEY,
   MAX_SOURCE_BYTES,
   MAX_SOURCE_DIMENSION,
   OUTPUT_SIZE,

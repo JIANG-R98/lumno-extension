@@ -1,7 +1,7 @@
 const assert = require('assert');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { createOverlayPage, bundledSiteSearchProviders } = require('../helpers/overlay-runtime-harness');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // Provider icons in the real overlay's search scope menu: packaged tiles for
 // bundled providers, the worker's cached icons for the user's own, and a
@@ -34,7 +34,7 @@ async function run() {
     'a bundled provider should show its packaged tile');
   assert.ok(!page.messages.some((message) => message.action === 'getFaviconData' && /bing\.com/.test(message.pageUrl || message.url || '')),
     'a packaged tile should not be hydrated through the favicon service');
-  assert.ok(page.storageReads.some((keys) => keys.area === 'local' && keys.includes(shortcutFavicon.SITE_SEARCH_STORAGE_KEY)),
+  assert.ok(page.storageReads.some((keys) => keys.area === 'local' && keys.includes(siteSearchIconCache.key)),
     'the overlay should read the canonical icon cache');
 
   const updated = await siteSearchIconCacheStorage([{ provider: CUSTOM, dataUrl: FRESH_ICON }]);

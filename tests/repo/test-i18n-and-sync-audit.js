@@ -1,13 +1,13 @@
 const assert = require('assert');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
 const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 const auditOutput = execFileSync(process.execPath, ['scripts/check/audit-i18n.js'], {
   encoding: 'utf8'
@@ -60,26 +60,26 @@ localeNames.forEach((locale) => {
     `${locale} unavailable sync tooltip should refer to the current browser instead of Chrome`
   );
 });
-const chromeSyncKeys = settings.CHROME_SYNC_STORAGE_KEYS;
-const TOPBAR_LOCAL_KEYS = settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS;
+const chromeSyncKeys = settings.BROWSER_SYNC_KEYS;
+const TOPBAR_LOCAL_KEYS = settings.BOOKMARK_TOPBAR_SURFACE_KEYS;
 
 // The Chrome Sync (and WebDAV and export) contract: what syncs, and what
 // stays on this device.
 [
-  ['OVERLAY_ENTER_ANIMATION_STORAGE_KEY', '_x_extension_overlay_enter_animation_2026_unique_'],
-  ['BOOKMARK_VIEW_MODE_STORAGE_KEY', '_x_extension_bookmark_view_mode_2026_unique_'],
-  ['BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY', '_x_extension_bookmark_folder_icons_visible_2026_unique_'],
-  ['NEWTAB_SHORTCUTS_STORAGE_KEY', '_x_extension_newtab_shortcuts_2026_unique_'],
-  ['NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY', '_x_extension_newtab_shortcut_add_visible_2026_unique_'],
-  ['NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY', '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_']
+  ['overlayEnterAnimation', '_x_extension_overlay_enter_animation_2026_unique_'],
+  ['bookmarkViewMode', '_x_extension_bookmark_view_mode_2026_unique_'],
+  ['bookmarkFolderIconsVisible', '_x_extension_bookmark_folder_icons_visible_2026_unique_'],
+  ['newtabShortcutsLegacy', '_x_extension_newtab_shortcuts_2026_unique_'],
+  ['newtabShortcutAddVisible', '_x_extension_newtab_shortcut_add_visible_2026_unique_'],
+  ['newtabShortcutDockMagnificationEnabled', '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_']
 ].forEach(([name, key]) => {
-  assert.strictEqual(settings[name], key, `shared settings should define and export ${name}`);
+  assert.strictEqual(settings[name].key, key, `shared settings should declare ${name}`);
   assert(chromeSyncKeys.includes(key), `${name} should be included in sync, export and import`);
 });
-[settings.SITE_SEARCH_STORAGE_KEY, settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY, settings.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY].forEach((key) => {
+[settings.siteSearchCustom.key, settings.bookmarkFolderColorRefs.key, settings.bookmarkFolderColorPresets.key].forEach((key) => {
   assert(chromeSyncKeys.includes(key), `${key} should be in the Chrome Sync and WebDAV contract`);
 });
-assert(!chromeSyncKeys.includes(shortcutFavicon.SITE_SEARCH_STORAGE_KEY),
+assert(!chromeSyncKeys.includes(siteSearchIconCache.key),
   'regenerable provider-icon cache data must stay out of sync/export/import settings');
 TOPBAR_LOCAL_KEYS.forEach((key) => {
   assert(!chromeSyncKeys.includes(key), `options must not export or import local-only ${key}`);
@@ -148,9 +148,9 @@ localeNames.forEach((locale) => {
 async function testBackgroundMigration() {
   const background = loadBackground({
     local: {
-      [settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: 'fade',
-      [settings.BOOKMARK_VIEW_MODE_STORAGE_KEY]: 'top',
-      [settings.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY]: false
+      [settings.overlayEnterAnimation.key]: 'fade',
+      [settings.bookmarkViewMode.key]: 'top',
+      [settings.bookmarkFolderIconsVisible.key]: false
     },
     sync: Object.assign({ _x_extension_language_messages_2024_unique_: { hello: 'world' } },
       Object.fromEntries(TOPBAR_LOCAL_KEYS.map((key) => [key, key.includes('mode') ? 'clear' : '#aabbcc'])))
@@ -158,7 +158,7 @@ async function testBackgroundMigration() {
   await wait(100);
   const sync = background.storage.sync.data;
   assert.deepStrictEqual(
-    [sync[settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY], sync[settings.BOOKMARK_VIEW_MODE_STORAGE_KEY], sync[settings.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY]],
+    [sync[settings.overlayEnterAnimation.key], sync[settings.bookmarkViewMode.key], sync[settings.bookmarkFolderIconsVisible.key]],
     ['fade', 'top', false], 'background startup should migrate the full Chrome Sync contract');
   assert(!Object.hasOwn(sync, '_x_extension_language_messages_2024_unique_'),
     'background startup should remove the obsolete oversized language cache from Chrome Sync');
@@ -178,10 +178,10 @@ async function testLegacyLocalChoicesSurvive() {
     'invalid values are repaired at once, missing ones only without a local copy');
 
   const newtabKeys = [
-    settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
-    settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
-    settings.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
-    settings.RECENT_COUNT_STORAGE_KEY
+    settings.newtabFeedbackButtonVisible.key,
+    settings.newtabAppearanceButtonVisible.key,
+    settings.bookmarkFolderIconsVisible.key,
+    settings.recentCount.key
   ];
   const legacy = await createNewtabPage({ local: { [newtabKeys[0]]: false, [newtabKeys[1]]: false, [newtabKeys[2]]: false, [newtabKeys[3]]: 0 } });
   await legacy.settle(800);
@@ -195,18 +195,18 @@ async function testLegacyLocalChoicesSurvive() {
     'a device without old choices still saves the defaults');
   fresh.close();
 
-  const options = await createOptionsPage({ local: { [settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: 'fade' } });
+  const options = await createOptionsPage({ local: { [settings.overlayEnterAnimation.key]: 'fade' } });
   await options.settle(500);
-  assert.strictEqual(options.storage.sync.data[settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY], 'fade',
+  assert.strictEqual(options.storage.sync.data[settings.overlayEnterAnimation.key], 'fade',
     'Settings should move an old local opening animation into sync instead of saving the default over it');
   assert.strictEqual(options.document.querySelector('[data-overlay-enter-animation="fade"]').getAttribute('aria-checked'), 'true');
   options.close();
 }
 
 async function testOptionsMigration() {
-  const page = await createOptionsPage({ local: { [settings.BOOKMARK_VIEW_MODE_STORAGE_KEY]: 'top' } });
+  const page = await createOptionsPage({ local: { [settings.bookmarkViewMode.key]: 'top' } });
   await page.settle(300);
-  assert.strictEqual(page.storage.sync.data[settings.BOOKMARK_VIEW_MODE_STORAGE_KEY], 'top',
+  assert.strictEqual(page.storage.sync.data[settings.bookmarkViewMode.key], 'top',
     'options should migrate legacy local settings into sync storage');
   page.close();
 }
@@ -215,7 +215,7 @@ async function testOverlayReadsAnimationAtStartup() {
   const page = await createOverlayPage({ stylesheetsLoad: true });
   await page.open({});
   await page.settle(100);
-  assert(page.storageReads.some((keys) => keys.length > 1 && keys.includes(settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY)),
+  assert(page.storageReads.some((keys) => keys.length > 1 && keys.includes(settings.overlayEnterAnimation.key)),
     'overlay runtime should read the synchronized opening-animation preference in its batched startup settings');
   page.close();
 }
@@ -224,8 +224,8 @@ async function testOverlayReadsAnimationAtStartup() {
 async function testTopbarMaterialIsLocal() {
   const [modeKey, lightKey, darkKey, legacyKey] = TOPBAR_LOCAL_KEYS;
   const page = await createNewtabPage({
-    local: { [settings.BOOKMARK_VIEW_MODE_STORAGE_KEY]: 'top', [modeKey]: 'custom', [lightKey]: '#112233' },
-    sync: { [settings.BOOKMARK_VIEW_MODE_STORAGE_KEY]: 'top', [modeKey]: 'adaptive', [lightKey]: '#aabbcc', [darkKey]: '#ddeeff', [legacyKey]: '#445566' },
+    local: { [settings.bookmarkViewMode.key]: 'top', [modeKey]: 'custom', [lightKey]: '#112233' },
+    sync: { [settings.bookmarkViewMode.key]: 'top', [modeKey]: 'adaptive', [lightKey]: '#aabbcc', [darkKey]: '#ddeeff', [legacyKey]: '#445566' },
     bookmarks: [{ id: 'u1', title: 'U', url: 'https://u.example/' }]
   });
   await page.settle(500);
@@ -247,7 +247,7 @@ async function testTopbarMaterialIsLocal() {
 // The bookmark view mode lives in Sync; an empty Sync recovers this
 // device's last mode, unless WebDAV is the device's source.
 async function testBookmarkViewMode() {
-  const KEY = settings.BOOKMARK_VIEW_MODE_STORAGE_KEY;
+  const KEY = settings.bookmarkViewMode.key;
   const recovered = await createNewtabPage({ local: { [KEY]: 'top' } });
   await recovered.settle(400);
   assert.strictEqual(recovered.document.body.getAttribute('data-bookmark-view-mode'), 'top',
@@ -255,7 +255,7 @@ async function testBookmarkViewMode() {
   assert.strictEqual(recovered.storage.sync.data[KEY], 'top', 'a recovered local bookmark mode should be written back to sync storage');
   recovered.close();
 
-  const webdav = await createNewtabPage({ local: { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [KEY]: 'top' } });
+  const webdav = await createNewtabPage({ local: { [settings.localPrimary.key]: true, [KEY]: 'top' } });
   await webdav.settle(400);
   assert.ok(!webdav.storage.sync.writes.some((write) => Object.hasOwn(write, KEY)),
     'a WebDAV device must not migrate its complete local source into Chrome');
@@ -265,7 +265,7 @@ async function testBookmarkViewMode() {
 // Folder colors from another device are applied without writing back, so
 // two devices never bounce a renamed folder.
 async function testFolderColorsFromAnotherDevice() {
-  const KEY = settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY;
+  const KEY = settings.bookmarkFolderColorRefs.key;
   const page = await createNewtabPage({ bookmarks: [{ id: 'f1', title: 'Work', children: [{ id: 'u1', title: 'U', url: 'https://u.example/' }] }] });
   await page.settle(400);
   const before = page.storage.sync.writes.length;
@@ -278,7 +278,7 @@ async function testFolderColorsFromAnotherDevice() {
 
 // The appearance panel names its shortcut settings in the page language.
 async function testShortcutSettingLabels() {
-  const page = await createNewtabPage({ sync: { [settings.LANGUAGE_STORAGE_KEY]: 'en' } });
+  const page = await createNewtabPage({ sync: { [settings.language.key]: 'en' } });
   await page.settle(300);
   page.click(page.document.querySelector('.x-nt-wallpaper-button'));
   await page.settle(400);

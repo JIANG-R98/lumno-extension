@@ -1,6 +1,7 @@
 // Wallpaper-adaptive tones: samples the wallpaper under each text, icon and
 // glass surface of the New Tab page and sets the ink and colors that read on it.
 import type { WallpaperSample } from './wallpaper-effects';
+import { newtabGlassInkHint } from '../../domain/settings/newtab-wallpaper';
 
 type ToneInk = 'light' | 'dark';
 type ThemeMode = 'light' | 'dark';
@@ -983,7 +984,6 @@ function clearGlassAdaptationStyles(element: HTMLElement): void {
   element.style.removeProperty('--x-nt-glass-saturate');
 }
 
-const GLASS_INK_HINT_STORAGE_KEY = '_x_extension_newtab_glass_ink_hint_2026_unique_';
 
 function createWallpaperAdaptiveTone<W>(options?: WallpaperAdaptiveToneOptions<W> | null) {
   const config: WallpaperAdaptiveToneOptions<W> = options || {};
@@ -1684,8 +1684,8 @@ function createWallpaperAdaptiveTone<W>(options?: WallpaperAdaptiveToneOptions<W
       documentObj.body.setAttribute('data-glass-ink-hint', hint);
     }
     try {
-      if (windowObj.localStorage.getItem(GLASS_INK_HINT_STORAGE_KEY) !== hint) {
-        windowObj.localStorage.setItem(GLASS_INK_HINT_STORAGE_KEY, hint);
+      if (windowObj.localStorage.getItem(newtabGlassInkHint.key) !== hint) {
+        windowObj.localStorage.setItem(newtabGlassInkHint.key, hint);
       }
     } catch {
       // localStorage is only a head start; the sample corrects the ink either way.
@@ -1778,7 +1778,6 @@ function createWallpaperAdaptiveTone<W>(options?: WallpaperAdaptiveToneOptions<W
 type WallpaperAdaptiveTone = ReturnType<typeof createWallpaperAdaptiveTone>;
 
 export {
-  GLASS_INK_HINT_STORAGE_KEY,
   createWallpaperAdaptiveTone,
   getGlassAdaptation,
   chooseReadableInk,

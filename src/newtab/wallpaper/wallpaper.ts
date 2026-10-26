@@ -44,35 +44,37 @@ import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
 import { readBootValue } from '../../platform/boot-handoff';
 import { getWallpaperViewApi } from '../react/wallpaper-view';
+import { newtabFavicon, newtabWallpaperEffect, newtabWallpaperOverlay, newtabWallpaperPreload } from '../../domain/settings/newtab-wallpaper';
+import { newtabTime12Hour, newtabTimeFont, newtabTimeFontSize, newtabTimeFontWeight, newtabTimeInk, newtabTimeOpacity, newtabTimeSecondsVisible, newtabTopContentMode } from '../../domain/settings/newtab-time';
+import { bingDailyCache } from '../../domain/settings/newtab-wallpaper';
 
 const DEFAULT_STORAGE_KEYS = {
-  wallpaper: SETTINGS.NEWTAB_WALLPAPER_STORAGE_KEY,
-  localWallpaper: SETTINGS.NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
-  onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
-  linkWallpapers: SETTINGS.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
-  dailyWallpaperPicks: SETTINGS.NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
-  curatedMixExcluded: SETTINGS.NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY,
-  overlay: '_x_extension_newtab_wallpaper_overlay_2026_unique_',
-  effect: '_x_extension_newtab_wallpaper_effect_2026_unique_',
-  topContentMode: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
-    '_x_extension_newtab_wordmark_visible_2026_unique_',
-  timeFontWeight: SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_weight_2026_unique_',
-  timeFontSize: SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_size_2026_unique_',
-  timeOpacity: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
-    '_x_extension_newtab_time_opacity_2026_unique_',
-  timeInk: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY ||
-    '_x_extension_newtab_time_ink_2026_unique_',
-  timeFont: SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_2026_unique_',
-  timeSecondsVisible: SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
-    '_x_extension_newtab_time_seconds_visible_2026_unique_',
-  time12Hour: SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY ||
-    '_x_extension_newtab_time_12_hour_2026_unique_',
-  favicon: '_x_extension_newtab_favicon_2026_unique_'
+  wallpaper: SETTINGS.newtabWallpaper.key,
+  localWallpaper: SETTINGS.newtabLocalWallpaper.key,
+  onlineWallpaper: SETTINGS.newtabOnlineWallpaper.key,
+  linkWallpapers: SETTINGS.newtabLinkWallpapers.key,
+  dailyWallpaperPicks: SETTINGS.newtabDailyWallpaperPicks.key,
+  curatedMixExcluded: SETTINGS.newtabCuratedMixExcluded.key,
+  overlay: newtabWallpaperOverlay.key,
+  effect: newtabWallpaperEffect.key,
+  topContentMode: SETTINGS.newtabTopContentMode.key ||
+    newtabTopContentMode.key,
+  timeFontWeight: SETTINGS.newtabTimeFontWeight.key ||
+    newtabTimeFontWeight.key,
+  timeFontSize: SETTINGS.newtabTimeFontSize.key ||
+    newtabTimeFontSize.key,
+  timeOpacity: SETTINGS.newtabTimeOpacity.key ||
+    newtabTimeOpacity.key,
+  timeInk: SETTINGS.newtabTimeInk.key ||
+    newtabTimeInk.key,
+  timeFont: SETTINGS.newtabTimeFont.key ||
+    newtabTimeFont.key,
+  timeSecondsVisible: SETTINGS.newtabTimeSecondsVisible.key ||
+    newtabTimeSecondsVisible.key,
+  time12Hour: SETTINGS.newtabTime12Hour.key ||
+    newtabTime12Hour.key,
+  favicon: newtabFavicon.key
 };
-const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
 const PRELOAD_STORAGE_VERSION = 4;
 const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 11;
 const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
@@ -746,7 +748,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     currentWallpaperId: '',
     currentTopContentMode: normalizeNewtabTopContentMode(getTopContentMode()),
     currentTimeFontWeight: normalizeNewtabTimeFontWeight(getTimeFontWeight()),
-    currentTimeFont: SETTINGS.normalizeNewtabTimeFont(getTimeFont()),
+    currentTimeFont: SETTINGS.newtabTimeFont.parse(getTimeFont()),
     currentTimeSecondsVisible: normalizeNewtabTimeSecondsVisible(getTimeSecondsVisible()),
     currentNewtabFaviconId: NEWTAB_FAVICON_DEFAULT_ID,
     wallpaperEffects: null,
@@ -1192,7 +1194,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     getCachedWallpaperImage,
     dailyWallpaperStandIns,
     window,
-    PRELOAD_STORAGE_KEY,
+    PRELOAD_STORAGE_KEY: newtabWallpaperPreload.key,
     NEWTAB_WALLPAPER_DEFAULT_ID,
     getWritableWallpaperPrefs: (...args) => getWritableWallpaperPrefs(...args),
     getWritableLocalWallpaperOverrides: (...args) => getWritableLocalWallpaperOverrides(...args),
@@ -1422,7 +1424,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     getWallpaperRuntimePath,
     remoteClient,
     window,
-    PRELOAD_STORAGE_KEY,
+    PRELOAD_STORAGE_KEY: newtabWallpaperPreload.key,
     getDisplayedWallpaperImageUrl,
     getWallpaperImageUrl,
     getWallpaperSample,
@@ -1562,15 +1564,15 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
   wallpaperState.currentLocalWallpaperOverrides = getDefaultLocalWallpaperOverrides();
 
   function normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode {
-    return SETTINGS.normalizeNewtabTopContentMode(value);
+    return SETTINGS.newtabTopContentMode.parse(value);
   }
 
   function normalizeNewtabTimeSecondsVisible(value: unknown): boolean {
-    return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
+    return SETTINGS.newtabTimeSecondsVisible.parse(value);
   }
 
   function normalizeNewtabTimeFontWeight(value: unknown): number {
-    return SETTINGS.normalizeNewtabTimeFontWeight(value);
+    return SETTINGS.newtabTimeFontWeight.parse(value);
   }
 
   wallpaperState.wallpaperAdaptiveTone = WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone({
@@ -1709,7 +1711,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
       return false;
     }
     let handled = false;
-    if (changes[REMOTE_CONTENT.BING_DAILY_CACHE_KEY] && wallpaperState.hasStoredWallpaperStateLoaded) {
+    if (changes[bingDailyCache.key] && wallpaperState.hasStoredWallpaperStateLoaded) {
       remoteClient.restoreWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
         if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
           applyResolvedNewtabWallpaper();
@@ -1718,7 +1720,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
       }).catch(warnWallpaperFailure('Could not restore the daily Bing wallpaper another tab saved.'));
       handled = true;
     }
-    if (changes[SETTINGS.ASSET_REVISION_STORAGE_KEY]) {
+    if (changes[SETTINGS.assetRevision.key]) {
       void refreshCustomWallpapers().then(() => loadStoredWallpaperState());
       handled = true;
     }
@@ -1775,7 +1777,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     }
     if (NEWTAB_TIME_FONT_STORAGE_KEY && changes[NEWTAB_TIME_FONT_STORAGE_KEY]) {
       const raw = changes[NEWTAB_TIME_FONT_STORAGE_KEY].newValue;
-      const nextValue = SETTINGS.normalizeNewtabTimeFont(raw);
+      const nextValue = SETTINGS.newtabTimeFont.parse(raw);
       applyTimeFont(nextValue);
       if (storageArea && raw !== nextValue) {
         void storageArea.set({ [NEWTAB_TIME_FONT_STORAGE_KEY]: nextValue });

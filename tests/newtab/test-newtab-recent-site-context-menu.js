@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
@@ -18,7 +18,7 @@ const HISTORY = Array.from({ length: 4 }, (_, index) => ({
 
 async function openNewtab() {
   const page = await createNewtabPage({
-    sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 8, [settings.RECENT_MODE_STORAGE_KEY]: 'latest' },
+    sync: { [settings.recentCount.key]: 8, [settings.recentMode.key]: 'latest' },
     history: HISTORY
   });
   await page.settle(400);
@@ -57,7 +57,7 @@ async function testMenu() {
   assert.strictEqual(first.getAttribute('data-recent-context-menu-open'), 'true', 'the card should stay marked while its menu is open');
   assert.strictEqual(cards(page).length, 4, 'opening the menu should not change anything');
   const hiddenWrites = () => page.storage.sync.writes.concat(page.storage.local.writes)
-    .filter((write) => Object.hasOwn(write, settings.HIDDEN_RECENT_SITES_STORAGE_KEY));
+    .filter((write) => Object.hasOwn(write, settings.hiddenRecentSites.key));
   assert.strictEqual(hiddenWrites().length, 0);
 
   await choose(page, 'open-in-new-tab');

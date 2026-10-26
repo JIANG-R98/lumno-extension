@@ -18,10 +18,7 @@ import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SETTINGS from '../domain/settings';
 import * as SHORTCUT_ICON_MAP from '../domain/shortcut-icon-map';
 import * as SHORTCUTS_STORE from '../domain/shortcuts-store';
-import {
-  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY
-} from '../domain/settings';
+import { faviconEnhancedFetchEnabled, faviconRequestBlacklist } from '../domain/settings';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
 import { normalizeHost, providerStorageRuntime, storageArea, warnBackgroundFailure } from './worker-context';
@@ -37,6 +34,9 @@ import type { ShortcutIconMap } from '../domain/shortcut-icon-map';
 import type { GroupedShortcutItem } from '../domain/shortcuts-store';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { ShortcutFaviconData, SiteThemeColor } from '../domain/messages';
+import { faviconVisitDirty } from '../domain/settings/search';
+import { newtabShortcutFaviconCache, newtabShortcutIcons, newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
+import * as SearchSettings from '../domain/settings/search';
 
 // What the favicon policy allows for a page and its host.
 type FaviconTargetPolicy =
@@ -95,9 +95,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
 
-// Hosts whose favicon may have changed since it was cached, marked on visits.
-const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
-const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY;
+const SITE_SEARCH_ICON_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
 const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
 const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS));
 const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
@@ -164,8 +162,8 @@ function schedulePersistFaviconVisitDirtyHost(hostname: string): void {
   }
   faviconVisitDirtyPersistTimer = setTimeout(() => {
     faviconVisitDirtyPersistTimer = null;
-    storageArea.get([FAVICON_VISIT_DIRTY_STORAGE_KEY], (result) => {
-      const payload = result && result[FAVICON_VISIT_DIRTY_STORAGE_KEY];
+    storageArea.get([faviconVisitDirty.key], (result) => {
+      const payload = result && result[faviconVisitDirty.key];
       const existing = getValidFaviconVisitDirtyEntries(isRecord(payload) && payload.entries ? payload.entries : null);
       const merged = new Map(existing.map((item) => [item.key, item.updatedAt]));
       faviconVisitDirtyMarkCache.forEach((updatedAt, key) => {
@@ -184,7 +182,7 @@ function schedulePersistFaviconVisitDirtyHost(hostname: string): void {
         serialized[item.key] = item.updatedAt;
       });
       storageArea.set({
-        [FAVICON_VISIT_DIRTY_STORAGE_KEY]: {
+        [faviconVisitDirty.key]: {
           version: 1,
           entries: serialized,
           updatedAt: Date.now()
@@ -1010,15 +1008,15 @@ function loadSiteSearchShortcutIconSources(): Promise<SiteSearchShortcutIconSour
     return siteSearchShortcutIconSourcesPromise;
   }
   const localArea = chrome.storage && chrome.storage.local ? chrome.storage.local : null;
-  const overflowKey = SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY;
+  const overflowKey = newtabShortcutsLocalOverflow.key;
   const loadTask = Promise.resolve(providerStorageRuntime.ready).then(() => {
     const syncActive = providerStorageRuntime.getActiveAreaName() === 'sync';
     return Promise.all([
       readStorageKeys(providerStorageRuntime.area, SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS.slice()),
       readStorageKeys(localArea, [
         ...(syncActive ? [overflowKey] : []),
-        SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY,
-        SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY
+        newtabShortcutIcons.key,
+        newtabShortcutFaviconCache.key
       ])
     ]);
   }).then(([values, localValues]): SiteSearchShortcutIconSources | null => {
@@ -1028,8 +1026,8 @@ function loadSiteSearchShortcutIconSources(): Promise<SiteSearchShortcutIconSour
     }
     return {
       shortcuts: state.items,
-      shortcutIcons: SHORTCUT_ICON_MAP.normalizeIconMap(localValues[SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY]),
-      shortcutFavicons: SHORTCUT_FAVICON.normalizeCacheMap(localValues[SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY])
+      shortcutIcons: SHORTCUT_ICON_MAP.normalizeIconMap(localValues[newtabShortcutIcons.key]),
+      shortcutFavicons: SHORTCUT_FAVICON.normalizeCacheMap(localValues[newtabShortcutFaviconCache.key])
     };
   }).catch(() => null);
   siteSearchShortcutIconSourcesPromise = loadTask;
@@ -1044,9 +1042,9 @@ function loadSiteSearchShortcutIconSources(): Promise<SiteSearchShortcutIconSour
 
 const SITE_SEARCH_SHORTCUT_ICON_STORAGE_KEYS: ReadonlySet<string> = new Set([
   ...SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS,
-  SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY,
-  SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY,
-  SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY
+  newtabShortcutsLocalOverflow.key,
+  newtabShortcutIcons.key,
+  newtabShortcutFaviconCache.key
 ]);
 
 export function isSiteSearchShortcutIconStorageChange(changes: Record<string, unknown> | null | undefined): boolean {
@@ -1283,7 +1281,7 @@ function normalizeFaviconRequestBlacklistItems(items: unknown): BlacklistRule[] 
 }
 
 function normalizeFaviconEnhancedFetchEnabled(value: unknown): boolean {
-  return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
+  return SETTINGS.faviconEnhancedFetchEnabled.parse(value);
 }
 
 export function loadFaviconRequestBlacklistItems(): Promise<BlacklistRule[]> {
@@ -1298,8 +1296,8 @@ export function loadFaviconRequestBlacklistItems(): Promise<BlacklistRule[]> {
       resolve([]);
       return;
     }
-    storageArea.get([FAVICON_REQUEST_BLACKLIST_STORAGE_KEY], (result) => {
-      const items = normalizeFaviconRequestBlacklistItems(result && result[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]);
+    storageArea.get([faviconRequestBlacklist.key], (result) => {
+      const items = normalizeFaviconRequestBlacklistItems(result && result[faviconRequestBlacklist.key]);
       faviconRequestBlacklistCache = items;
       resolve(items);
     });
@@ -1322,12 +1320,12 @@ export function loadFaviconEnhancedFetchEnabled(): Promise<boolean> {
       resolve(true);
       return;
     }
-    storageArea.get([FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY], (result) => {
-      const rawValue = result && result[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY];
+    storageArea.get([faviconEnhancedFetchEnabled.key], (result) => {
+      const rawValue = result && result[faviconEnhancedFetchEnabled.key];
       const enabled = normalizeFaviconEnhancedFetchEnabled(rawValue);
       faviconEnhancedFetchEnabledCache = enabled;
       if (rawValue !== enabled) {
-        storageArea.set({ [FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]: enabled });
+        storageArea.set({ [faviconEnhancedFetchEnabled.key]: enabled });
       }
       resolve(enabled);
     });

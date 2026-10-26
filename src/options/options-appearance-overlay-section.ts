@@ -2,7 +2,7 @@
 // opening animation, its local fonts, and whether it adapts to each page's
 // colors. One React view draws it; this keeps it in step with storage.
 import type * as Settings from '../domain/settings';
-import type { OverlayEnterAnimation, OverlaySizeMode } from '../domain/settings';
+import type { OverlayEnterAnimation, OverlaySizeMode } from '../domain/settings/overlay-panel';
 import type { StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
@@ -22,11 +22,11 @@ interface AppearanceOverlaySectionDeps {
   // The fonts are this device's own, so they stay out of browser sync.
   localStorageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'OVERLAY_SIZE_MODE_STORAGE_KEY' | 'OVERLAY_WIDTH_STORAGE_KEY' | 'OVERLAY_ENTER_ANIMATION_STORAGE_KEY' |
-    'OVERLAY_FONT_FAMILY_STORAGE_KEY' | 'OVERLAY_FONT_FALLBACK_STORAGE_KEY' | 'OVERLAY_FONT_LABELS_STORAGE_KEY' |
-    'OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY' | 'OVERLAY_WIDTH_MIN' | 'OVERLAY_WIDTH_MAX' |
-    'getOverlaySizePreset' | 'normalizeOverlaySizeMode' | 'normalizeOverlayWidth' | 'normalizeOverlayEnterAnimation' |
-    'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels' | 'normalizeOverlayPageThemeAdaptationEnabled'>;
+    'overlaySizeMode' | 'overlayWidth' | 'overlayEnterAnimation' |
+    'overlayFontFamily' | 'overlayFontFallback' | 'overlayFontLabels' |
+    'overlayPageThemeAdaptationEnabled' | 'OVERLAY_WIDTH_MIN' | 'OVERLAY_WIDTH_MAX' |
+    'getOverlaySizePreset' | 'overlaySizeMode' | 'overlayWidth' | 'overlayEnterAnimation' |
+    'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels' | 'overlayPageThemeAdaptationEnabled'>;
   getMessage: GetMessage;
   formatTemplate: FormatTemplate;
   // The browser family the page runs in, as data-browser-family names it.
@@ -49,26 +49,22 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
     listInstalledFonts,
     getViewportTopInset
   } = deps;
-  const FAMILY_KEY = SETTINGS.OVERLAY_FONT_FAMILY_STORAGE_KEY;
-  const FALLBACK_KEY = SETTINGS.OVERLAY_FONT_FALLBACK_STORAGE_KEY;
-  const LABELS_KEY = SETTINGS.OVERLAY_FONT_LABELS_STORAGE_KEY;
-  const WIDTH_KEY = SETTINGS.OVERLAY_WIDTH_STORAGE_KEY;
 
   const render = (): void => controller.render(getModel());
   const sizeMode = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_SIZE_MODE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlaySizeMode,
+    storageKey: SETTINGS.overlaySizeMode.key,
+    normalize: SETTINGS.overlaySizeMode.parse,
     repairOnChange: false,
     refreshSelects: true
   }, storageArea, () => render());
   const enterAnimation = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayEnterAnimation,
+    storageKey: SETTINGS.overlayEnterAnimation.key,
+    normalize: SETTINGS.overlayEnterAnimation.parse,
     repairOnChange: false
   }, storageArea, () => render());
   const pageThemeAdaptation = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayPageThemeAdaptationEnabled,
+    storageKey: SETTINGS.overlayPageThemeAdaptationEnabled.key,
+    normalize: SETTINGS.overlayPageThemeAdaptationEnabled.parse,
     refreshSelects: true
   }, storageArea, () => render());
   // Null follows the size's own width.
@@ -88,7 +84,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
     (installedFonts && installedFonts.get(family)) || fontLabels[family] || family;
 
   function changeWidth(value: number): void {
-    const next = SETTINGS.normalizeOverlayWidth(value);
+    const next = SETTINGS.overlayWidth.parse(value);
     // The size's own width (also what reset picks) clears the custom value,
     // so the panel follows the size again.
     width = next === getSizeWidth() ? null : next;
@@ -97,9 +93,9 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
       return;
     }
     if (width === null) {
-      storageArea.remove?.(WIDTH_KEY);
+      storageArea.remove?.(SETTINGS.overlayWidth.key);
     } else {
-      storageArea.set({ [WIDTH_KEY]: width });
+      storageArea.set({ [SETTINGS.overlayWidth.key]: width });
     }
   }
 
@@ -108,9 +104,9 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
   function changeFont(key: string, value: string): void {
     const family = SETTINGS.normalizeOverlayFontFamily(value);
     const label = family ? getFontLabel(family) : '';
-    if (key === FAMILY_KEY) {
+    if (key === SETTINGS.overlayFontFamily.key) {
       fontFamily = family;
-    } else if (key === FALLBACK_KEY) {
+    } else if (key === SETTINGS.overlayFontFallback.key) {
       fontFallback = family;
     } else {
       return;
@@ -121,7 +117,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
     );
     render();
     if (localStorageArea) {
-      localStorageArea.set({ [key]: family, [LABELS_KEY]: fontLabels });
+      localStorageArea.set({ [key]: family, [SETTINGS.overlayFontLabels.key]: fontLabels });
     }
   }
 
@@ -134,13 +130,13 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
       },
       onSelect(key, value) {
         if (key === sizeMode.storageKey) {
-          sizeMode.change(SETTINGS.normalizeOverlaySizeMode(value));
+          sizeMode.change(SETTINGS.overlaySizeMode.parse(value));
         } else if (key === enterAnimation.storageKey) {
-          enterAnimation.change(SETTINGS.normalizeOverlayEnterAnimation(value));
+          enterAnimation.change(SETTINGS.overlayEnterAnimation.parse(value));
         }
       },
       onSlide(key, value) {
-        if (key === WIDTH_KEY) {
+        if (key === SETTINGS.overlayWidth.key) {
           changeWidth(value);
         }
       },
@@ -203,7 +199,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
     const fallback = '_x_extension_overlay_font_fallback_select_2026_unique_';
     return [
       {
-        key: FAMILY_KEY,
+        key: SETTINGS.overlayFontFamily.key,
         rowId: '_x_extension_overlay_font_row_2026_unique_',
         title: { id: `${family}_title`, text: getMessage('settings_overlay_font_title', '本地字体') },
         description: getMessage('settings_overlay_font_desc', '读取这台电脑已安装的字体，只对这台设备生效，不会同步'),
@@ -231,7 +227,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
         }
       },
       {
-        key: FALLBACK_KEY,
+        key: SETTINGS.overlayFontFallback.key,
         rowId: '_x_extension_overlay_font_fallback_row_2026_unique_',
         title: { id: `${fallback}_title`, text: getMessage('settings_overlay_font_fallback_title', '本地回退字体') },
         description: getMessage('settings_overlay_font_fallback_desc', '主字体缺少字形时使用，例如英文字体下的中文'),
@@ -288,7 +284,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
         },
         {
           type: 'slider',
-          key: WIDTH_KEY,
+          key: SETTINGS.overlayWidth.key,
           rowId: '_x_extension_overlay_width_setting_row_2026_unique_',
           title: { text: getMessage('settings_overlay_width_title', '宽度') },
           hostId: '_x_extension_overlay_width_control_2026_unique_',
@@ -321,8 +317,8 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
             items: getAnimationItems()
           }
         },
-        { type: 'slot', key: FAMILY_KEY },
-        { type: 'slot', key: FALLBACK_KEY },
+        { type: 'slot', key: SETTINGS.overlayFontFamily.key },
+        { type: 'slot', key: SETTINGS.overlayFontFallback.key },
         {
           type: 'toggle',
           key: pageThemeAdaptation.storageKey,
@@ -348,8 +344,8 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
   function bindSettings(settingBinder: SectionSettingBinder, localSettingBinder: SectionSettingBinder): void {
     sizeMode.bind(settingBinder);
     settingBinder.bindSetting({
-      key: WIDTH_KEY,
-      normalize: SETTINGS.normalizeOverlayWidth,
+      key: SETTINGS.overlayWidth.key,
+      normalize: SETTINGS.overlayWidth.parse,
       apply(next) {
         width = next;
         render();
@@ -361,7 +357,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
     enterAnimation.bind(settingBinder);
     pageThemeAdaptation.bind(settingBinder);
     localSettingBinder.bindSetting({
-      key: FAMILY_KEY,
+      key: SETTINGS.overlayFontFamily.key,
       normalize: SETTINGS.normalizeOverlayFontFamily,
       apply(family) {
         fontFamily = family;
@@ -371,7 +367,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
       refreshSelects: true
     });
     localSettingBinder.bindSetting({
-      key: LABELS_KEY,
+      key: SETTINGS.overlayFontLabels.key,
       // Families may load after the names, so nothing is pruned on read.
       normalize: (value) => SETTINGS.normalizeOverlayFontLabels(value),
       apply(labels) {
@@ -383,7 +379,7 @@ function createAppearanceOverlaySection(deps: AppearanceOverlaySectionDeps) {
       refreshSelects: true
     });
     localSettingBinder.bindSetting({
-      key: FALLBACK_KEY,
+      key: SETTINGS.overlayFontFallback.key,
       normalize: SETTINGS.normalizeOverlayFontFamily,
       apply(family) {
         fontFallback = family;

@@ -15,7 +15,7 @@ function createStartupStorage() {
     }
     try {
       const value = JSON.stringify(keys.slice().sort());
-      const cacheKey = settingsRuntimeApi.NEWTAB_STARTUP_STORAGE_KEYS_CACHE_KEY;
+      const cacheKey = settingsRuntimeApi.newtabStartupStorageKeys.key;
       if (window.localStorage.getItem(cacheKey) !== value) {
         window.localStorage.setItem(cacheKey, value);
       }

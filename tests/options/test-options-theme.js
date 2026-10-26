@@ -50,7 +50,7 @@ function setup(stored, options) {
     shown,
     window,
     writes,
-    cached: () => window.localStorage.getItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY),
+    cached: () => window.localStorage.getItem(settings.optionsThemePreload.key),
     pageTheme: () => document.body.getAttribute('data-theme')
   };
 }
@@ -58,7 +58,7 @@ function setup(stored, options) {
 (async () => {
   // Startup shows the stored mode and refreshes the preloader's cache.
   {
-    const page = setup({ [settings.THEME_STORAGE_KEY]: 'dark' });
+    const page = setup({ [settings.themeMode.key]: 'dark' });
     await page.section.init();
     assert.strictEqual(page.pageTheme(), 'dark');
     assert.strictEqual(page.document.getElementById('panel').getAttribute('data-theme'), 'dark');
@@ -98,7 +98,7 @@ function setup(stored, options) {
 
   // A choice made on another page is shown here, and "system" follows the OS.
   {
-    const page = setup({ [settings.THEME_STORAGE_KEY]: 'light' }, { systemDark: true });
+    const page = setup({ [settings.themeMode.key]: 'light' }, { systemDark: true });
     await page.section.init();
     page.section.applyStorageChange('dark');
     assert.strictEqual(page.pageTheme(), 'dark');

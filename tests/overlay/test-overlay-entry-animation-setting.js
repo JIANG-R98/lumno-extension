@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
@@ -33,9 +33,9 @@ async function testChoosingFadeIsSaved() {
 }
 
 async function testStorage() {
-  assert.deepStrictEqual([undefined, 'bogus', 'fade', 'elastic'].map(settings.normalizeOverlayEnterAnimation),
+  assert.deepStrictEqual([undefined, 'bogus', 'fade', 'elastic'].map(settings.overlayEnterAnimation.parse),
     ['elastic', 'elastic', 'fade', 'elastic'], 'missing and invalid values should mean spring');
-  assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(KEY));
+  assert.ok(settings.BROWSER_SYNC_KEYS.includes(KEY));
   const worker = loadBackground({ local: { [KEY]: 'fade' } });
   await wait(80);
   assert.strictEqual(worker.storage.sync.data[KEY], 'fade', 'a choice an earlier version kept locally should move into browser sync');

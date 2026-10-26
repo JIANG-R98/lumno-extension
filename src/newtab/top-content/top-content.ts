@@ -34,9 +34,9 @@ interface TopContentDeps {
   COMMUNITY_LINKS: Pick<typeof LumnoCommunityLinks, 'getStoreListing'>;
   recentCards: readonly HTMLElement[];
   SETTINGS: Pick<typeof LumnoSettings,
-    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'normalizeNewtabTimeFontSize' | 'getNewtabTimeFont' |
-    'getNewtabTimeFontTracking' | 'resolveNewtabTimeFontWeight' | 'normalizeNewtabTimeOpacity' |
-    'normalizeNewtabTimeInk' | 'normalizeNewtabTime12Hour'>;
+    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'newtabTimeFontSize' | 'getNewtabTimeFont' |
+    'getNewtabTimeFontTracking' | 'resolveNewtabTimeFontWeight' | 'newtabTimeOpacity' |
+    'newtabTimeInk' | 'newtabTime12Hour'>;
   updateSearchEntryLayout(): void;
   updateSuggestionsFloatingLayout(): void;
   scheduleWallpaperAdaptiveToneUpdate(): void;
@@ -85,7 +85,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
     if (pageState.newtabTopContentMode !== 'time') {
       return TOP_CONTENT_MAX_HEIGHT_PX;
     }
-    const fontSize = SETTINGS.normalizeNewtabTimeFontSize(pageState.newtabTimeFontSize);
+    const fontSize = SETTINGS.newtabTimeFontSize.parse(pageState.newtabTimeFontSize);
     return Math.max(
       TOP_CONTENT_MAX_HEIGHT_PX,
       Math.ceil((fontSize * TOP_CONTENT_MAX_HEIGHT_PX) / TOP_CONTENT_DEFAULT_TIME_FONT_SIZE)
@@ -343,12 +343,12 @@ function createTopContentRuntime(deps: TopContentDeps) {
         stretch: timeFont.stretch,
         tracking: SETTINGS.getNewtabTimeFontTracking(timeFont.id, pageState.newtabTimeFontWeight)
       },
-      fontSize: SETTINGS.normalizeNewtabTimeFontSize(pageState.newtabTimeFontSize),
+      fontSize: SETTINGS.newtabTimeFontSize.parse(pageState.newtabTimeFontSize),
       fontWeight: SETTINGS.resolveNewtabTimeFontWeight(timeFont.id, pageState.newtabTimeFontWeight),
       appearance: getWordmarkAppearance(),
       locale: document.documentElement ? document.documentElement.lang : undefined,
       mode: pageState.newtabTopContentMode === 'time' ? 'time' : 'brand',
-      opacity: SETTINGS.normalizeNewtabTimeOpacity(pageState.newtabTimeOpacity) / 100,
+      opacity: SETTINGS.newtabTimeOpacity.parse(pageState.newtabTimeOpacity) / 100,
       showSeconds: pageState.newtabTimeSecondsVisible,
       twelveHour: pageState.newtabTime12Hour
     });
@@ -393,7 +393,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
   }
 
   function setNewtabTimeFontSize(value: unknown): number {
-    const nextValue = SETTINGS.normalizeNewtabTimeFontSize(value);
+    const nextValue = SETTINGS.newtabTimeFontSize.parse(value);
     const changed = nextValue !== pageState.newtabTimeFontSize;
     pageState.newtabTimeFontSize = nextValue;
     if (changed && pageState.newtabTopContentMode === 'time') {
@@ -410,7 +410,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
   }
 
   function setNewtabTimeInk(value: unknown): NewtabTimeInk {
-    const nextValue = SETTINGS.normalizeNewtabTimeInk(value);
+    const nextValue = SETTINGS.newtabTimeInk.parse(value);
     const changed = nextValue !== pageState.newtabTimeInk;
     pageState.newtabTimeInk = nextValue;
     if (changed) {
@@ -422,7 +422,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
   }
 
   function setNewtabTimeOpacity(value: unknown): number {
-    const nextValue = SETTINGS.normalizeNewtabTimeOpacity(value);
+    const nextValue = SETTINGS.newtabTimeOpacity.parse(value);
     const changed = nextValue !== pageState.newtabTimeOpacity;
     pageState.newtabTimeOpacity = nextValue;
     if (changed && pageState.newtabTopContentMode === 'time') {
@@ -460,7 +460,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
   }
 
   function setNewtabTime12Hour(value: unknown): boolean {
-    const nextValue = SETTINGS.normalizeNewtabTime12Hour(value);
+    const nextValue = SETTINGS.newtabTime12Hour.parse(value);
     const changed = nextValue !== pageState.newtabTime12Hour;
     pageState.newtabTime12Hour = nextValue;
     if (changed && pageState.newtabTopContentMode === 'time') {

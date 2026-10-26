@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 
@@ -28,7 +28,7 @@ function testStyles() {
 
 async function testRowsFollowTheirSetting() {
   const page = await createOptionsPage({
-    sync: { [settings.BOOKMARK_COUNT_STORAGE_KEY]: 0, [settings.RECENT_COUNT_STORAGE_KEY]: 0 }
+    sync: { [settings.bookmarkCount.key]: 0, [settings.recentCount.key]: 0 }
   });
   await page.settle(200);
   const unfolded = () => page.byId(BOOKMARK_SUBROWS).getAttribute('data-expanded') === 'true';
@@ -36,8 +36,8 @@ async function testRowsFollowTheirSetting() {
   assert.strictEqual(unfolded(), false, 'zero bookmark rows should fold the whole bookmarks-per-row setting');
   assert.strictEqual(page.byId(RECENT_MODE_TABS), null, 'no recent sites should hide the recent-site mode');
 
-  page.changeStorage('sync', settings.BOOKMARK_COUNT_STORAGE_KEY, 8);
-  page.changeStorage('sync', settings.RECENT_COUNT_STORAGE_KEY, 4);
+  page.changeStorage('sync', settings.bookmarkCount.key, 8);
+  page.changeStorage('sync', settings.recentCount.key, 4);
   await page.settle(200);
   assert.strictEqual(unfolded(), true, 'bookmark rows should bring back the per-row setting');
   assert.ok(page.byId(RECENT_MODE_TABS), 'recent sites should bring back their mode');

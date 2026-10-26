@@ -1,15 +1,12 @@
 // The log of recent failures behind the diagnostics export, kept in
 // chrome.storage.local on this device. The worker records into it; the
 // options page reads it when the person exports diagnostics.
-import {
-  DIAGNOSTIC_ERRORS_STORAGE_KEY,
-  appendDiagnosticError,
-  readDiagnosticErrors
-} from '../domain/diagnostics';
+import { appendDiagnosticError, readDiagnosticErrors } from '../domain/diagnostics';
 import type { DiagnosticError } from '../domain/diagnostics';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { callStorage, isRecord } from './storage-call';
 import type { StorageChromeApi } from './settings-storage';
+import { diagnosticErrors } from '../domain/settings/sync-state';
 
 interface DiagnosticsLogOptions {
   chromeApi: StorageChromeApi | null | undefined;
@@ -33,8 +30,8 @@ function createDiagnosticsLog(options: DiagnosticsLogOptions): Readonly<Diagnost
     if (!area) {
       return undefined;
     }
-    const items = await callStorage(chromeApi, (done) => area.get([DIAGNOSTIC_ERRORS_STORAGE_KEY], done));
-    return isRecord(items) ? items[DIAGNOSTIC_ERRORS_STORAGE_KEY] : undefined;
+    const items = await callStorage(chromeApi, (done) => area.get([diagnosticErrors.key], done));
+    return isRecord(items) ? items[diagnosticErrors.key] : undefined;
   }
 
   function record(context: string, failure: unknown): Promise<void> {
@@ -44,7 +41,7 @@ function createDiagnosticsLog(options: DiagnosticsLogOptions): Readonly<Diagnost
         return;
       }
       const errors = appendDiagnosticError(await readStored(), context, failure, at);
-      await callStorage(chromeApi, (done) => area.set({ [DIAGNOSTIC_ERRORS_STORAGE_KEY]: errors }, done));
+      await callStorage(chromeApi, (done) => area.set({ [diagnosticErrors.key]: errors }, done));
     }).catch(() => {});
     return pending;
   }

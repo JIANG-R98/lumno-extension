@@ -1,12 +1,6 @@
 // Loading and saving the shortcut state in the extension's storage: one
 // area, or browser sync with the local overflow record beside it.
-import {
-  SHORTCUTS_LOCAL_OVERFLOW_KEY,
-  SHORTCUT_STORAGE_KEYS,
-  createAuthoritativeOverflowRecord,
-  createShortcutStoragePlan,
-  readShortcutState
-} from '../domain/shortcuts-store';
+import { SHORTCUT_STORAGE_KEYS, createAuthoritativeOverflowRecord, createShortcutStoragePlan, readShortcutState } from '../domain/shortcuts-store';
 import type {
   GroupedShortcutItem,
   ShortcutNormalizeOptions,
@@ -16,6 +10,7 @@ import type {
 } from '../domain/shortcuts-store';
 import type { StorageItems } from '../domain/storage-port';
 import type { StorageChromeApi } from './settings-storage';
+import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
 
 // An area that answers like chrome.storage: through the callback, or
 // through the promise it returns. A missing method reads as empty or
@@ -260,7 +255,7 @@ function persistShortcutState(
       state: plan.state, plan, localOnlyIds: [], syncLimited: false
     }));
   }
-  return storageSet(overflowArea, { [SHORTCUTS_LOCAL_OVERFLOW_KEY]: plan.overflowRecord }, opts)
+  return storageSet(overflowArea, { [newtabShortcutsLocalOverflow.key]: plan.overflowRecord }, opts)
     .then(() => saveShortcutStoragePlan(storage, plan, opts))
     .then(() => (plan.removeKeys.length
       ? storageRemove(storage, plan.removeKeys, opts).catch(() => {})
@@ -272,7 +267,7 @@ function persistShortcutState(
       syncLimited: plan.overflowItems.length > 0
     }))
     .catch((syncError: unknown) => storageSet(overflowArea, {
-      [SHORTCUTS_LOCAL_OVERFLOW_KEY]: createAuthoritativeOverflowRecord(plan.state)
+      [newtabShortcutsLocalOverflow.key]: createAuthoritativeOverflowRecord(plan.state)
     }, opts).then((): ShortcutPersistResult => ({
       state: plan.state,
       plan,

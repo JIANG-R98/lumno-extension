@@ -1,7 +1,7 @@
 // The WebDAV card on the Account tab: the connections the worker reports,
 // their actions, and the copy for their states and failures. The card itself
 // is drawn from the model this hands to onRender.
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettings from '../domain/settings/sync-state';
 import type { WebDavOperation } from '../domain/messages';
 import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav-contract';
 import type { ConflictDescription, ValueSummary } from '../domain/webdav-contract';
@@ -495,8 +495,9 @@ function createController(options: WebDavControllerOptions) {
     render();
   }
   chromeApi.storage.onChanged.addListener((changes, area) => {
-    const { WEBDAV_STATUS_STORAGE_KEY: key, WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY: synced,
-      WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY: dismissed } = LumnoSettings;
+    const key = LumnoSettings.webdavStatus.key;
+    const synced = LumnoSettings.webdavConnections.key;
+    const dismissed = LumnoSettings.webdavDismissedConnections.key;
     const names = Object.keys(changes);
     if ((area === 'local' && names.some((name) => name === key || name.startsWith(`${key}:`) || name === dismissed)) ||
         (area === 'sync' && names.includes(synced))) {

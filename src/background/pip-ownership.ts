@@ -5,6 +5,7 @@ import * as LumnoMessaging from '../platform/messaging';
 import type { MessageTabs } from '../platform/messaging';
 import type { OkReply, PipKind, PipOwner, PipOwnershipReply, PipReleaseReply } from '../domain/messages';
 import type { StorageAreaLike } from '../domain/storage-port';
+import { globalPipOwner } from '../domain/settings/features';
 
 interface PipOwnershipChromeApi {
   storage?: { session?: StorageAreaLike; local?: StorageAreaLike };
@@ -29,8 +30,6 @@ interface PipOwnership {
   releaseGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, token: unknown): Promise<PipReleaseReply>;
   requestGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, kind: unknown): Promise<PipOwnershipReply>;
 }
-
-const GLOBAL_PIP_OWNER_STORAGE_KEY = '_x_lumno_global_pip_owner_2026_';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -89,9 +88,9 @@ function create(options?: PipOwnershipOptions | null): Readonly<PipOwnership> {
       return Promise.resolve(null);
     }
     return new Promise((resolve) => {
-      storageArea.get([GLOBAL_PIP_OWNER_STORAGE_KEY], (result) => {
+      storageArea.get([globalPipOwner.key], (result) => {
         const normalized = normalizePipOwnerRecord(
-          result ? result[GLOBAL_PIP_OWNER_STORAGE_KEY] : null
+          result ? result[globalPipOwner.key] : null
         );
         globalPipOwnerCacheLoaded = true;
         globalPipOwnerCache = normalized;
@@ -109,7 +108,7 @@ function create(options?: PipOwnershipOptions | null): Readonly<PipOwnership> {
       return Promise.resolve(normalized);
     }
     return new Promise((resolve) => {
-      storageArea.set({ [GLOBAL_PIP_OWNER_STORAGE_KEY]: normalized }, () => {
+      storageArea.set({ [globalPipOwner.key]: normalized }, () => {
         resolve(normalized);
       });
     });
@@ -130,7 +129,7 @@ function create(options?: PipOwnershipOptions | null): Readonly<PipOwnership> {
       return Promise.resolve(true);
     }
     return new Promise((resolve) => {
-      remove.call(storageArea, GLOBAL_PIP_OWNER_STORAGE_KEY, () => {
+      remove.call(storageArea, globalPipOwner.key, () => {
         resolve(true);
       });
     });

@@ -15,11 +15,11 @@ import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
 import {
-  DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
-  SEARCH_BLACKLIST_STORAGE_KEY,
-  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-  SITE_SEARCH_DISABLED_STORAGE_KEY,
-  SITE_SEARCH_STORAGE_KEY
+  defaultSearchEngine,
+  searchBlacklist,
+  searchResultSourceTypes,
+  siteSearchDisabled,
+  siteSearchCustom
 } from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { loadWorkerLazyModule } from '../platform/worker-lazy';
@@ -57,6 +57,7 @@ import type {
 import type { PinyinApi } from '../domain/search/pinyin-api';
 import type { TabGroupContext } from './tab-groups';
 import type { MessageSender } from './message-router';
+import { searchSelectionStats } from '../domain/settings/search';
 
 // A suggestion row as the surfaces get it: the ranking's fields plus
 // whatever the row carries for display.
@@ -185,7 +186,6 @@ function readSuggestionRow(value: unknown): SuggestionRow | null {
 }
 
 // Which suggestion the user picked for a query; device-only, in local storage.
-export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
 
 export function getSearchEngineSuggestionRequestKey(request: { context?: unknown } | null | undefined, sender: MessageSender | null | undefined): string {
   const senderTabId = sender && sender.tab && typeof sender.tab.id === 'number'
@@ -438,7 +438,7 @@ export function setDefaultSearchEngineState(nextState: unknown, shouldPersist: b
   };
   defaultSearchEngineState = updated;
   if (shouldPersist && storageArea) {
-    storageArea.set({ [DEFAULT_SEARCH_ENGINE_STORAGE_KEY]: updated });
+    storageArea.set({ [defaultSearchEngine.key]: updated });
   }
 }
 
@@ -452,8 +452,8 @@ function loadDefaultSearchEngineState(): Promise<DefaultSearchEngineState> {
     return Promise.resolve(defaultSearchEngineState);
   }
   return new Promise((resolve) => {
-    storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
-      const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
+    storageArea.get([defaultSearchEngine.key], (result) => {
+      const stored = result ? result[defaultSearchEngine.key] : null;
       if (isRecord(stored) && stored.id) {
         if (SEARCH_UTILS.isRetiredSearchEngineState({
           id: typeof stored.id === 'string' ? stored.id : undefined,
@@ -742,7 +742,7 @@ function loadCustomSiteSearchProviders(): Promise<NormalizedSiteSearchProvider[]
   return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
-    SITE_SEARCH_STORAGE_KEY
+    siteSearchCustom.key
   ).then(sanitizeSiteSearchProviders);
 }
 
@@ -750,7 +750,7 @@ function loadDisabledSiteSearchKeys(): Promise<string[]> {
   return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
-    SITE_SEARCH_DISABLED_STORAGE_KEY
+    siteSearchDisabled.key
   ).then((value) => {
     const items: unknown[] = Array.isArray(value) ? value : [];
     return items.map((item) => String(item).toLowerCase()).filter(Boolean);
@@ -787,17 +787,17 @@ function loadSearchResultSourceTypes(): Promise<SearchSourceType[]> {
   }
   searchResultSourceTypesPromise = new Promise<SearchSourceType[]>((resolve) => {
     if (!storageArea) {
-      const defaults = SETTINGS.normalizeSearchResultSourceTypes(null);
+      const defaults = SETTINGS.searchResultSourceTypes.parse(null);
       searchResultSourceTypesCache = defaults;
       resolve(defaults);
       return;
     }
-    storageArea.get([SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY], (result) => {
-      const raw = result && result[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY];
-      const normalized = SETTINGS.normalizeSearchResultSourceTypes(raw);
+    storageArea.get([searchResultSourceTypes.key], (result) => {
+      const raw = result && result[searchResultSourceTypes.key];
+      const normalized = SETTINGS.searchResultSourceTypes.parse(raw);
       searchResultSourceTypesCache = normalized;
       if (!areStringArraysEqual(raw, normalized)) {
-        storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: normalized });
+        storageArea.set({ [searchResultSourceTypes.key]: normalized });
       }
       resolve(normalized);
     });
@@ -817,11 +817,11 @@ function loadSearchFuzzyPinyinEnabled(): Promise<boolean> {
   searchFuzzyPinyinEnabledPromise = LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
-    SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY
+    SETTINGS.searchFuzzyPinyinEnabled.key
   )
     .catch(() => undefined)
     .then((value) => {
-      setSearchFuzzyPinyinEnabled(SETTINGS.normalizeSearchFuzzyPinyinEnabled(value));
+      setSearchFuzzyPinyinEnabled(SETTINGS.searchFuzzyPinyinEnabled.parse(value));
       return searchFuzzyPinyinEnabled;
     })
     .finally(() => {
@@ -853,8 +853,8 @@ function loadSearchBlacklistItems(): Promise<BlacklistRule[]> {
       resolve([]);
       return;
     }
-    storageArea.get([SEARCH_BLACKLIST_STORAGE_KEY], (result) => {
-      const items = normalizeSearchBlacklistItems(result && result[SEARCH_BLACKLIST_STORAGE_KEY]);
+    storageArea.get([searchBlacklist.key], (result) => {
+      const items = normalizeSearchBlacklistItems(result && result[searchBlacklist.key]);
       searchBlacklistCache = items;
       resolve(items);
     });
@@ -882,8 +882,8 @@ function loadSearchSelectionStats(): Promise<SearchSelectionStats> {
       resolve(emptyStats);
       return;
     }
-    localStorageArea.get([SEARCH_SELECTION_STATS_STORAGE_KEY], (result) => {
-      const stats = normalizeSearchSelectionStats(result && result[SEARCH_SELECTION_STATS_STORAGE_KEY]);
+    localStorageArea.get([searchSelectionStats.key], (result) => {
+      const stats = normalizeSearchSelectionStats(result && result[searchSelectionStats.key]);
       searchSelectionStatsCache = stats;
       resolve(stats);
     });
@@ -901,7 +901,7 @@ function saveSearchSelectionStats(stats: SearchSelectionStats): Promise<boolean>
       resolve(false);
       return;
     }
-    localStorageArea.set({ [SEARCH_SELECTION_STATS_STORAGE_KEY]: normalizedStats }, () => {
+    localStorageArea.set({ [searchSelectionStats.key]: normalizedStats }, () => {
       resolve(!(chrome.runtime && chrome.runtime.lastError));
     });
   });

@@ -34,8 +34,8 @@ interface ShortcutsSectionDeps {
     set(items: StorageItems): unknown;
   } | null;
   SETTINGS: Pick<typeof Settings,
-    'AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY' | 'AGGREGATE_SEARCH_STORAGE_KEY' |
-    'normalizeAggregateSearchAutoGroupEnabled'>;
+    'aggregateSearchAutoGroupEnabled' | 'aggregateSearches' |
+    'aggregateSearchAutoGroupEnabled'>;
   // Older installs have aggregate searches but no auto-group choice; it is
   // derived from those searches the first time.
   deriveLegacyAutoGroupEnabled(aggregateSearches: unknown): boolean;
@@ -65,7 +65,6 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     refreshCustomSelects,
     initTooltips
   } = deps;
-  const AUTO_GROUP_KEY = SETTINGS.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
 
   const lists: Record<'custom' | 'sites' | 'ai' | 'engines', SiteSearchListRenderModel | null> = {
     custom: null,
@@ -75,7 +74,7 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
   };
   let aggregateList: AggregateSearchListRenderModel | null = null;
   let form: SiteSearchFormRenderModel | null = null;
-  let autoGroupEnabled = SETTINGS.normalizeAggregateSearchAutoGroupEnabled(undefined);
+  let autoGroupEnabled = SETTINGS.aggregateSearchAutoGroupEnabled.parse(undefined);
 
   function applyAutoGroup(enabled: boolean): void {
     autoGroupEnabled = enabled;
@@ -92,7 +91,7 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     onAutoGroupChange(checked) {
       applyAutoGroup(checked);
       if (storageArea) {
-        storageArea.set({ [AUTO_GROUP_KEY]: checked });
+        storageArea.set({ [SETTINGS.aggregateSearchAutoGroupEnabled.key]: checked });
       }
     }
   });
@@ -191,8 +190,8 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
   // aggregate searches it may be derived from, and written back once.
   function bindSettings(settingBinder: { bindSetting<V>(spec: SettingSpec<V>): void }): void {
     settingBinder.bindSetting({
-      key: AUTO_GROUP_KEY,
-      normalize: SETTINGS.normalizeAggregateSearchAutoGroupEnabled,
+      key: SETTINGS.aggregateSearchAutoGroupEnabled.key,
+      normalize: SETTINGS.aggregateSearchAutoGroupEnabled.parse,
       apply: applyAutoGroup,
       load: false,
       refreshSelects: true
@@ -200,15 +199,15 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     if (!storageArea) {
       return;
     }
-    storageArea.get([AUTO_GROUP_KEY, SETTINGS.AGGREGATE_SEARCH_STORAGE_KEY], (items) => {
+    storageArea.get([SETTINGS.aggregateSearchAutoGroupEnabled.key, SETTINGS.aggregateSearches.key], (items) => {
       const result = items || {};
-      const rawValue = result[AUTO_GROUP_KEY];
+      const rawValue = result[SETTINGS.aggregateSearchAutoGroupEnabled.key];
       const stored = typeof rawValue === 'undefined'
-        ? deriveLegacyAutoGroupEnabled(result[SETTINGS.AGGREGATE_SEARCH_STORAGE_KEY])
-        : SETTINGS.normalizeAggregateSearchAutoGroupEnabled(rawValue);
+        ? deriveLegacyAutoGroupEnabled(result[SETTINGS.aggregateSearches.key])
+        : SETTINGS.aggregateSearchAutoGroupEnabled.parse(rawValue);
       applyAutoGroup(stored);
       if (rawValue !== stored) {
-        storageArea.set({ [AUTO_GROUP_KEY]: stored });
+        storageArea.set({ [SETTINGS.aggregateSearchAutoGroupEnabled.key]: stored });
       }
       refreshCustomSelects();
     });

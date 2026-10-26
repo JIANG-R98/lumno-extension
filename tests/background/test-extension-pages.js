@@ -1,7 +1,8 @@
 const assert = require('assert');
 // The service worker loads settings before extension pages.
-require('../../src/domain/settings.ts');
+require('../../src/domain/settings/index.ts');
 const pages = require('../../src/background/extension-pages.ts');
+const { releasePageOpened } = require('../../src/domain/settings/features.ts');
 
 // The Settings version badge that sends openReleasePage is covered by
 // tests/options/test-options-page-links.js.
@@ -170,12 +171,12 @@ function openExtensionShortcutsPage(options) {
   assert.strictEqual(createdTabs.length, 6, 'first update should create one release tab');
   assert.strictEqual(createdTabs.options[5].active, false, 'background release should create an inactive tab');
   assert.strictEqual(
-    syncStore[pages.RELEASE_PAGE_OPENED_STORAGE_KEY].version,
+    syncStore[releasePageOpened.key].version,
     'v0.9.9',
     'opened release page version should be persisted in sync'
   );
   assert.strictEqual(
-    localStore[pages.RELEASE_PAGE_OPENED_STORAGE_KEY],
+    localStore[releasePageOpened.key],
     undefined,
     'release page marker should not be duplicated to local when sync is available'
   );
@@ -189,13 +190,13 @@ function openExtensionShortcutsPage(options) {
   assert.strictEqual(nextVersionOpened, true, 'new version should open the release page again');
   assert.strictEqual(createdTabs.length, 7, 'new version should create a new release tab');
   assert.strictEqual(
-    syncStore[pages.RELEASE_PAGE_OPENED_STORAGE_KEY].version,
+    syncStore[releasePageOpened.key].version,
     'v0.10.0',
     'new version marker should replace the old marker'
   );
 
   const legacyLocalStore = {
-    [pages.RELEASE_PAGE_OPENED_STORAGE_KEY]: {
+    [releasePageOpened.key]: {
       version: 'v0.10.1',
       reason: 'update',
       openedAt: 1
@@ -208,7 +209,7 @@ function openExtensionShortcutsPage(options) {
   assert.strictEqual(legacyOpened, false, 'legacy local marker should prevent reopening the same version');
   assert.strictEqual(legacyCreatedTabs.length, 0, 'legacy local marker should not create another release tab');
   assert.strictEqual(
-    legacySyncStore[pages.RELEASE_PAGE_OPENED_STORAGE_KEY].version,
+    legacySyncStore[releasePageOpened.key].version,
     'v0.10.1',
     'legacy local release marker should migrate into sync'
   );

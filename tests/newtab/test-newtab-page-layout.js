@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -27,8 +27,8 @@ async function openPage(options) {
   const historySearches = [];
   const page = await createNewtabPage({
     sync: Object.assign({
-      [settings.RECENT_COUNT_STORAGE_KEY]: 8,
-      [settings.RECENT_MODE_STORAGE_KEY]: 'latest'
+      [settings.recentCount.key]: 8,
+      [settings.recentMode.key]: 'latest'
     }, config.sync || {}),
     history: HISTORY,
     bookmarks: [{ title: 'A', url: 'https://a.example/' }],
@@ -78,7 +78,7 @@ async function testGridColumnsFollowTheViewport() {
 // Wide mode lets recent sites grow to six columns.
 async function testWideModeWidensRecentSites() {
   const columnsIn = async (mode) => {
-    const page = await openPage({ width: 1800, sync: { [settings.NEWTAB_WIDTH_MODE_STORAGE_KEY]: mode } });
+    const page = await openPage({ width: 1800, sync: { [settings.newtabWidthMode.key]: mode } });
     const columns = page.columns()[1];
     page.close();
     return columns;
@@ -130,9 +130,9 @@ function testSearchSurfaceUsesTheSharedEntry() {
 
 // Bookmark rows step 0–8 and columns 4–8; other values fall back.
 async function testBookmarkGridSettings() {
-  assert.strictEqual(settings.normalizeBookmarkColumns(undefined), 6);
-  assert.deepStrictEqual([3, 4, 8, 9, 5.5].map(settings.normalizeBookmarkColumns), [6, 4, 8, 6, 6]);
-  assert.deepStrictEqual([0, 4, 32, 36, 6].map(settings.normalizeBookmarkCount), [0, 4, 32, 8, 8]);
+  assert.strictEqual(settings.bookmarkColumns.parse(undefined), 6);
+  assert.deepStrictEqual([3, 4, 8, 9, 5.5].map(settings.bookmarkColumns.parse), [6, 4, 8, 6, 6]);
+  assert.deepStrictEqual([0, 4, 32, 36, 6].map(settings.bookmarkCount.parse), [0, 4, 32, 8, 8]);
 
   const onboarding = parsePageCss('src/onboarding/onboarding.html');
   assert.ok(onboarding.entries.some((entry) => entry.style.getPropertyValue('--x-nt-bookmark-columns') === '6'),

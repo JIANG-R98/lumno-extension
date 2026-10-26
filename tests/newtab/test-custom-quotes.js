@@ -1,10 +1,11 @@
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const custom = require('../../src/domain/custom-quotes.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 require('../../src/newtab/remote-content.ts');
 const quotesApi = require('../../src/newtab/top-content/quotes.ts');
 const locale = require('../../_locales/en/messages.json');
+const { customQuotePick } = require('../../src/domain/settings/newtab-quote.ts');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 async function main() {
@@ -54,8 +55,8 @@ async function main() {
   const makeRuntime = () => quotesApi.createRuntime({ documentObj: document, windowObj: dom.window, lineView,
     t: (key, fallback) => locale[key]?.message || fallback, getLocale: () => 'en', chromeObj,
     getSearchRoot: () => document.querySelector('#search'), getShortcutSection: () => document.querySelector('#shortcuts'),
-    localStorageArea: localArea, storageArea: { get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: prefs }); },
-      set(values, callback) { prefs = values[settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]; callback(); } },
+    localStorageArea: localArea, storageArea: { get(_keys, callback) { callback({ [settings.newtabQuotePrefs.key]: prefs }); },
+      set(values, callback) { prefs = values[settings.newtabQuotePrefs.key]; callback(); } },
     client: { getQuote() { networkCalls++; return Promise.resolve({ text: 'Remote', author: '', source: '', url: 'https://hitokoto.cn/' }); } }
   });
   const runtime = makeRuntime(); await runtime.mount(); await tick();
@@ -84,7 +85,7 @@ async function main() {
   assert.equal(status().error, true);
   line.handlers.onShuffle(); await tick();
   const afterShuffle = line.model.text;
-  assert.ok(local[custom.PICK_KEY]);
+  assert.ok(local[customQuotePick.key]);
   runtime.destroy();
   const restored = makeRuntime(); await restored.mount(); await tick();
   assert.equal(line.model.text, afterShuffle, 'Shuffle selection survives refresh');

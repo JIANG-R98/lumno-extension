@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -37,8 +37,8 @@ async function testNewTab() {
   const page = await createNewtabPage({
     darkSystem: true,
     sync: {
-      [settings.RECENT_COUNT_STORAGE_KEY]: 8,
-      [settings.RECENT_MODE_STORAGE_KEY]: 'latest',
+      [settings.recentCount.key]: 8,
+      [settings.recentMode.key]: 'latest',
       _x_extension_motion_effects_enabled_2026_unique_: true
     },
     history: [{ url: 'https://a.example/', title: 'A', lastVisitTime: Date.now(), visitCount: 2 }],

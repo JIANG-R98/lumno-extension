@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -11,7 +11,7 @@ const suggestionNavigation = require('../../src/shared/search/suggestion-navigat
 // tabs are the exception: the overlay lists them all in a scrolling viewport
 // that many rows tall.
 
-const LIMIT = settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY;
+const LIMIT = settings.searchResultDisplayLimit.key;
 assert.strictEqual(LIMIT, '_x_extension_search_result_display_limit_2026_unique_');
 const RESULTS = Array.from({ length: 12 }, (_, index) => ({ type: 'history', title: `Result ${index}`, url: `https://r${index}.test/` }));
 const TABS = Array.from({ length: 12 }, (_, index) => ({ id: 100 + index, windowId: 1, title: `Tab ${index}`, url: `https://t${index}.test/` }));

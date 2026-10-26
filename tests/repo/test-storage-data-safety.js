@@ -3,9 +3,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
-const settingsMigrations = require('../../src/domain/settings-migrations.ts');
+const settingsMigrations = { ...require('../../src/domain/settings/migrations.ts'), ...require('../../src/domain/settings/removed.ts'), settingsSchemaVersion: require('../../src/domain/settings/sync-state.ts').settingsSchemaVersion };
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const expectedDevelopmentExtensionId = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
@@ -141,8 +141,8 @@ assert(
 );
 
 assert.deepStrictEqual(
-  settings.CHROME_SYNC_STORAGE_KEYS,
-  expectedSyncKeys,
+  settings.BROWSER_SYNC_KEYS.slice().sort(),
+  expectedSyncKeys.slice().sort(),
   'sync storage keys are a persisted data contract; changes require an explicit migration'
 );
 
@@ -178,7 +178,7 @@ sourceFiles.forEach((file) => {
     /\b(?:syncArea|localArea|bookmarkTopbarSurfaceStorageArea)\.clear\s*\(/,
     `${toPosixPath(file)} must not clear an aliased persisted storage area`
   );
-  const removeCallPattern = /\b(chrome\.storage\.(?:sync|local)|syncArea|localArea|bookmarkTopbarSurfaceStorageArea)\.remove\s*\(\s*([A-Za-z_$][\w$]*)/g;
+  const removeCallPattern = /\b(chrome\.storage\.(?:sync|local)|syncArea|localArea|bookmarkTopbarSurfaceStorageArea)\.remove\s*\(\s*([A-Za-z_$][\w$.]*)/g;
   let removeCallMatch = removeCallPattern.exec(source);
   while (removeCallMatch) {
     persistedRemoveCalls.push(
@@ -191,8 +191,8 @@ sourceFiles.forEach((file) => {
 assert.deepStrictEqual(
   persistedRemoveCalls.sort(),
   [
-    'src/newtab/bookmarks/bookmark-display-settings.ts:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmarks/bookmark-display-settings.ts:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY'
+    'src/newtab/bookmarks/bookmark-display-settings.ts:bookmarkTopbarSurfaceStorageArea:BookmarkSettings.bookmarkTopbarSurfaceColorLegacy.key',
+    'src/newtab/bookmarks/bookmark-display-settings.ts:localArea:BookmarkSettings.bookmarkTopbarSurfaceColorLegacy.key'
   ],
   'persisted storage removals must remain limited to the reviewed legacy cleanup paths'
 );
@@ -200,30 +200,30 @@ assert.deepStrictEqual(
 // every key they may remove, and none is a setting the current version keeps.
 const migrationRemovals = settingsMigrations.planSettingsMigrations(0, { sync: {}, local: {} }).patch;
 assert.deepStrictEqual(migrationRemovals.sync.remove.slice().sort(), [
-  settingsMigrations.LANGUAGE_MESSAGES_STORAGE_KEY,
-  ...settingsMigrations.REMOVED_AI_SYNC_STORAGE_KEYS,
-  ...settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
-  ...settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+  settingsMigrations.LANGUAGE_MESSAGES_KEY,
+  ...settingsMigrations.REMOVED_AI_SYNC_KEYS,
+  ...settings.BOOKMARK_TOPBAR_SURFACE_KEYS,
+  ...settings.OVERLAY_FONT_KEYS
 ].sort(), 'settings migrations must remove only the reviewed keys from Chrome Sync');
 assert.deepStrictEqual(migrationRemovals.local.remove.slice().sort(), [
-  settingsMigrations.LANGUAGE_MESSAGES_STORAGE_KEY,
-  ...settingsMigrations.REMOVED_AI_LOCAL_STORAGE_KEYS,
-  ...settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS
+  settingsMigrations.LANGUAGE_MESSAGES_KEY,
+  ...settingsMigrations.REMOVED_AI_LOCAL_KEYS,
+  ...settingsMigrations.LEGACY_SITE_SEARCH_ICON_KEYS
 ].sort(), 'settings migrations must remove only the reviewed keys from local storage');
 assert.strictEqual(
-  settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
+  settings.BOOKMARK_TOPBAR_SURFACE_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
   'legacy bookmark topbar cleanup keys must never overlap active sync settings'
 );
 // The overlay font keys never shipped in Chrome Sync (only development builds
 // wrote them there), so clearing those copies removes no released setting.
 assert.strictEqual(
-  settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
+  settings.OVERLAY_FONT_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
   'device-local overlay font keys must never overlap active sync settings'
 );
 assert.strictEqual(
-  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
   'legacy site-search icon cache keys must never overlap active sync settings'
 );
@@ -244,8 +244,8 @@ assert.strictEqual(
 // Background and New Tab move local settings into sync through one shared
 // helper. It never removes anything and treats grouped shortcuts as one save.
 {
-  const [V2_HEAD, V2_CHUNK_2] = settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
-  const PLAIN_KEY = settings.THEME_STORAGE_KEY;
+  const [V2_HEAD, V2_CHUNK_2] = settings.NEWTAB_SHORTCUTS_GROUP_KEYS;
+  const PLAIN_KEY = settings.themeMode.key;
   function runMigration(sync, local, keys, syncAfterFirstRead) {
     const writes = [];
     let syncReads = 0;
@@ -263,7 +263,7 @@ assert.strictEqual(
     settingsStorage.migrateLocalSettingsToSync(localArea, syncArea, keys);
     return writes;
   }
-  const allKeys = [PLAIN_KEY, ...settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS];
+  const allKeys = [PLAIN_KEY, ...settings.NEWTAB_SHORTCUTS_GROUP_KEYS];
   assert.deepStrictEqual(runMigration({}, { [PLAIN_KEY]: 'dark' }, allKeys), [{ [PLAIN_KEY]: 'dark' }]);
   assert.deepStrictEqual(runMigration({ [PLAIN_KEY]: 'light' }, { [PLAIN_KEY]: 'dark' }, allKeys), [],
     'a value already in sync is kept');

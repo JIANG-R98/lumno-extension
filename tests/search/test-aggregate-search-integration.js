@@ -1,16 +1,17 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
+const { aggregateSearches } = require('../../src/domain/settings/search.ts');
 
 // Aggregate searches run one query on several sources at once. They are
 // defined in Settings and offered as scopes on both search surfaces; the
 // worker side is covered by test-background-aggregate-search.js.
 
-const AGGREGATES = settings.AGGREGATE_SEARCH_STORAGE_KEY;
+const AGGREGATES = settings.aggregateSearches.key;
 const DISABLED = '_x_extension_site_search_disabled_2024_unique_';
 const DEFINITIONS = aggregateStore.serializeAggregateSearches([
   { id: 'research', key: 'rs', name: 'Research', sourceRefs: ['builtin:gg', 'builtin:bi'] },
@@ -21,7 +22,7 @@ function testPackaging() {
   const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
   assert.ok(manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
     'aggregate searches require the existing tabs and tabGroups permissions');
-  assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
+  assert.strictEqual(settings.aggregateSearches.key, aggregateSearches.key);
   assert.ok(runsBefore(getPageScripts('newtab.html'), 'src/domain/search/aggregate-search-store.ts', 'src/newtab/newtab.ts'));
   assert.ok(runsBefore(getInjectedScripts('overlay'), 'src/domain/search/aggregate-search-store.ts', 'src/overlay/search-panel.ts'));
   assert.ok(runsBefore(getPageScripts('src/options/options.html'), 'src/domain/search/aggregate-search-store.ts', 'src/options/options.ts'));

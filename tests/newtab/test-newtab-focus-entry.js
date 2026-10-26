@@ -24,7 +24,7 @@ assert.ok(preload && preloadFiles.includes('src/newtab/newtab-focus-entry.ts'),
 const paintGate = newtabDocument.querySelector('style[data-nt-focus-paint-gate="true"]');
 assert.ok(paintGate && (paintGate.compareDocumentPosition(preload) & 4),
   'the New Tab paint gate should be parsed before visual preload scripts can expose the wallpaper');
-assert.ok(runsBefore(preloadFiles, 'src/domain/settings.ts', 'src/newtab/newtab-focus-entry.ts'),
+assert.ok(runsBefore(preloadFiles, 'src/domain/settings/index.ts', 'src/newtab/newtab-focus-entry.ts'),
   'the shared setting contract should load before the focus entry router');
 assert.ok(runsBefore(preloadFiles, 'src/newtab/newtab-focus-entry.ts', 'src/newtab/wallpaper/wallpaper-preload.ts'),
   'the focus route should settle before the New Tab starts visual preloading');

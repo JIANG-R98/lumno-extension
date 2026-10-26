@@ -53,7 +53,7 @@ async function loadStartupStorage(localData, syncData) {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 (async () => {
-  const settings = require('../../src/domain/settings.ts');
+  const settings = require('../../src/domain/settings/index.ts');
   {
     const { storage, sync } = await loadStartupStorage(
       { [SYNCED_KEY]: 'dark', [OTHER_KEY]: 'ja' },
@@ -69,7 +69,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
   }
   {
     const { storage, sync } = await loadStartupStorage(
-      { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [SYNCED_KEY]: 'dark' },
+      { [settings.localPrimary.key]: true, [SYNCED_KEY]: 'dark' },
       {}
     );
     assert.strictEqual(storage.isPrimaryStorageAreaName('local'), true, 'settings kept on this device live locally');

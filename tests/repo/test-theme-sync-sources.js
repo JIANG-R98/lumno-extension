@@ -1,13 +1,13 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 // Every surface writes the global theme the same way. (New Tab's /mode and
 // appearance panel are in tests/newtab/test-newtab-mode-command.js.)
 
-const THEME = settings.THEME_STORAGE_KEY;
-const NEWTAB_THEME = settings.NEWTAB_THEME_MODE_STORAGE_KEY;
+const THEME = settings.themeMode.key;
+const NEWTAB_THEME = settings.newtabThemeMode.key;
 const themeWrites = (writes) => writes.filter((write) => Object.hasOwn(write, THEME) || Object.hasOwn(write, NEWTAB_THEME));
 
 // Picking a theme in Settings saves it as the global theme.

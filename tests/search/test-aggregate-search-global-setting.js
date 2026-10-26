@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const store = require('../../src/domain/search/aggregate-search-store.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -11,7 +11,7 @@ const { createOptionsPage } = require('../helpers/options-page');
 // covered by src/options/react/aggregate-search-list.test.tsx.
 
 const TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
-const AUTO_GROUP = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
+const AUTO_GROUP = settings.aggregateSearchAutoGroupEnabled.key;
 
 async function testMarkup() {
   const page = await createOptionsPage({});
@@ -40,7 +40,7 @@ async function testWorkerReadsTheSettingEachRun() {
   const worker = loadBackground({
     tabs: [{ id: 10, index: 0, windowId: 1, url: 'https://page.test/' }],
     sync: {
-      [settings.AGGREGATE_SEARCH_STORAGE_KEY]: store.serializeAggregateSearches([definition]),
+      [settings.aggregateSearches.key]: store.serializeAggregateSearches([definition]),
       [AUTO_GROUP]: false
     },
     packagedFetch: true,

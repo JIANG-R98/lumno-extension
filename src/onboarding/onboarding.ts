@@ -3,7 +3,7 @@ import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import type { BackgroundRequest, OkReply, OverlayTab } from '../domain/messages';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import type { Disposition } from '../domain/navigation-disposition';
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettings from '../domain/settings/locale';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { isElementNode } from '../shared/dom-guards';
 import { getHtmlElement, queryHtmlElement } from '../shared/dom-lookup';
@@ -45,7 +45,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 (function() {
 
-  const LANGUAGE_STORAGE_KEY = LumnoSettings.LANGUAGE_STORAGE_KEY;
   const SHOW_SEARCH_COMMAND_NAME = 'show-search';
   const ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION = 'triggerOnboardingSearchOverlayFromCommand';
   const SHORTCUT_PLACEHOLDER = '{shortcut}';
@@ -577,9 +576,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       return;
     }
     try {
-      storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
+      storageArea.get([LumnoSettings.language.key], (result) => {
         const runtimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
-        const stored = !runtimeError && result ? result[LANGUAGE_STORAGE_KEY] : '';
+        const stored = !runtimeError && result ? result[LumnoSettings.language.key] : '';
         const locale = typeof stored === 'string' && stored && stored !== 'system'
           ? stored
           : getBrowserLocale();

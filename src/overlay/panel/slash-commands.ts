@@ -4,7 +4,7 @@
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { WebAppearanceMode } from '../../domain/messages';
 import type * as Settings from '../../domain/settings';
-import type { ThemeMode } from '../../domain/settings';
+import type { ThemeMode } from '../../domain/settings/appearance';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type { FormatMessage, Translate } from './types';

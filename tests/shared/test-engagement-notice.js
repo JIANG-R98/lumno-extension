@@ -3,10 +3,11 @@ const fs = require('fs');
 
 const communityLinks = require('../../src/platform/community-links.ts');
 const engagementNotice = require('../../src/shared/engagement-notice.ts');
-const updateNotice = require('../../src/shared/update-notice.ts');
 const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { ENGAGEMENT_DELAY_MS, engagementStorage } = require('../helpers/newtab-notices');
+const { engagementNoticeState } = require('../../src/domain/settings/features.ts');
+const featureSettings = require('../../src/domain/settings/features.ts');
 
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
@@ -51,7 +52,7 @@ async function testOnNewTab() {
   typing.type('lumno');
   await typing.settle(ENGAGEMENT_DELAY_MS + 400);
   assert.strictEqual(typing.promptVisible(), false, 'searching should keep the prompt away');
-  assert.strictEqual(typing.storage.local.data[engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY].newtab.meaningfulUses, 5,
+  assert.strictEqual(typing.storage.local.data[engagementNoticeState.key].newtab.meaningfulUses, 5,
     'and count as meaningful use');
   typing.close();
 
@@ -59,7 +60,7 @@ async function testOnNewTab() {
   const update = await open({
     language: 'en',
     updateNotice: true,
-    sync: { [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
+    sync: { [featureSettings.updateNoticeState.key]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
   });
   const updateVisible = Array.from(update.document.querySelectorAll('.x-lumno-feature-hint--update-notice'))
     .some((hint) => hint.getAttribute('data-visible') === 'true' && !hint.hasAttribute('data-engagement-surface'));
@@ -156,7 +157,7 @@ function createEligibleState(surface, now) {
   );
 
   const localStore = {
-    [engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY]: createEligibleState(
+    [engagementNoticeState.key]: createEligibleState(
       'overlay',
       now
     )
@@ -276,12 +277,12 @@ function createEligibleState(surface, now) {
   await flushMicrotasks();
   assert.strictEqual(reviewClicks, 1, 'the rating action should reach the surface');
   assert(
-    localStore[engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY].completedAt > 0,
+    localStore[engagementNoticeState.key].completedAt > 0,
     'acting on the prompt should permanently complete the local lifecycle'
   );
 
   const deferredStore = {
-    [engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY]: createEligibleState('overlay', now)
+    [engagementNoticeState.key]: createEligibleState('overlay', now)
   };
   const deferredChromeApi = {
     runtime: { lastError: null },
@@ -355,7 +356,7 @@ function createEligibleState(surface, now) {
     'an update-owned session should keep the rating prompt hidden after the gate resolves'
   );
   assert.strictEqual(
-    deferredStore[engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY].exposureCount,
+    deferredStore[engagementNoticeState.key].exposureCount,
     0,
     'deferring for an update should not consume a rating exposure'
   );
@@ -382,7 +383,7 @@ function createEligibleState(surface, now) {
     'the next session should expose a rating prompt that an update previously deferred'
   );
   assert.strictEqual(
-    deferredStore[engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY].exposureCount,
+    deferredStore[engagementNoticeState.key].exposureCount,
     1,
     'only the actually visible rating prompt should count as an exposure'
   );
@@ -399,7 +400,7 @@ function createEligibleState(surface, now) {
         'the rating action should open the Firefox Add-ons review page in Firefox'
       );
       const firefoxStore = {
-        [engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY]: createEligibleState('overlay', now)
+        [engagementNoticeState.key]: createEligibleState('overlay', now)
       };
       const firefoxAttributes = {};
       const firefoxController = engagementNotice.createEngagementNotice({

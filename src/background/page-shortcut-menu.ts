@@ -12,6 +12,7 @@ import type { LocaleMessage, PageShortcutResult } from '../domain/messages';
 import type { StorageItems, StorageKeys } from '../domain/storage-port';
 import { createInjectedAppRun } from '../platform/injection';
 import type { PageShortcutToastCommand } from '../domain/injected-commands';
+import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;
@@ -72,7 +73,7 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
     ? opts.loadLocaleMessages
     : () => Promise.resolve({});
   const themeStorageKey = String(opts.themeStorageKey || '');
-  const overflowKey = store.SHORTCUTS_LOCAL_OVERFLOW_KEY;
+  const overflowKey = NewtabShortcutSettings.newtabShortcutsLocalOverflow.key;
   let chain: Promise<unknown> = Promise.resolve();
 
   function getLastError(): chrome.runtime.LastError | null {
@@ -92,7 +93,7 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
   }
 
   async function getMessages(): Promise<Record<string, LocaleMessage>> {
-    const mode = await readProviderValue(settings.LANGUAGE_STORAGE_KEY);
+    const mode = await readProviderValue(settings.language.key);
     const uiLanguage = chromeApi.i18n && typeof chromeApi.i18n.getUILanguage === 'function'
       ? chromeApi.i18n.getUILanguage()
       : 'en';
@@ -158,7 +159,7 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
   }
 
   async function isWebDavSyncEnabled(): Promise<boolean> {
-    const key = settings.WEBDAV_STATUS_STORAGE_KEY;
+    const key = settings.webdavStatus.key;
     if (!key || !chromeApi.storage.local) return false;
     const values = await read(chromeApi.storage.local, [key]).catch((): StorageItems => ({}));
     const status = values[key];
@@ -300,8 +301,8 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
       handleClick(info, tab);
     });
     chromeApi.storage.onChanged.addListener((changes, area) => {
-      if (changes[settings.LOCAL_PRIMARY_STORAGE_KEY] ||
-          (provider.isActiveAreaName(area) && changes[settings.LANGUAGE_STORAGE_KEY])) {
+      if (changes[settings.localPrimary.key] ||
+          (provider.isActiveAreaName(area) && changes[settings.language.key])) {
         syncMenu().catch(() => {});
       }
     });

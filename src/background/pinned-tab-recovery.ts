@@ -12,11 +12,12 @@
 // Suspension: the setting is re-read on wake before an event is acted on, and
 // a pending debounced snapshot is flushed on runtime.onSuspend.
 
-import { PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY } from '../domain/settings';
+import { pinnedTabRecoveryEnabled } from '../domain/settings';
 import { storageArea } from './worker-context';
 import { getResolvedTabUrl } from './browser-urls-service';
 import { isTabGroupColor } from './tab-groups';
 import type { TabGroupColor } from './tab-groups';
+import { pinnedTabSnapshot } from '../domain/settings/features';
 
 // The tab group a pinned tab was in: its key (window and group id when
 // saved) tells tabs of one group apart, title and color recreate it.
@@ -40,9 +41,6 @@ interface SnapshotPersistOptions {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
-
-// The last snapshot of the pinned tabs; device-only, in local storage.
-const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
 
 const PINNED_TAB_SNAPSHOT_DEBOUNCE_MS = 600;
 
@@ -76,7 +74,7 @@ export function applyPinnedTabRecoverySetting(rawValue: unknown): boolean {
   pinnedTabRecoveryEnabledCache = normalized;
   pinnedTabRecoverySettingLoaded = true;
   if (rawValue !== normalized && storageArea && typeof storageArea.set === 'function') {
-    storageArea.set({ [PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]: normalized });
+    storageArea.set({ [pinnedTabRecoveryEnabled.key]: normalized });
   }
   return normalized;
 }
@@ -94,14 +92,14 @@ function ensurePinnedTabRecoverySettingLoaded(): Promise<boolean> {
     return Promise.resolve(false);
   }
   pinnedTabRecoverySettingLoadPromise = new Promise<boolean>((resolve) => {
-    storageArea.get([PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY], (result) => {
+    storageArea.get([pinnedTabRecoveryEnabled.key], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         pinnedTabRecoverySettingLoaded = true;
         pinnedTabRecoveryEnabledCache = false;
         resolve(false);
         return;
       }
-      const rawValue = result ? result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY] : undefined;
+      const rawValue = result ? result[pinnedTabRecoveryEnabled.key] : undefined;
       resolve(applyPinnedTabRecoverySetting(rawValue));
     });
   }).finally(() => {
@@ -132,12 +130,12 @@ function getPinnedSnapshotFromStorage(): Promise<unknown> {
       resolve(null);
       return;
     }
-    chrome.storage.local.get([PINNED_TAB_SNAPSHOT_STORAGE_KEY], (result) => {
+    chrome.storage.local.get([pinnedTabSnapshot.key], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         resolve(null);
         return;
       }
-      resolve(result ? result[PINNED_TAB_SNAPSHOT_STORAGE_KEY] : null);
+      resolve(result ? result[pinnedTabSnapshot.key] : null);
     });
   });
 }
@@ -148,7 +146,7 @@ function setPinnedSnapshotToStorage(snapshot: unknown): Promise<boolean> {
       resolve(false);
       return;
     }
-    chrome.storage.local.set({ [PINNED_TAB_SNAPSHOT_STORAGE_KEY]: snapshot }, () => {
+    chrome.storage.local.set({ [pinnedTabSnapshot.key]: snapshot }, () => {
       if (chrome.runtime && chrome.runtime.lastError) {
         resolve(false);
         return;

@@ -25,7 +25,7 @@ const ALLOWLIST = [
   'question filler words dropped from help center queries in src/domain/search/help-center-search.ts',
   'episode and chapter title patterns in src/domain/progress-match.ts',
   'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
-  'language names written in their own language in UI_LOCALES (src/domain/settings.ts)'
+  'language names written in their own language in UI_LOCALES (src/domain/settings/locale.ts)'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -130,7 +130,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/newtab/wallpaper/wallpaper-catalog.ts') {
     return true;
   }
-  if (file === 'src/domain/settings.ts' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
+  if (file === 'src/domain/settings/locale.ts' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
     return true;
   }
   if (file === 'src/shared/update-notice.ts' &&

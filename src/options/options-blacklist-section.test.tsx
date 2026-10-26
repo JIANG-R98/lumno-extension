@@ -9,9 +9,9 @@ import type { SettingSpec } from './options-setting-bindings';
 import { createBlacklistTabApi } from './react/blacklist-tab';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
-const SEARCH_KEY = Settings.SEARCH_BLACKLIST_STORAGE_KEY;
-const FAVICON_KEY = Settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY;
-const FETCH_KEY = Settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY;
+const SEARCH_KEY = Settings.searchBlacklist.key;
+const FAVICON_KEY = Settings.faviconRequestBlacklist.key;
+const FETCH_KEY = Settings.faviconEnhancedFetchEnabled.key;
 const FETCH_TOGGLE = '_x_extension_favicon_enhanced_fetch_toggle_2026_unique_';
 const SEARCH_CLEAR = '_x_extension_blacklist_clear_2026_unique_';
 const FAVICON_CLEAR = '_x_extension_favicon_blacklist_clear_2026_unique_';

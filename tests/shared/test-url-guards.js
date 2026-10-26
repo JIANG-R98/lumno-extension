@@ -1,6 +1,6 @@
 const assert = require('assert');
 const vm = require('vm');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { runModuleInContext } = require('../helpers/module-script');
 
@@ -81,7 +81,7 @@ assert.strictEqual(guards.canOpenUrlFromWebPageContext(`${ownBase}newtab.html`, 
 (async () => {
   const now = Date.now();
   const page = await createNewtabPage({
-    sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 8, [settings.RECENT_MODE_STORAGE_KEY]: 'latest' },
+    sync: { [settings.recentCount.key]: 8, [settings.recentMode.key]: 'latest' },
     history: [
       { url: 'chrome://newtab/', title: 'New Tab', lastVisitTime: now, visitCount: 9 },
       { url: 'chrome://settings/', title: 'Settings', lastVisitTime: now - 500, visitCount: 2 },

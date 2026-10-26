@@ -309,14 +309,14 @@ globalThis.chrome = originalChrome;
 // the worker follows the restricted page rule: Lumno's New Tab by default,
 // the browser's own New Tab when the rule says so.
 async function testFailedInjectionFollowsTheRestrictedPageRule() {
-  const settings = require('../../src/domain/settings.ts');
+  const settings = require('../../src/domain/settings/index.ts');
   const { loadBackground, wait } = require('../helpers/background-harness');
   const { createFakeTabPages } = require('../helpers/fake-tab-pages');
   for (const [rule, expected] of [['default', 'lumno'], ['none', 'browser']]) {
     const pages = createFakeTabPages();
     const worker = loadBackground({
       tabs: [{ id: 7, windowId: 1, index: 0, active: true, title: 'Page', url: 'https://page.example.test/a', status: 'complete' }],
-      sync: { [settings.RESTRICTED_ACTION_STORAGE_KEY]: rule },
+      sync: { [settings.restrictedAction.key]: rule },
       configureChrome: pages.install
     });
     await wait(50);

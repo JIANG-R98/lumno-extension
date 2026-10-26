@@ -67,7 +67,7 @@ interface WallpaperPageState {
 interface WallpaperPageDeps extends Pick<TopContentRuntime,
   'setNewtabTopContentMode' | 'setNewtabTimeFontWeight' | 'setNewtabTimeFontSize' | 'setNewtabTimeOpacity' |
   'setNewtabTimeInk' | 'setNewtabTimeFont' | 'setNewtabTimeSecondsVisible' | 'setNewtabTime12Hour'> {
-  SETTINGS: Pick<typeof LumnoSettings, 'normalizeNewtabTimeInk' | 'normalizeNewtabGlassStyle' | 'normalizeNewtabGlassTheme'>;
+  SETTINGS: Pick<typeof LumnoSettings, 'newtabTimeInk' | 'newtabGlassStyle' | 'newtabGlassTheme'>;
   shortcutTiles: readonly HTMLElement[];
   // A dock tile's icon, which its tone samples.
   getShortcutDockIcon(tile: HTMLElement): HTMLElement | null;
@@ -220,7 +220,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
 
   // The clock's ink when the user fixed it; '' leaves it to the wallpaper or theme.
   function getFixedTimeInk(): Exclude<NewtabTimeInk, 'auto'> | '' {
-    const ink = SETTINGS.normalizeNewtabTimeInk(pageState.newtabTimeInk);
+    const ink = SETTINGS.newtabTimeInk.parse(pageState.newtabTimeInk);
     return pageState.newtabTopContentMode === 'time' && ink !== 'auto' ? ink : '';
   }
 
@@ -574,9 +574,9 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
     inputAutoFocusReady: initialNewtabInputAutoFocusReadyTask,
     getInputAutoFocusEnabled: () => pageState.newtabInputAutoFocusEnabled,
     setInputAutoFocusEnabled: setNewtabInputAutoFocusEnabled,
-    getGlassStyle: () => SETTINGS.normalizeNewtabGlassStyle(document.body.getAttribute('data-glass-style')),
+    getGlassStyle: () => SETTINGS.newtabGlassStyle.parse(document.body.getAttribute('data-glass-style')),
     setGlassStyle(value) {
-      const style = SETTINGS.normalizeNewtabGlassStyle(value);
+      const style = SETTINGS.newtabGlassStyle.parse(value);
       applyNewtabGlassStyle(style);
       if (storageArea) {
         void storageArea.set({ [NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
@@ -584,7 +584,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
     },
     getGlassTheme: () => pageState.newtabGlassTheme,
     setGlassTheme(value) {
-      const theme = SETTINGS.normalizeNewtabGlassTheme(value);
+      const theme = SETTINGS.newtabGlassTheme.parse(value);
       applyNewtabGlassTheme(theme);
       if (storageArea) {
         void storageArea.set({ [NEWTAB_GLASS_THEME_STORAGE_KEY]: theme });

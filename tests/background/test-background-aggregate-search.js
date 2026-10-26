@@ -3,6 +3,7 @@ const aggregateSearch = require('../../src/background/aggregate-search.ts');
 const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
 const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
+const { aggregateSearches } = require('../../src/domain/settings/search.ts');
 
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
 assert.strictEqual(
@@ -598,9 +599,9 @@ async function run() {
     chromeApi: success.api,
     loadAggregateSearches: () => aggregateStorage.loadAggregateSearches({
       get(_keys, callback) {
-        callback({ [aggregateStore.STORAGE_KEY]: storedDefinitions });
+        callback({ [aggregateSearches.key]: storedDefinitions });
       }
-    }, aggregateStore.STORAGE_KEY, success.api),
+    }, aggregateSearches.key, success.api),
     loadSiteSearchProviders() {
       providerLoadCount += 1;
       return Promise.resolve(storedProviders);
@@ -660,9 +661,9 @@ async function run() {
     chromeApi: success.api,
     loadAggregateSearches: () => aggregateStorage.loadAggregateSearches({
       get(_keys, callback) {
-        callback({ [aggregateStore.STORAGE_KEY]: missingSourceDefinitions });
+        callback({ [aggregateSearches.key]: missingSourceDefinitions });
       }
-    }, aggregateStore.STORAGE_KEY, success.api),
+    }, aggregateSearches.key, success.api),
     loadSiteSearchProviders: () => Promise.resolve([providers[0]]),
     openAggregateSearch() {
       throw new Error('must not open a partial aggregate');

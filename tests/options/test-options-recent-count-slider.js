@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // Recent site cards are set in rows (0–2) and stored as cards (rows × 4).
@@ -9,7 +9,7 @@ const SLIDER_ID = '_x_extension_recent_count_slider_2026_unique_';
 const MODE_TABS_ID = '_x_extension_recent_mode_tabs_wrap_2024_unique_';
 
 async function testSliderUsesRows() {
-  const page = await createOptionsPage({ sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 8 } });
+  const page = await createOptionsPage({ sync: { [settings.recentCount.key]: 8 } });
   await page.settle(200);
   const control = page.byId(CONTROL_ID);
   assert.ok(control && control.contains(page.byId(SLIDER_ID)), 'recent site cards should mount the shared range slider control');
@@ -23,7 +23,7 @@ async function testSliderUsesRows() {
   slider.dispatchEvent(new page.window.Event('input', { bubbles: true }));
   slider.dispatchEvent(new page.window.Event('change', { bubbles: true }));
   await page.settle(200);
-  assert.strictEqual(page.storage.sync.data[settings.RECENT_COUNT_STORAGE_KEY], 4,
+  assert.strictEqual(page.storage.sync.data[settings.recentCount.key], 4,
     'recent slider values should keep the rows-times-four storage format');
 
   const tabs = Array.from(page.byId(MODE_TABS_ID).querySelectorAll('[data-recent-mode]'));

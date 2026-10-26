@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
 const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const siteDisplayName = require('../../src/domain/site-display-name.ts');
@@ -10,7 +10,7 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 const { injectedModules } = require('../helpers/injected-modules');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const LANGUAGE_KEY = settings.LANGUAGE_STORAGE_KEY;
+const LANGUAGE_KEY = settings.language.key;
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
 
 function readMessages(locale) {
@@ -179,7 +179,7 @@ async function run() {
 
   // Local-primary mode keeps the shortcut in local storage; a page that takes
   // no scripts still gets the shortcut.
-  const local = device({ local: { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true } }, { uiLanguage: 'ja', scriptingFails: true });
+  const local = device({ local: { [settings.localPrimary.key]: true } }, { uiLanguage: 'ja', scriptingFails: true });
   local.controller.start();
   await settle();
   assert.strictEqual(local.menuItem().title, 'Lumno の新しいタブのショートカットに追加', 'the browser language applies without a Lumno one');

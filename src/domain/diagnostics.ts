@@ -6,8 +6,6 @@
 // words) are reduced to their type and size. Failure messages lose web and
 // email addresses.
 
-// chrome.storage.local, this device only.
-const DIAGNOSTIC_ERRORS_STORAGE_KEY = '_x_lumno_diagnostic_errors_2026_unique_';
 const MAX_DIAGNOSTIC_ERRORS = 50;
 const MAX_MESSAGE_LENGTH = 300;
 const MAX_CONTEXT_LENGTH = 120;
@@ -246,7 +244,6 @@ function buildDiagnosticsReport(input: DiagnosticsReportInput): DiagnosticsRepor
 }
 
 export {
-  DIAGNOSTIC_ERRORS_STORAGE_KEY,
   MAX_DIAGNOSTIC_ERRORS,
   appendDiagnosticError,
   buildDiagnosticsReport,

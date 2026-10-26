@@ -28,6 +28,7 @@ import type {
 import type { StorageItems } from '../domain/storage-port';
 import { createInjectedAppRun } from '../platform/injection';
 import type { StartCommand } from '../domain/injected-commands';
+import { linkPreviewSessions } from '../domain/settings/features';
 
 type Rule = chrome.declarativeNetRequest.Rule;
 type HeaderInfo = chrome.declarativeNetRequest.HeaderInfo;
@@ -172,9 +173,6 @@ const PREVIEWABLE_URL_PATTERN = /^https?:\/\//i;
 // preview gets this many such tries.
 const MAX_REFUSED_RETRIES = 6;
 const RESOLVE_TIMEOUT_MS = 5000;
-// Open previews outlive a suspended worker in session storage, so a woken
-// worker still knows the preview's frame and domains.
-const SESSIONS_STORAGE_KEY = '_x_extension_link_preview_sessions_2026_unique_';
 
 // A secret the surface hands to its own frame (see bindFrame); the page under
 // the preview never sees it.
@@ -422,7 +420,7 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
         lastFrameUrl: session.lastFrameUrl
       };
     });
-    void callback<void>((done) => area.set({ [SESSIONS_STORAGE_KEY]: saved }, done));
+    void callback<void>((done) => area.set({ [linkPreviewSessions.key]: saved }, done));
   }
 
   async function restoreSessions(): Promise<void> {
@@ -430,8 +428,8 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
     if (!area) {
       return;
     }
-    const result = await callback<StorageItems>((done) => area.get([SESSIONS_STORAGE_KEY], done));
-    const saved = isRecord(result) ? result[SESSIONS_STORAGE_KEY] : null;
+    const result = await callback<StorageItems>((done) => area.get([linkPreviewSessions.key], done));
+    const saved = isRecord(result) ? result[linkPreviewSessions.key] : null;
     if (!isRecord(saved)) {
       return;
     }

@@ -9,7 +9,7 @@ import * as LumnoNewtabRecentSitesStore from '../domain/recent-sites-store';
 import * as LumnoProgressHistory from '../domain/progress-history';
 import * as LumnoProgressMatch from '../domain/progress-match';
 import * as LumnoSettings from '../domain/settings';
-import { PINNED_RECENT_SITES_STORAGE_KEY, PROGRESS_TRACKING_ENABLED_STORAGE_KEY, THEME_STORAGE_KEY } from '../domain/settings';
+import { pinnedRecentSites, themeMode } from '../domain/settings';
 import * as LumnoPageShortcutMenu from './page-shortcut-menu';
 import * as LumnoPopupRecentPin from './popup-recent-pin';
 import * as LumnoProgressTracker from './progress-tracker';
@@ -36,22 +36,22 @@ const progressTracker = LumnoProgressTracker.createProgressTracker({
   progressHistory: LumnoProgressHistory,
   getPinnedArea: () => storageArea,
   historyArea: localStorageArea,
-  pinnedKey: PINNED_RECENT_SITES_STORAGE_KEY,
+  pinnedKey: pinnedRecentSites.key,
   isEnabled: isProgressTrackingEnabled
 });
 
 // Attaches the tracker to tab events and follows the setting.
 function startProgressTracking(): void {
   progressTracker.attach();
-  storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
-    progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
-      result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
+  storageArea.get([LumnoSettings.progressTrackingEnabled.key], (result) => {
+    progressTrackingEnabled = LumnoSettings.progressTrackingEnabled.parse(
+      result && result[LumnoSettings.progressTrackingEnabled.key]
     );
   });
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (!isPrimaryStorageAreaName(areaName) || !changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) return;
-    progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
-      changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
+    if (!isPrimaryStorageAreaName(areaName) || !changes[LumnoSettings.progressTrackingEnabled.key]) return;
+    progressTrackingEnabled = LumnoSettings.progressTrackingEnabled.parse(
+      changes[LumnoSettings.progressTrackingEnabled.key].newValue
     );
   });
 }
@@ -60,13 +60,13 @@ function startProgressTracking(): void {
 // null where the browser has no context menus.
 const pageShortcutMenuController = chrome.contextMenus
   ? LumnoPageShortcutMenu.createController({ chrome, provider: providerStorageRuntime,
-    loadLocaleMessages, themeStorageKey: THEME_STORAGE_KEY }) : null;
+    loadLocaleMessages, themeStorageKey: themeMode.key }) : null;
 
 // The popup's pin among the New Tab's recent sites; episodes and chapters
 // start tracked while progress tracking (Labs) is on.
 const popupRecentPin = LumnoPopupRecentPin.createController({
   store: LumnoNewtabRecentSitesStore,
-  key: PINNED_RECENT_SITES_STORAGE_KEY,
+  key: pinnedRecentSites.key,
   storeOptions: {
     normalizeHost,
     getCanonicalPageUrlForFavicon: FAVICON_UTILS.getCanonicalPageUrlForFavicon,

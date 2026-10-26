@@ -1,6 +1,7 @@
 const assert = require('assert');
 const diagnostics = require('../../src/domain/diagnostics.ts');
 const { createDiagnosticsLog } = require('../../src/platform/diagnostics-log.ts');
+const { diagnosticErrors } = require('../../src/domain/settings/sync-state.ts');
 
 function createArea(initial = {}) {
   const values = { ...initial };
@@ -100,7 +101,7 @@ async function run() {
     diagnosticsLog.record('Second', new Error('two'))
   ]);
   assert.deepStrictEqual((await diagnosticsLog.read()).map((entry) => [entry.context, entry.at]), [['First', 11], ['Second', 12]]);
-  assert.deepStrictEqual(Object.keys(area.values), [diagnostics.DIAGNOSTIC_ERRORS_STORAGE_KEY]);
+  assert.deepStrictEqual(Object.keys(area.values), [diagnosticErrors.key]);
 
   const failingChrome = { runtime: { lastError: null } };
   const failingArea = createArea();

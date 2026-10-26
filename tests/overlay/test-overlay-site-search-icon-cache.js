@@ -4,6 +4,7 @@ const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const { parseCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // The bundled provider tiles and the shared icon cache rules. How the worker
 // warms icons is covered by tests/background/test-background-site-search-icons.js,
@@ -127,7 +128,7 @@ assert.deepStrictEqual([revealed.style.getPropertyValue('display'), revealed.sty
   await wait(80);
   const readKeys = harness.storage.local.reads.flatMap((keys) => (Array.isArray(keys) ? keys : [keys]));
   assert.ok(
-    readKeys.includes(shortcutFavicon.SITE_SEARCH_STORAGE_KEY),
+    readKeys.includes(siteSearchIconCache.key),
     'provider icons should warm as soon as the background runtime starts'
   );
   console.log('overlay site-search icon cache tests passed');

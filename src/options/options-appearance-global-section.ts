@@ -13,8 +13,8 @@ interface AppearanceGlobalSectionDeps {
   view(handlers: AppearanceGlobalSectionHandlers): SectionView<AppearanceGlobalSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'MOTION_EFFECTS_ENABLED_STORAGE_KEY' | 'SIMPLE_MODE_ENABLED_STORAGE_KEY' |
-    'normalizeMotionEffectsEnabled' | 'normalizeSimpleModeEnabled'>;
+    'motionEffectsEnabled' | 'simpleModeEnabled' |
+    'motionEffectsEnabled' | 'simpleModeEnabled'>;
   getMessage: GetMessage;
   // Plays the gallery's click effect and switches the page's color mode.
   onTheme(mode: ThemeMode, button: HTMLButtonElement): void;
@@ -25,13 +25,13 @@ function createAppearanceGlobalSection(deps: AppearanceGlobalSectionDeps) {
 
   const render = (): void => controller.render(getModel());
   const motionEffects = createSectionSetting({
-    storageKey: SETTINGS.MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeMotionEffectsEnabled,
+    storageKey: SETTINGS.motionEffectsEnabled.key,
+    normalize: SETTINGS.motionEffectsEnabled.parse,
     refreshSelects: true
   }, storageArea, () => render());
   const simpleMode = createSectionSetting({
-    storageKey: SETTINGS.SIMPLE_MODE_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSimpleModeEnabled,
+    storageKey: SETTINGS.simpleModeEnabled.key,
+    normalize: SETTINGS.simpleModeEnabled.parse,
     refreshSelects: true
   }, storageArea, () => render());
   const toggles = [motionEffects, simpleMode];

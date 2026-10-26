@@ -11,7 +11,7 @@ const {
 const { getBundleFiles } = require('../helpers/runtime-scripts');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.ts.
-const LumnoSettings = require('../../src/domain/settings.ts');
+const LumnoSettings = require('../../src/domain/settings/index.ts');
 const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.ts');
 const LumnoNewtabWallpaperEffects = require('../../src/newtab/wallpaper/wallpaper-effects.ts');
 const LumnoNewtabWallpaperLocalStore = require('../../src/shared/wallpaper-local-store.ts');
@@ -884,7 +884,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     }
   };
 
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
     filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
 
@@ -950,7 +950,7 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
         }
       }
     };
-    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
+    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
       filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
     });
     return preloadSandbox;
@@ -2242,7 +2242,7 @@ function runPreloadForWallpaper(entry, wallpaperEffects, prepareWindow) {
   windowObj.chrome = { runtime: { getURL: (path) => `chrome-extension://abc/${path}` } };
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: windowObj.chrome };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
     filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   return { root: documentObj.documentElement, preload: sandbox.__lumnoBoot?.wallpaperPreload };
@@ -3002,7 +3002,7 @@ async function testTimeSettingsFollowTheContentAboveTheSearchBar() {
 
   panelActions(testRuntime).selectTopContent('time');
   assert.strictEqual(page.mode, 'time');
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY], 'time');
+  assert.strictEqual(storageArea.data[settings.newtabTopContentMode.key], 'time');
   assert.strictEqual(search().timeWeight.visible, true, 'the time shows its font weight setting');
   assert.strictEqual(search().timeFont.visible, true, 'the time shows its font setting');
   assert.strictEqual(search().seconds.visible, true, 'the time shows its seconds setting');
@@ -3012,8 +3012,8 @@ async function testTimeSettingsFollowTheContentAboveTheSearchBar() {
   panelActions(testRuntime).setTimeFont('bitcount');
   assert.strictEqual(page.font, 'bitcount');
   assert.strictEqual(page.weight, 480);
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_STORAGE_KEY], 'bitcount');
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY], 480);
+  assert.strictEqual(storageArea.data[settings.newtabTimeFont.key], 'bitcount');
+  assert.strictEqual(storageArea.data[settings.newtabTimeFontWeight.key], 480);
   assert.deepStrictEqual(
     [search().timeFont.value, search().timeWeight.min, search().timeWeight.max, search().timeWeight.value],
     ['bitcount', 300, 550, 480]
@@ -3021,46 +3021,46 @@ async function testTimeSettingsFollowTheContentAboveTheSearchBar() {
   assert.strictEqual(search().timeWeight.resetVisible, false, "the face's own default has nothing to reset");
   // A heavier synced weight shows at the face's ceiling; the stored weight is kept
   // for the faces that can draw it.
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: { newValue: 800 } });
+  testRuntime.handleStorageChange({ [settings.newtabTimeFontWeight.key]: { newValue: 800 } });
   assert.strictEqual(page.weight, 800);
   assert.strictEqual(search().timeWeight.value, 550);
   panelActions(testRuntime).resetTimeFontWeight();
   assert.strictEqual(page.weight, 480, "reset returns to the face's own default");
   // Another device picks a face; an unknown one falls back to Open Sans.
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TIME_FONT_STORAGE_KEY]: { newValue: 'geist' } });
+  testRuntime.handleStorageChange({ [settings.newtabTimeFont.key]: { newValue: 'geist' } });
   assert.strictEqual(page.font, 'geist');
   assert.strictEqual(search().timeWeight.max, 800);
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TIME_FONT_STORAGE_KEY]: { newValue: 'papyrus' } });
+  testRuntime.handleStorageChange({ [settings.newtabTimeFont.key]: { newValue: 'papyrus' } });
   assert.strictEqual(page.font, 'open-sans');
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_STORAGE_KEY], 'open-sans');
+  assert.strictEqual(storageArea.data[settings.newtabTimeFont.key], 'open-sans');
   panelActions(testRuntime).setTimeFontWeight(320, NOT_DRAGGING);
 
   panelActions(testRuntime).setTimeFontWeight(612, NOT_DRAGGING);
   assert.strictEqual(page.weight, 612);
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY], 612);
+  assert.strictEqual(storageArea.data[settings.newtabTimeFontWeight.key], 612);
   assert.strictEqual(search().timeWeight.value, 612);
   assert.strictEqual(search().timeWeight.resetVisible, true, 'a changed weight offers a reset');
   panelActions(testRuntime).resetTimeFontWeight();
   assert.strictEqual(page.weight, 320);
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY], 320);
+  assert.strictEqual(storageArea.data[settings.newtabTimeFontWeight.key], 320);
   assert.strictEqual(search().timeWeight.resetVisible, false);
   panelActions(testRuntime).setTimeFontWeight(612, NOT_DRAGGING);
   panelActions(testRuntime).setTimeSecondsVisible(true);
   assert.strictEqual(page.seconds, true);
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY], true);
+  assert.strictEqual(storageArea.data[settings.newtabTimeSecondsVisible.key], true);
   assert.strictEqual(search().seconds.toggle.checked, true);
 
   // Another device changes the settings: the page and the panel follow.
   page.weight = 300;
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: { newValue: 9999 } });
+  testRuntime.handleStorageChange({ [settings.newtabTimeFontWeight.key]: { newValue: 9999 } });
   assert.strictEqual(page.weight, 800, 'a synced weight is clamped before it reaches the page');
-  assert.strictEqual(storageArea.data[settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY], 800,
+  assert.strictEqual(storageArea.data[settings.newtabTimeFontWeight.key], 800,
     'an out-of-range synced weight is written back clamped');
   assert.strictEqual(search().timeWeight.value, 800);
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: { newValue: false } });
+  testRuntime.handleStorageChange({ [settings.newtabTimeSecondsVisible.key]: { newValue: false } });
   assert.strictEqual(page.seconds, false);
   assert.strictEqual(search().seconds.toggle.checked, false);
-  testRuntime.handleStorageChange({ [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: { newValue: 'off' } });
+  testRuntime.handleStorageChange({ [settings.newtabTopContentMode.key]: { newValue: 'off' } });
   assert.strictEqual(page.mode, 'off');
   assert.strictEqual(search().topContent.tabs.active, 'off');
   assert.strictEqual(search().timeWeight.visible, false);
@@ -3787,7 +3787,7 @@ async function testPreloadPaintsTheCachedOnlineCopyBeforeTheRuntime() {
       wallpapers: { light: entry, dark: null }
     }));
     const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
       filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
     });
     if (beforeRead) beforeRead(sandbox.__lumnoBoot?.wallpaperPreload);
@@ -3831,7 +3831,7 @@ function runWallpaperPreloadWithEntry(entry, prepareWindow) {
   }));
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
     filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   return { documentObj, windowObj, preload: sandbox.__lumnoBoot?.wallpaperPreload };
@@ -4103,7 +4103,7 @@ async function testCuratedDailyCachesTomorrowsPhotoAhead() {
   }
   const preloadSandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: preloadDocument, window: preloadWindow,
     chrome: {}, Date: TomorrowDate };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/domain/settings/index.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
     filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   assert.strictEqual(await preloadSandbox.__lumnoBoot?.wallpaperPreload.imageReady, copyDataUrl(tomorrow.imageUrl),

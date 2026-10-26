@@ -8,15 +8,7 @@
 
 import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups';
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
-import {
-  getExtensionDetailsUrl,
-  openBookmarkManagerPage,
-  openExtensionOptionsPage,
-  openExtensionShortcutsPage,
-  openOnboardingPage,
-  openReleasePage,
-  openSiteSearchOptionsPage
-} from './extension-pages';
+import { getExtensionDetailsUrl, openBookmarkManagerPage, openExtensionOptionsPage, openExtensionShortcutsPage, openOnboardingPage, openReleasePage, openSiteSearchOptionsPage } from './extension-pages';
 import { checkFileSchemeAccess, swapNewtabForFocus } from './newtab-fallback';
 import { SHOW_SEARCH_COMMAND_NAME, loadLocaleMessages, loadShortcutRules, logHotkeyDebug } from './worker-context';
 import {

@@ -213,17 +213,17 @@ describe('Options page storage wiring', () => {
   it('restores switches from storage, repairs missing values and becomes ready', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({
-      [settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY]: false,
-      [settings.TAB_SWITCHER_ENABLED_STORAGE_KEY]: true
+      [settings.motionEffectsEnabled.key]: false,
+      [settings.tabSwitcherEnabled.key]: true
     });
     expect(toggle('_x_extension_motion_effects_toggle_2026_unique_').checked).toBe(false);
     expect(toggle('_x_extension_tab_switcher_toggle_2026_unique_').checked).toBe(true);
     expect(toggle('_x_extension_update_notice_toggle_2026_unique_').checked).toBe(true);
     const synced = chrome.storage.sync.values;
-    expect(synced[settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY]).toBe(true);
-    expect(synced[settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]).toBe(false);
-    expect(synced[settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]).toBe(true);
-    expect(synced[settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY]).toBe(false);
+    expect(synced[settings.updateNoticeEnabled.key]).toBe(true);
+    expect(synced[settings.simpleModeEnabled.key]).toBe(false);
+    expect(synced[settings.aggregateSearchAutoGroupEnabled.key]).toBe(true);
+    expect(synced[settings.motionEffectsEnabled.key]).toBe(false);
     expect(document.getElementById('_x_extension_feedback_support_2026_unique_')?.textContent)
       .toContain(enMessages.settings_help_center_title.message);
     // The WebDAV controller is created in the page's own declaration order.
@@ -243,16 +243,16 @@ describe('Options page storage wiring', () => {
       simpleMode.click();
     });
     await settle();
-    expect(chrome.storage.sync.values[settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]).toBe(true);
+    expect(chrome.storage.sync.values[settings.simpleModeEnabled.key]).toBe(true);
 
     await act(async () => {
-      chrome.storage.sync.externalSet({ [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: false });
+      chrome.storage.sync.externalSet({ [settings.simpleModeEnabled.key]: false });
     });
     await settle();
     expect(simpleMode.checked).toBe(false);
 
     await act(async () => {
-      chrome.storage.local.externalSet({ [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true });
+      chrome.storage.local.externalSet({ [settings.simpleModeEnabled.key]: true });
     });
     await settle();
     expect(simpleMode.checked).toBe(false);
@@ -262,13 +262,13 @@ describe('Options page storage wiring', () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage();
     await act(async () => {
-      chrome.storage.sync.externalSet({ [settings.THEME_STORAGE_KEY]: 'dark' });
+      chrome.storage.sync.externalSet({ [settings.themeMode.key]: 'dark' });
     });
     await settle();
     expect(document.body.getAttribute('data-theme')).toBe('dark');
 
     await act(async () => {
-      chrome.storage.sync.externalSet({ [settings.LANGUAGE_STORAGE_KEY]: 'ja' });
+      chrome.storage.sync.externalSet({ [settings.language.key]: 'ja' });
     });
     await settle();
     expect(document.documentElement.lang).toBe('ja');
@@ -277,7 +277,7 @@ describe('Options page storage wiring', () => {
     expect(list.textContent).not.toContain('Synced tech');
     await act(async () => {
       chrome.storage.sync.externalSet({
-        [settings.AGGREGATE_SEARCH_STORAGE_KEY]: {
+        [settings.aggregateSearches.key]: {
           version: 1,
           items: [{ id: 'agg-1', key: 'tech', name: 'Synced tech', sourceRefs: ['builtin:yt', 'builtin:gh'] }]
         }
@@ -289,7 +289,7 @@ describe('Options page storage wiring', () => {
 
   it('renders the stored search source order and stores moves', async () => {
     const settings = SETTINGS;
-    const key = settings.SEARCH_SOURCE_ORDER_STORAGE_KEY;
+    const key = settings.searchSourceOrder.key;
     const chrome = await bootOptionsPage({
       [key]: { version: 1, groups: ['local', 'ai'], lists: { site: ['gh', 'yt'] }, local: ['history'] }
     });
@@ -367,21 +367,21 @@ describe('Options page storage wiring', () => {
   it('binds the New Tab switches of the Appearance tab to their storage keys', async () => {
     const chrome = await bootOptionsPage();
     const switches: Array<[name: string, key: string, normalize: (value: unknown) => boolean]> = [
-      ['newtab_time_seconds', SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabTimeSecondsVisible],
-      ['newtab_time_12_hour', SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY, SETTINGS.normalizeNewtabTime12Hour],
-      ['newtab_input_auto_focus', SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY, SETTINGS.normalizeNewtabInputAutoFocusEnabled],
-      ['newtab_shortcuts', SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabShortcutsVisible],
-      ['newtab_shortcut_add', SETTINGS.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabShortcutAddVisible],
-      ['newtab_shortcut_dock_magnification', SETTINGS.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-        SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled],
-      ['bookmark_folder_icons_visible', SETTINGS.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeBookmarkFolderIconsVisible],
-      ['newtab_feedback_button_visible', SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabFeedbackButtonVisible],
-      ['newtab_appearance_button_visible', SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
-        SETTINGS.normalizeNewtabAppearanceButtonVisible]
+      ['newtab_time_seconds', SETTINGS.newtabTimeSecondsVisible.key, SETTINGS.newtabTimeSecondsVisible.parse],
+      ['newtab_time_12_hour', SETTINGS.newtabTime12Hour.key, SETTINGS.newtabTime12Hour.parse],
+      ['newtab_input_auto_focus', SETTINGS.newtabInputAutoFocusEnabled.key, SETTINGS.newtabInputAutoFocusEnabled.parse],
+      ['newtab_shortcuts', SETTINGS.newtabShortcutsVisible.key, SETTINGS.newtabShortcutsVisible.parse],
+      ['newtab_shortcut_add', SETTINGS.newtabShortcutAddVisible.key, SETTINGS.newtabShortcutAddVisible.parse],
+      ['newtab_shortcut_dock_magnification', SETTINGS.newtabShortcutDockMagnificationEnabled.key,
+        SETTINGS.newtabShortcutDockMagnificationEnabled.parse],
+      ['bookmark_folder_icons_visible', SETTINGS.bookmarkFolderIconsVisible.key, SETTINGS.bookmarkFolderIconsVisible.parse],
+      ['newtab_feedback_button_visible', SETTINGS.newtabFeedbackButtonVisible.key, SETTINGS.newtabFeedbackButtonVisible.parse],
+      ['newtab_appearance_button_visible', SETTINGS.newtabAppearanceButtonVisible.key,
+        SETTINGS.newtabAppearanceButtonVisible.parse]
     ];
     const entries = switches.map(([name, key, normalize]) => ({ inputId: `_x_extension_${name}_toggle_2026_unique_`, key, normalize }));
     // Sub-options stay disabled while their parent switch is off.
-    const parents = [SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
+    const parents = [SETTINGS.newtabShortcutsVisible.key];
     for (const entry of entries) {
       if (!parents.includes(entry.key)) {
         await act(async () => {
@@ -408,11 +408,11 @@ describe('Options page storage wiring', () => {
 
   it('runs each switch\'s follow-up, such as locking the selection provider while it is off', async () => {
     const settings = SETTINGS;
-    const chrome = await bootOptionsPage({ [settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY]: true });
+    const chrome = await bootOptionsPage({ [settings.selectionQuickActionsEnabled.key]: true });
     const provider = expectTag(document.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_'), 'select');
     expect(provider.disabled).toBe(false);
     await act(async () => {
-      chrome.storage.sync.externalSet({ [settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY]: false });
+      chrome.storage.sync.externalSet({ [settings.selectionQuickActionsEnabled.key]: false });
     });
     await settle();
     expect(provider.disabled).toBe(true);
@@ -421,13 +421,13 @@ describe('Options page storage wiring', () => {
   it('migrates the aggregate tab-group switch from older per-search values', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({
-      [settings.AGGREGATE_SEARCH_STORAGE_KEY]: {
+      [settings.aggregateSearches.key]: {
         version: 1,
         items: [{ id: 'agg-1', key: 'tech', name: 'Tech', sourceRefs: ['builtin:yt', 'builtin:gh'], autoCreateTabGroup: false }]
       }
     });
     expect(toggle('_x_extension_aggregate_search_auto_group_toggle_2026_unique_').checked).toBe(false);
-    expect(chrome.storage.sync.values[settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]).toBe(false);
+    expect(chrome.storage.sync.values[settings.aggregateSearchAutoGroupEnabled.key]).toBe(false);
   });
 
   it('tells a failed aggregate search read apart from an empty list', async () => {
@@ -445,7 +445,7 @@ describe('Options page storage wiring', () => {
     const get = failing.storage.sync.get.bind(failing.storage.sync);
     failing.storage.sync.get = (keys: unknown, callback?: (result: StorageValues) => void) => {
       const list = Array.isArray(keys) ? keys : [keys];
-      if (callback && list.length === 1 && list[0] === settings.AGGREGATE_SEARCH_STORAGE_KEY) {
+      if (callback && list.length === 1 && list[0] === settings.aggregateSearches.key) {
         queueMicrotask(() => {
           failing.runtime.lastError = { message: 'read failed' };
           callback({});
@@ -463,8 +463,8 @@ describe('Options page storage wiring', () => {
 
   it('repairs, persists and follows the overlay opening animation', async () => {
     const settings = SETTINGS;
-    const chrome = await bootOptionsPage({ [settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: 'bounce' });
-    const key = settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY;
+    const chrome = await bootOptionsPage({ [settings.overlayEnterAnimation.key]: 'bounce' });
+    const key = settings.overlayEnterAnimation.key;
     const button = (value: string) => getTag(document, `#_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_ button[data-overlay-enter-animation="${value}"]`, 'button');
     expect(chrome.storage.sync.values[key]).toBe('elastic');
     expect(button('elastic').getAttribute('aria-checked')).toBe('true');
@@ -485,10 +485,10 @@ describe('Options page storage wiring', () => {
     const chrome = await bootOptionsPage();
     const reads = vi.spyOn(chrome.storage.sync, 'get');
     await act(async () => {
-      chrome.storage.sync.externalSet({ [settings.BOOKMARK_COUNT_STORAGE_KEY]: 2 });
+      chrome.storage.sync.externalSet({ [settings.bookmarkCount.key]: 2 });
     });
     await settle();
-    expect(reads.mock.calls.some(([keys]) => Array.isArray(keys) && keys.includes(settings.SYNC_META_STORAGE_KEY))).toBe(true);
+    expect(reads.mock.calls.some(([keys]) => Array.isArray(keys) && keys.includes(settings.syncMeta.key))).toBe(true);
   });
 
   it.each(['zh_CN', 'zh_TW', 'en', 'ja'])(
@@ -496,7 +496,7 @@ describe('Options page storage wiring', () => {
     async (locale) => {
       const settings = SETTINGS;
       const messages = LOCALE_MESSAGES[locale];
-      const chrome = await bootOptionsPage({ [settings.LANGUAGE_STORAGE_KEY]: locale.replace('_', '-') });
+      const chrome = await bootOptionsPage({ [settings.language.key]: locale.replace('_', '-') });
       const select = expectTag(document.getElementById('_x_extension_search_result_tab_position_select_2026_unique_'), 'select');
       const host = expectElement(select.closest('._x_extension_custom_select_2024_unique_'));
       const label = () => host.querySelector('._x_extension_select_label_2024_unique_')?.textContent;
@@ -523,11 +523,11 @@ describe('Options page storage wiring', () => {
         queryHtmlElement(host, '[data-value="beforeCurrent"]')?.click();
       });
       await settle();
-      expect(chrome.storage.sync.values[settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]).toBe('beforeCurrent');
+      expect(chrome.storage.sync.values[settings.searchResultTabPosition.key]).toBe('beforeCurrent');
       expect(label()).toBe(messages.search_result_tab_position_before_current.message);
 
       await act(async () => {
-        chrome.storage.sync.externalSet({ [settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: 'afterCurrent' });
+        chrome.storage.sync.externalSet({ [settings.searchResultTabPosition.key]: 'afterCurrent' });
       });
       await settle();
       expect(label()).toBe(messages.search_result_tab_position_after_current.message);
@@ -541,8 +541,8 @@ describe('Options page storage wiring', () => {
     const file = new File([JSON.stringify({
       version: 1,
       data: {
-        [settings.THEME_STORAGE_KEY]: 'light',
-        [settings.NEWTAB_SHORTCUTS_STORAGE_KEY]: [{ url: 'https://example.com' }]
+        [settings.themeMode.key]: 'light',
+        [settings.newtabShortcutsLegacy.key]: [{ url: 'https://example.com' }]
       }
     })], 'settings.json', { type: 'application/json' });
     Object.defineProperty(input, 'files', { configurable: true, value: [file] });
@@ -550,11 +550,11 @@ describe('Options page storage wiring', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await vi.waitFor(() => {
-      expect(chrome.storage.sync.values[settings.SYNC_META_STORAGE_KEY]).toMatchObject({ source: 'import' });
+      expect(chrome.storage.sync.values[settings.syncMeta.key]).toMatchObject({ source: 'import' });
     });
     const synced = chrome.storage.sync.values;
-    expect(synced[settings.THEME_STORAGE_KEY]).toBe('light');
-    expect(synced[settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY]).toEqual([]);
+    expect(synced[settings.themeMode.key]).toBe('light');
+    expect(synced[settings.newtabShortcutsLegacyChunk2.key]).toEqual([]);
     expect(input.value).toBe('');
   });
 });

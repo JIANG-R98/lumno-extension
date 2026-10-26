@@ -10,6 +10,7 @@ import { downloadJsonFile } from './options-download';
 import type { createSyncTransfer, SettingsImportPlan } from './options-sync-transfer';
 import type { FormatTemplate, GetMessage, ToastTask } from './options-types';
 import type { BrowserSyncCardHandlers, BrowserSyncCardModel, BrowserSyncTone } from './react/account-tab';
+import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 
 interface SyncSectionChromeApi {
   runtime: { lastError?: { message?: string } | null };
@@ -18,8 +19,8 @@ interface SyncSectionChromeApi {
 
 interface SyncSectionOptions {
   chromeApi: SyncSectionChromeApi;
-  settings: Pick<typeof Settings, 'CHROME_SYNC_STORAGE_KEYS' | 'SYNC_META_STORAGE_KEY' |
-    'NEWTAB_SHORTCUTS_V2_STORAGE_KEYS' | 'WEBDAV_STATUS_STORAGE_KEY'>;
+  settings: Pick<typeof Settings, 'BROWSER_SYNC_KEYS' | 'syncMeta' |
+    'NEWTAB_SHORTCUTS_GROUP_KEYS' | 'webdavStatus'>;
   syncTransfer: ReturnType<typeof createSyncTransfer> | null;
   // The provider area.
   storageArea: StorageAreaLike | null;
@@ -65,8 +66,6 @@ function createSyncSection(options: SyncSectionOptions) {
   } = options;
   const chrome = options.chromeApi;
   const SETTINGS = options.settings;
-  const SYNC_KEYS = SETTINGS.CHROME_SYNC_STORAGE_KEYS;
-  const SYNC_META_STORAGE_KEY = SETTINGS.SYNC_META_STORAGE_KEY;
   const documentObj = options.documentObj;
 
   // Until the first refresh (null) the card shows sync as on, with no tone.
@@ -153,10 +152,10 @@ function createSyncSection(options: SyncSectionOptions) {
     }
     const revision = ++shortcutSyncSummaryRevision;
     storageArea.get(store.SHORTCUT_STORAGE_KEYS.slice(), (values) => {
-      localStorageArea.get([store.SHORTCUTS_LOCAL_OVERFLOW_KEY, SETTINGS.WEBDAV_STATUS_STORAGE_KEY], (local) => {
+      localStorageArea.get([NewtabShortcutSettings.newtabShortcutsLocalOverflow.key, SETTINGS.webdavStatus.key], (local) => {
         if (revision !== shortcutSyncSummaryRevision) return;
-        const summary = store.summarizeShortcutSync(values || {}, local && local[store.SHORTCUTS_LOCAL_OVERFLOW_KEY]);
-        const webdavStatus = local ? local[SETTINGS.WEBDAV_STATUS_STORAGE_KEY] : undefined;
+        const summary = store.summarizeShortcutSync(values || {}, local && local[NewtabShortcutSettings.newtabShortcutsLocalOverflow.key]);
+        const webdavStatus = local ? local[SETTINGS.webdavStatus.key] : undefined;
         const webdav = isRecord(webdavStatus) && webdavStatus.enabled === true;
         let text = '';
         if (summary.total <= 0) {
@@ -195,8 +194,8 @@ function createSyncSection(options: SyncSectionOptions) {
     }
     updateSyncStatusText('sync_status_ready', '同步已开启');
     // The last-sync time describes the browser's own sync service.
-    (chrome.storage.sync || storageArea).get([SYNC_META_STORAGE_KEY], (result) => {
-      const meta = result ? result[SYNC_META_STORAGE_KEY] : null;
+    (chrome.storage.sync || storageArea).get([SETTINGS.syncMeta.key], (result) => {
+      const meta = result ? result[SETTINGS.syncMeta.key] : null;
       const lastSyncAt = isRecord(meta) && (typeof meta.lastSyncAt === 'number' || typeof meta.lastSyncAt === 'string')
         ? meta.lastSyncAt
         : '';
@@ -223,8 +222,8 @@ function createSyncSection(options: SyncSectionOptions) {
           }
         });
         // Grouped shortcuts move only as a whole save, never chunk by chunk.
-        const [shortcutsHeadKey] = SETTINGS.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
-        SETTINGS.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS.forEach((key) => {
+        const [shortcutsHeadKey] = SETTINGS.NEWTAB_SHORTCUTS_GROUP_KEYS;
+        SETTINGS.NEWTAB_SHORTCUTS_GROUP_KEYS.forEach((key) => {
           if (!Object.prototype.hasOwnProperty.call(missingSyncValues, shortcutsHeadKey)) {
             delete missingSyncValues[key];
           } else if (typeof localResult[key] !== 'undefined') {
@@ -237,7 +236,7 @@ function createSyncSection(options: SyncSectionOptions) {
         }
         storageArea.get(missingKeys, (latestSyncItems) => {
           const latestSyncResult = latestSyncItems || {};
-          const groupedKeys = SETTINGS.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
+          const groupedKeys = SETTINGS.NEWTAB_SHORTCUTS_GROUP_KEYS;
           // The grouped save still moves whole while sync lacks its head,
           // replacing any stray chunk there; once sync has a head, none of it moves.
           const groupStillMissing = typeof latestSyncResult[shortcutsHeadKey] === 'undefined';
@@ -283,7 +282,7 @@ function createSyncSection(options: SyncSectionOptions) {
     }
     syncing = true;
     render();
-    browserSyncArea.get(SYNC_KEYS.slice(), (result) => {
+    browserSyncArea.get(SETTINGS.BROWSER_SYNC_KEYS.slice(), (result) => {
       browserSyncArea.set(transfer.buildManualSyncPayload(result, Date.now()), () => {
         syncing = false;
         render();
@@ -302,7 +301,7 @@ function createSyncSection(options: SyncSectionOptions) {
     if (!transfer || !storageArea) {
       return;
     }
-    storageArea.get(SYNC_KEYS.slice(), (result) => {
+    storageArea.get(SETTINGS.BROWSER_SYNC_KEYS.slice(), (result) => {
       downloadJsonFile(
         documentObj,
         `lumno-settings-${Date.now()}.json`,

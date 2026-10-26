@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 const { createNewtabPage } = require('../helpers/newtab-page');
@@ -12,27 +12,27 @@ const { createNewtabPage } = require('../helpers/newtab-page');
 const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
 
 assert.strictEqual(
-  settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+  settings.newtabTimeSecondsVisible.key,
   '_x_extension_newtab_time_seconds_visible_2026_unique_'
 );
 assert.strictEqual(
-  settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
+  settings.newtabTimeFontWeight.key,
   '_x_extension_newtab_time_font_weight_2026_unique_'
 );
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_MIN, 300);
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_MAX, 800);
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_DEFAULT, 320);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(undefined), 320);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(299), 300);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(650), 650);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(801), 800);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(undefined), 320);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(299), 300);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(650), 650);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(801), 800);
 assert.strictEqual(
-  settings.NEWTAB_TIME_FONT_STORAGE_KEY,
+  settings.newtabTimeFont.key,
   '_x_extension_newtab_time_font_2026_unique_'
 );
-assert.strictEqual(settings.normalizeNewtabTimeFont(undefined), 'open-sans');
-assert.strictEqual(settings.normalizeNewtabTimeFont('comic-sans'), 'open-sans');
-assert.strictEqual(settings.normalizeNewtabTimeFont('bitcount'), 'bitcount');
+assert.strictEqual(settings.newtabTimeFont.parse(undefined), 'open-sans');
+assert.strictEqual(settings.newtabTimeFont.parse('comic-sans'), 'open-sans');
+assert.strictEqual(settings.newtabTimeFont.parse('bitcount'), 'bitcount');
 assert.deepStrictEqual(
   settings.NEWTAB_TIME_FONTS.map((font) => font.id),
   ['open-sans', 'geist', 'jetbrains-mono', 'bricolage-grotesque', 'unbounded', 'bitcount']
@@ -60,7 +60,7 @@ settings.NEWTAB_TIME_FONTS.filter((font) => Array.isArray(font.tracking)).forEac
 });
 assert.strictEqual(settings.getNewtabTimeFontTracking('bitcount', 800), 0, 'tracking follows the clamped weight');
 assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_FONT_STORAGE_KEY),
+  settings.BROWSER_SYNC_KEYS.includes(settings.newtabTimeFont.key),
   'the time font preference should sync through the shared settings contract'
 );
 // Every Lumno Clock face named in settings is declared by the clock stylesheet with
@@ -78,17 +78,17 @@ settings.NEWTAB_TIME_FONTS
     assert.deepStrictEqual([Number(face[2]), Number(face[3])], [font.minWeight, font.maxWeight]);
   });
 assert.ok(newtabDocument.querySelector('link[rel="stylesheet"][href$="assets/fonts/clock/clock-fonts.css"]'), 'New Tab should link the clock faces');
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible(undefined), false);
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible(true), true);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse(undefined), false);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse(true), true);
 assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(
-    settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY
+  settings.BROWSER_SYNC_KEYS.includes(
+    settings.newtabTimeFontWeight.key
   ),
   'the time font-weight preference should sync through the shared settings contract'
 );
 assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(
-    settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY
+  settings.BROWSER_SYNC_KEYS.includes(
+    settings.newtabTimeSecondsVisible.key
   ),
   'the seconds preference should sync through the shared settings contract'
 );
@@ -99,7 +99,7 @@ const ROW_IDS = ['font', 'font_weight', 'font_size', 'opacity', 'ink', 'seconds'
 const TIME_SUBROWS = '_x_extension_newtab_time_subrows_2026_unique_';
 
 async function testSettingsMarkup() {
-  const page = await createOptionsPage({ sync: { [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: settings.NEWTAB_TOP_CONTENT_BRAND } });
+  const page = await createOptionsPage({ sync: { [settings.newtabTopContentMode.key]: settings.NEWTAB_TOP_CONTENT_BRAND } });
   const optionsDocument = page.document;
   const order = [
     '_x_extension_newtab_top_content_tabs_wrap_2026_unique_',
@@ -125,7 +125,7 @@ async function testSettingsMarkup() {
 }
 
 async function testSettingsShowTheTimeRowsForTheClock() {
-  const page = await createOptionsPage({ sync: { [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: settings.NEWTAB_TOP_CONTENT_BRAND } });
+  const page = await createOptionsPage({ sync: { [settings.newtabTopContentMode.key]: settings.NEWTAB_TOP_CONTENT_BRAND } });
   const subrows = page.byId(TIME_SUBROWS);
   assert.ok(ROW_IDS.every((id) => subrows.contains(page.byId(id))));
   assert.strictEqual(subrows.getAttribute('data-expanded'), 'false', 'the clock options stay folded while New Tab shows the wordmark');
@@ -133,7 +133,7 @@ async function testSettingsShowTheTimeRowsForTheClock() {
   await page.settle(400);
   assert.strictEqual(subrows.getAttribute('data-expanded'), 'true', 'choosing the clock should reveal its options');
   const slider = page.document.querySelector('#_x_extension_newtab_time_font_weight_row_2026_unique_ input[type="range"]');
-  const font = settings.NEWTAB_TIME_FONTS.find((item) => item.id === settings.normalizeNewtabTimeFont(undefined));
+  const font = settings.NEWTAB_TIME_FONTS.find((item) => item.id === settings.newtabTimeFont.parse(undefined));
   assert.deepStrictEqual([slider.min, slider.max, slider.step, slider.value],
     [String(font.minWeight), String(font.maxWeight), '1', String(settings.resolveNewtabTimeFontWeight(font.id, undefined))],
     'the weight slider should cover the chosen face\'s weights');
@@ -143,10 +143,10 @@ async function testSettingsShowTheTimeRowsForTheClock() {
 async function testClockFollowsTheSettings() {
   const page = await createNewtabPage({
     sync: {
-      [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: settings.NEWTAB_TOP_CONTENT_TIME,
-      [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: true,
-      [settings.NEWTAB_TIME_FONT_STORAGE_KEY]: 'jetbrains-mono',
-      [settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: 600
+      [settings.newtabTopContentMode.key]: settings.NEWTAB_TOP_CONTENT_TIME,
+      [settings.newtabTimeSecondsVisible.key]: true,
+      [settings.newtabTimeFont.key]: 'jetbrains-mono',
+      [settings.newtabTimeFontWeight.key]: 600
     }
   });
   await page.settle(400);
@@ -159,11 +159,11 @@ async function testClockFollowsTheSettings() {
   assert.ok(styled.includes(font.family.split(',')[0]), 'in its family');
   assert.match(styled, /font-weight: 600/, 'at the stored weight');
 
-  page.changeStorage('sync', settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, false);
+  page.changeStorage('sync', settings.newtabTimeSecondsVisible.key, false);
   await page.settle(150);
   assert.strictEqual(clock().getAttribute('data-show-seconds'), 'false', 'hiding seconds in Settings should apply at once');
   assert.strictEqual(page.document.querySelectorAll('.x-nt-time-seconds-digit').length, 0);
-  page.changeStorage('sync', settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY, 400);
+  page.changeStorage('sync', settings.newtabTimeFontWeight.key, 400);
   await page.settle(150);
   assert.match(clock().getAttribute('style') || '', /font-weight: 400/, 'and so should a new weight');
   page.close();

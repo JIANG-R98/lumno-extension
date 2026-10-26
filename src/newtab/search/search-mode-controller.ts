@@ -44,7 +44,7 @@ interface SearchModeControllerDeps {
   normalizeEnabledSearchResultSourceTypes(value: unknown): SearchSourceType[];
   normalizeSearchResultDisplayLimit(value: unknown): number;
   normalizeOverlayTabPriorityMode(value: unknown): boolean;
-  SETTINGS: Pick<typeof Settings, 'normalizeNewtabOpenInNewTab'>;
+  SETTINGS: Pick<typeof Settings, 'newtabOpenInNewTab'>;
   renderSuggestions: RenderSuggestions;
   searchInput: HTMLInputElement;
   // The room the clear button takes at the input's right.
@@ -174,7 +174,7 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
       pageState.openTabQuickSwitchEnabled = normalizeOverlayTabPriorityMode(
         result ? result[OVERLAY_TAB_PRIORITY_STORAGE_KEY] : null
       );
-      pageState.newtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(
+      pageState.newtabOpenInNewTab = SETTINGS.newtabOpenInNewTab.parse(
         result ? result[NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY] : null
       );
       if (raw !== nextMode) {

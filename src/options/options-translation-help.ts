@@ -3,7 +3,7 @@
 // UI string as a spreadsheet, fill in a "Suggestion" column and attach it.
 // scripts/i18n/import-sheet.js merges a returned spreadsheet.
 import type { LocaleMessage } from '../domain/messages';
-import type { UiLocale } from '../domain/settings';
+import type { UiLocale } from '../domain/settings/locale';
 import { downloadTextFile } from './options-download';
 import type { FormatTemplate, GetMessage } from './options-types';
 import type { TranslationHelpRenderModel } from './react/translation-help';

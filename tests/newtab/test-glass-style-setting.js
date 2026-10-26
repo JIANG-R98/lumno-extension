@@ -3,16 +3,16 @@ const { moduleScript } = require('../helpers/module-script');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const postcss = require('postcss');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
-const key = settings.NEWTAB_GLASS_STYLE_STORAGE_KEY;
-const themeKey = settings.NEWTAB_GLASS_THEME_STORAGE_KEY;
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(key));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(themeKey));
+const key = settings.newtabGlassStyle.key;
+const themeKey = settings.newtabGlassTheme.key;
+assert(settings.BROWSER_SYNC_KEYS.includes(key));
+assert(settings.BROWSER_SYNC_KEYS.includes(themeKey));
 assert.deepStrictEqual(Array.from(settings.NEWTAB_GLASS_THEMES), ['follow', 'light', 'dark']);
 for (const value of [undefined, null, 'system', 'Light', 1]) {
-  assert.strictEqual(settings.normalizeNewtabGlassTheme(value), 'follow');
+  assert.strictEqual(settings.newtabGlassTheme.parse(value), 'follow');
 }
 // Only a glass material set to light or dark holds the page's theme.
 assert.strictEqual(settings.getNewtabGlassThemeOverride('none', 'dark'), '');
@@ -22,10 +22,10 @@ assert.strictEqual(settings.getNewtabGlassThemeOverride('frosted', 'light'), 'li
 assert.strictEqual(settings.getNewtabGlassThemeOverride('liquid', 'dark'), 'dark');
 assert.deepStrictEqual(Array.from(settings.NEWTAB_GLASS_STYLES), ['none', 'frosted', 'liquid']);
 for (const value of [undefined, null, false, true, 'Frosted', 'glass', 1, {}]) {
-  assert.strictEqual(settings.normalizeNewtabGlassStyle(value), 'none');
+  assert.strictEqual(settings.newtabGlassStyle.parse(value), 'none');
 }
 for (const value of ['none', 'frosted', 'liquid']) {
-  assert.strictEqual(settings.normalizeNewtabGlassStyle(value), value);
+  assert.strictEqual(settings.newtabGlassStyle.parse(value), value);
 }
 
 // New Tab with the given material and material theme stored. The liquid

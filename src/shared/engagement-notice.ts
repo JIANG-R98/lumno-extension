@@ -7,6 +7,7 @@ import type { CommunityChannel } from '../domain/community-links';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoFeatureHints from './ui/feature-hints';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
+import { engagementNoticeState } from '../domain/settings/features';
 
 type EngagementSurface = 'newtab' | 'overlay';
 
@@ -71,7 +72,6 @@ interface EngagementNoticeController extends FeatureHintController {
   suppressForSession(): void;
 }
 
-const ENGAGEMENT_NOTICE_STORAGE_KEY = '_x_lumno_engagement_notice_state_2026_unique_';
 const ENGAGEMENT_NOTICE_ID = 'engagement-notice';
 const ENGAGEMENT_NOTICE_VERSION = '1';
 const ENGAGEMENT_NOTICE_ENABLED = true;
@@ -201,12 +201,12 @@ function getStoredEngagementState(chromeApi: EngagementChromeApi | null | undefi
       return;
     }
     try {
-      area.get([ENGAGEMENT_NOTICE_STORAGE_KEY], (result) => {
+      area.get([engagementNoticeState.key], (result) => {
         const runtimeError = chromeApi && chromeApi.runtime
           ? chromeApi.runtime.lastError
           : null;
         resolve(normalizeEngagementState(
-          runtimeError ? null : result && result[ENGAGEMENT_NOTICE_STORAGE_KEY]
+          runtimeError ? null : result && result[engagementNoticeState.key]
         ));
       });
     } catch (_error) {
@@ -223,7 +223,7 @@ function setStoredEngagementState(chromeApi: EngagementChromeApi | null | undefi
   }
   return new Promise((resolve) => {
     try {
-      area.set({ [ENGAGEMENT_NOTICE_STORAGE_KEY]: state }, () => resolve(state));
+      area.set({ [engagementNoticeState.key]: state }, () => resolve(state));
     } catch (_error) {
       resolve(state);
     }
@@ -524,7 +524,6 @@ export {
   X_URL,
   ENGAGEMENT_NOTICE_ENABLED,
   ENGAGEMENT_NOTICE_ID,
-  ENGAGEMENT_NOTICE_STORAGE_KEY,
   ENGAGEMENT_NOTICE_VERSION,
   MAX_EXPOSURES,
   RETRY_COOLDOWN_MS,

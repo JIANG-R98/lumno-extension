@@ -6,6 +6,7 @@ import type { MessageRuntime } from '../../platform/messaging';
 import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
+import { siteSearchCustom, siteSearchDisabled } from '../../domain/settings/search';
 
 interface SiteSearchStorageKeys {
   custom: string;
@@ -29,8 +30,8 @@ interface SiteSearchStoreOptions {
 }
 
 const STORAGE_KEYS: Readonly<SiteSearchStorageKeys> = Object.freeze({
-  custom: '_x_extension_site_search_custom_2024_unique_',
-  disabled: '_x_extension_site_search_disabled_2024_unique_'
+  custom: siteSearchCustom.key,
+  disabled: siteSearchDisabled.key
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {

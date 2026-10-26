@@ -2,10 +2,11 @@ const assert = require('assert');
 
 const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
 const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
+const { newtabShortcutsLocalOverflow } = require('../../src/domain/settings/newtab-shortcuts.ts');
 
 const SYNC_KEYS = shortcutsStore.SHORTCUTS_SYNC_KEYS;
 const LEGACY_KEYS = shortcutsStore.LEGACY_SHORTCUTS_CHUNK_KEYS;
-const OVERFLOW_KEY = shortcutsStore.SHORTCUTS_LOCAL_OVERFLOW_KEY;
+const OVERFLOW_KEY = newtabShortcutsLocalOverflow.key;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function createMemoryStorage(initialData) {

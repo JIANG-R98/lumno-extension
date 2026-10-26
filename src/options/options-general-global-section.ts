@@ -18,7 +18,7 @@ interface GeneralGlobalSectionDeps {
   view(handlers: GeneralGlobalSectionHandlers): SectionView<GeneralGlobalSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'UPDATE_NOTICE_ENABLED_STORAGE_KEY' | 'UI_LOCALES' | 'normalizeUpdateNoticeEnabled' | 'isMachineTranslatedLocale'>;
+    'updateNoticeEnabled' | 'UI_LOCALES' | 'updateNoticeEnabled' | 'isMachineTranslatedLocale'>;
   runtime: MessageRuntime & { lastError?: { message?: string } | null };
   getMessage: GetMessage;
   showToast(message: string, isError?: boolean): void;
@@ -43,8 +43,8 @@ function createGeneralGlobalSection(deps: GeneralGlobalSectionDeps) {
 
   const render = (): void => controller.render(getModel());
   const updateNotice = createSectionSetting({
-    storageKey: SETTINGS.UPDATE_NOTICE_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeUpdateNoticeEnabled,
+    storageKey: SETTINGS.updateNoticeEnabled.key,
+    normalize: SETTINGS.updateNoticeEnabled.parse,
     refreshSelects: true
   }, storageArea, () => render());
   let feedback: FeedbackSupportRenderModel | null = null;

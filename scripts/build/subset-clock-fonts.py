@@ -25,7 +25,7 @@ from fontTools.varLib import instancer
 OUT_DIR = Path(__file__).resolve().parent.parent / 'assets' / 'fonts' / 'clock'
 CLOCK_CHARS = '0123456789:'
 
-# Weight ranges must match NEWTAB_TIME_FONTS in src/domain/settings.ts.
+# Weight ranges must match NEWTAB_TIME_FONTS in src/domain/settings/index.ts.
 FACES = (
     ('geist', 'Geist[wght].ttf', 'Lumno Clock Geist', {'wght': (300, 800)}),
     ('jetbrains-mono', 'JetBrainsMono[wght].ttf', 'Lumno Clock JetBrains Mono', {'wght': (300, 800)}),

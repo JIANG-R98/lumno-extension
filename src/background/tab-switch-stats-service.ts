@@ -7,6 +7,7 @@
 import { warnBackgroundFailure } from './worker-context';
 import type { OverlayTab, TabRankFields } from '../domain/messages';
 import type { StorageAreaLike } from '../domain/storage-port';
+import { tabSwitchStats } from '../domain/settings/features';
 
 // When a tab was switched to in the last day, and last of all.
 interface TabSwitchStat {
@@ -41,7 +42,6 @@ const TAB_SWITCH_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
 const TAB_SWITCH_HIGH_FREQ_SHORT_THRESHOLD = 2;
 const TAB_SWITCH_HIGH_FREQ_DAY_THRESHOLD = 5;
 const TAB_SWITCH_EVENT_HISTORY_LIMIT = 60;
-const TAB_SWITCH_STATS_STORAGE_KEY = '_x_extension_tab_switch_stats_2026_unique_';
 // Tab switch stats: persisted on every change to session storage and merged
 // back by ensureTabSwitchStatsLoaded on wake.
 const tabSwitchEventsByTabId = new Map<number, TabSwitchStat>();
@@ -157,7 +157,7 @@ function persistTabSwitchStatsNow(): Promise<boolean> {
   }
   const snapshot = exportTabSwitchStatsSnapshot();
   return new Promise((resolve) => {
-    area.set({ [TAB_SWITCH_STATS_STORAGE_KEY]: snapshot }, () => {
+    area.set({ [tabSwitchStats.key]: snapshot }, () => {
       resolve(!(chrome.runtime && chrome.runtime.lastError));
     });
   });
@@ -176,8 +176,8 @@ export function ensureTabSwitchStatsLoaded(): Promise<void> {
     return Promise.resolve();
   }
   tabSwitchStatsLoadPromise = new Promise((resolve) => {
-    area.get([TAB_SWITCH_STATS_STORAGE_KEY], (result) => {
-      const payload = result ? result[TAB_SWITCH_STATS_STORAGE_KEY] : null;
+    area.get([tabSwitchStats.key], (result) => {
+      const payload = result ? result[tabSwitchStats.key] : null;
       applyPersistedTabSwitchStats(payload);
       tabSwitchStatsClearedBeforeLoad.clear();
       tabSwitchStatsLoaded = true;

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
 
 let registeredStorageListener = null;
@@ -20,42 +20,42 @@ assert.strictEqual(settingsStorage.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(undefined), true);
-assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(false), false);
-assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(true), true);
+assert.strictEqual(settings.aggregateSearchAutoGroupEnabled.parse(undefined), true);
+assert.strictEqual(settings.aggregateSearchAutoGroupEnabled.parse(false), false);
+assert.strictEqual(settings.aggregateSearchAutoGroupEnabled.parse(true), true);
 // The bookmark bar material syncs through WebDAV only, without the migrated legacy color.
-assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS, settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
-assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS, [
+assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_WEBDAV_KEYS, settings.BOOKMARK_TOPBAR_SURFACE_KEYS.slice(0, 3));
+assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_SURFACE_KEYS, [
   '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_light_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_2026_unique_'
 ]);
-assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(undefined), false);
-assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(true), true);
-assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(false), false);
-assert.deepStrictEqual(settings.normalizeNewtabOpenInNewTab(undefined), {
+assert.strictEqual(settings.newtabInputAutoFocusEnabled.parse(undefined), false);
+assert.strictEqual(settings.newtabInputAutoFocusEnabled.parse(true), true);
+assert.strictEqual(settings.newtabInputAutoFocusEnabled.parse(false), false);
+assert.deepStrictEqual(settings.newtabOpenInNewTab.parse(undefined), {
   search: false,
   shortcuts: false,
   bookmarks: false,
   recentSites: false
 });
-assert.deepStrictEqual(settings.normalizeNewtabOpenInNewTab({ search: true, bookmarks: 'true', extra: true }), {
+assert.deepStrictEqual(settings.newtabOpenInNewTab.parse({ search: true, bookmarks: 'true', extra: true }), {
   search: true,
   shortcuts: false,
   bookmarks: false,
   recentSites: false
 });
-assert.deepStrictEqual(settings.normalizeNewtabOpenInNewTab(['search']), {
+assert.deepStrictEqual(settings.newtabOpenInNewTab.parse(['search']), {
   search: false,
   shortcuts: false,
   bookmarks: false,
   recentSites: false
 });
-assert.strictEqual(settings.normalizeSimpleModeEnabled(undefined), false);
-assert.strictEqual(settings.normalizeSimpleModeEnabled(false), false);
-assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);
-assert.strictEqual(settings.normalizeSimpleModeEnabled('true'), false);
+assert.strictEqual(settings.simpleModeEnabled.parse(undefined), false);
+assert.strictEqual(settings.simpleModeEnabled.parse(false), false);
+assert.strictEqual(settings.simpleModeEnabled.parse(true), true);
+assert.strictEqual(settings.simpleModeEnabled.parse('true'), false);
 
 assert.strictEqual(settings.normalizeLocale(''), 'en');
 assert.strictEqual(settings.normalizeLocale('en-US'), 'en');
@@ -84,9 +84,9 @@ assert.strictEqual(settings.resolveSupportedLocale('system'), '');
 assert.strictEqual(settings.isMachineTranslatedLocale('de'), true);
 assert.strictEqual(settings.isMachineTranslatedLocale('zh-TW'), false);
 
-assert.strictEqual(settings.normalizeNewtabWidthMode('standard'), 'standard');
-assert.strictEqual(settings.normalizeNewtabWidthMode('wide'), 'wide');
-assert.strictEqual(settings.normalizeNewtabWidthMode('other'), 'wide');
+assert.strictEqual(settings.newtabWidthMode.parse('standard'), 'standard');
+assert.strictEqual(settings.newtabWidthMode.parse('wide'), 'wide');
+assert.strictEqual(settings.newtabWidthMode.parse('other'), 'wide');
 
 assert.strictEqual(settings.normalizeNewtabSearchWidth(639), 640);
 assert.strictEqual(settings.normalizeNewtabSearchWidth(680), 680, 'the default range starts at the New Tab minimum of 640');
@@ -98,95 +98,96 @@ assert.strictEqual(settings.normalizeNewtabSearchWidth(undefined, { allowNull: t
 assert.strictEqual(settings.normalizeNewtabSearchWidth(639, { min: 640, max: 1040, fallback: 920 }), 640);
 assert.strictEqual(settings.normalizeNewtabSearchWidth(680, { min: 640, max: 1040, fallback: 920 }), 680);
 
-assert.strictEqual(settings.normalizeNewtabWordmarkVisible(false), false);
-assert.strictEqual(settings.normalizeNewtabWordmarkVisible(true), true);
-assert.strictEqual(settings.normalizeNewtabWordmarkVisible(undefined), true);
-assert.strictEqual(settings.normalizeNewtabWordmarkVisible('time'), true);
-assert.strictEqual(settings.normalizeNewtabWordmarkVisible('off'), false);
-assert.strictEqual(settings.normalizeNewtabTopContentMode(false), 'off');
-assert.strictEqual(settings.normalizeNewtabTopContentMode(true), 'brand');
-assert.strictEqual(settings.normalizeNewtabTopContentMode('brand'), 'brand');
-assert.strictEqual(settings.normalizeNewtabTopContentMode('time'), 'time');
-assert.strictEqual(settings.normalizeNewtabTopContentMode('off'), 'off');
-assert.strictEqual(settings.normalizeNewtabTopContentMode(undefined), 'brand');
+const wordmarkVisible = (value) => settings.newtabTopContentMode.parse(value) !== 'off';
+assert.strictEqual(wordmarkVisible(false), false);
+assert.strictEqual(wordmarkVisible(true), true);
+assert.strictEqual(wordmarkVisible(undefined), true);
+assert.strictEqual(wordmarkVisible('time'), true);
+assert.strictEqual(wordmarkVisible('off'), false);
+assert.strictEqual(settings.newtabTopContentMode.parse(false), 'off');
+assert.strictEqual(settings.newtabTopContentMode.parse(true), 'brand');
+assert.strictEqual(settings.newtabTopContentMode.parse('brand'), 'brand');
+assert.strictEqual(settings.newtabTopContentMode.parse('time'), 'time');
+assert.strictEqual(settings.newtabTopContentMode.parse('off'), 'off');
+assert.strictEqual(settings.newtabTopContentMode.parse(undefined), 'brand');
 assert.strictEqual(
-  settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
+  settings.newtabTopContentMode.key,
   '_x_extension_newtab_wordmark_visible_2026_unique_'
 );
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_MIN, 300);
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_MAX, 800);
 assert.strictEqual(settings.NEWTAB_TIME_FONT_WEIGHT_DEFAULT, 320);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(undefined), 320);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(299), 300);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(320), 320);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight('537'), 537);
-assert.strictEqual(settings.normalizeNewtabTimeFontWeight(801), 800);
-assert.strictEqual(settings.normalizeNewtabTimeFontSize(undefined), 54);
-assert.strictEqual(settings.normalizeNewtabTimeFontSize(null), 54);
-assert.strictEqual(settings.normalizeNewtabTimeFontSize(10), 32);
-assert.strictEqual(settings.normalizeNewtabTimeFontSize('72.4'), 72);
-assert.strictEqual(settings.normalizeNewtabTimeFontSize(500), 96);
-assert.strictEqual(settings.normalizeNewtabTimeOpacity(undefined), 100);
-assert.strictEqual(settings.normalizeNewtabTimeOpacity(0), 20);
-assert.strictEqual(settings.normalizeNewtabTimeOpacity(65), 65);
-assert.strictEqual(settings.normalizeNewtabTimeOpacity(140), 100);
-assert.strictEqual(settings.normalizeNewtabTimeInk(undefined), 'auto');
-assert.strictEqual(settings.normalizeNewtabTimeInk('light'), 'light');
-assert.strictEqual(settings.normalizeNewtabTimeInk('dark'), 'dark');
-assert.strictEqual(settings.normalizeNewtabTimeInk('purple'), 'auto');
+assert.strictEqual(settings.newtabTimeFontWeight.parse(undefined), 320);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(299), 300);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(320), 320);
+assert.strictEqual(settings.newtabTimeFontWeight.parse('537'), 537);
+assert.strictEqual(settings.newtabTimeFontWeight.parse(801), 800);
+assert.strictEqual(settings.newtabTimeFontSize.parse(undefined), 54);
+assert.strictEqual(settings.newtabTimeFontSize.parse(null), 54);
+assert.strictEqual(settings.newtabTimeFontSize.parse(10), 32);
+assert.strictEqual(settings.newtabTimeFontSize.parse('72.4'), 72);
+assert.strictEqual(settings.newtabTimeFontSize.parse(500), 96);
+assert.strictEqual(settings.newtabTimeOpacity.parse(undefined), 100);
+assert.strictEqual(settings.newtabTimeOpacity.parse(0), 20);
+assert.strictEqual(settings.newtabTimeOpacity.parse(65), 65);
+assert.strictEqual(settings.newtabTimeOpacity.parse(140), 100);
+assert.strictEqual(settings.newtabTimeInk.parse(undefined), 'auto');
+assert.strictEqual(settings.newtabTimeInk.parse('light'), 'light');
+assert.strictEqual(settings.newtabTimeInk.parse('dark'), 'dark');
+assert.strictEqual(settings.newtabTimeInk.parse('purple'), 'auto');
 assert.strictEqual(
-  settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
+  settings.newtabTimeFontWeight.key,
   '_x_extension_newtab_time_font_weight_2026_unique_'
 );
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible(undefined), false);
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible(false), false);
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible(true), true);
-assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible('true'), false);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse(undefined), false);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse(false), false);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse(true), true);
+assert.strictEqual(settings.newtabTimeSecondsVisible.parse('true'), false);
 assert.strictEqual(
-  settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+  settings.newtabTimeSecondsVisible.key,
   '_x_extension_newtab_time_seconds_visible_2026_unique_'
 );
-assert.strictEqual(settings.normalizeNewtabTime12Hour(undefined), false);
-assert.strictEqual(settings.normalizeNewtabTime12Hour(false), false);
-assert.strictEqual(settings.normalizeNewtabTime12Hour(true), true);
-assert.strictEqual(settings.normalizeNewtabTime12Hour('true'), false);
+assert.strictEqual(settings.newtabTime12Hour.parse(undefined), false);
+assert.strictEqual(settings.newtabTime12Hour.parse(false), false);
+assert.strictEqual(settings.newtabTime12Hour.parse(true), true);
+assert.strictEqual(settings.newtabTime12Hour.parse('true'), false);
 assert.strictEqual(
-  settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+  settings.newtabTime12Hour.key,
   '_x_extension_newtab_time_12_hour_2026_unique_'
 );
 
-assert.strictEqual(settings.normalizeNewtabShortcutsVisible(false), false);
-assert.strictEqual(settings.normalizeNewtabShortcutsVisible(true), true);
-assert.strictEqual(settings.normalizeNewtabShortcutsVisible(undefined), true);
-assert.strictEqual(settings.normalizeNewtabShortcutsVisible('false'), true);
+assert.strictEqual(settings.newtabShortcutsVisible.parse(false), false);
+assert.strictEqual(settings.newtabShortcutsVisible.parse(true), true);
+assert.strictEqual(settings.newtabShortcutsVisible.parse(undefined), true);
+assert.strictEqual(settings.newtabShortcutsVisible.parse('false'), true);
 
-assert.strictEqual(settings.normalizeNewtabShortcutAddVisible(false), false);
-assert.strictEqual(settings.normalizeNewtabShortcutAddVisible(true), true);
-assert.strictEqual(settings.normalizeNewtabShortcutAddVisible(undefined), true);
-assert.strictEqual(settings.normalizeNewtabShortcutAddVisible('false'), true);
+assert.strictEqual(settings.newtabShortcutAddVisible.parse(false), false);
+assert.strictEqual(settings.newtabShortcutAddVisible.parse(true), true);
+assert.strictEqual(settings.newtabShortcutAddVisible.parse(undefined), true);
+assert.strictEqual(settings.newtabShortcutAddVisible.parse('false'), true);
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
+  settings.newtabShortcutAddVisible.key,
   '_x_extension_newtab_shortcut_add_visible_2026_unique_'
 );
 
-assert.strictEqual(settings.normalizeNewtabShortcutDockMagnificationEnabled(false), false);
-assert.strictEqual(settings.normalizeNewtabShortcutDockMagnificationEnabled(true), true);
-assert.strictEqual(settings.normalizeNewtabShortcutDockMagnificationEnabled(undefined), true);
-assert.strictEqual(settings.normalizeNewtabShortcutDockMagnificationEnabled('false'), true);
+assert.strictEqual(settings.newtabShortcutDockMagnificationEnabled.parse(false), false);
+assert.strictEqual(settings.newtabShortcutDockMagnificationEnabled.parse(true), true);
+assert.strictEqual(settings.newtabShortcutDockMagnificationEnabled.parse(undefined), true);
+assert.strictEqual(settings.newtabShortcutDockMagnificationEnabled.parse('false'), true);
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+  settings.newtabShortcutDockMagnificationEnabled.key,
   '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_'
 );
 [
   [
-    settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+    settings.newtabFeedbackButtonVisible.key,
     '_x_extension_newtab_feedback_button_visible_2026_unique_',
-    settings.normalizeNewtabFeedbackButtonVisible
+    settings.newtabFeedbackButtonVisible.parse
   ],
   [
-    settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+    settings.newtabAppearanceButtonVisible.key,
     '_x_extension_newtab_appearance_button_visible_2026_unique_',
-    settings.normalizeNewtabAppearanceButtonVisible
+    settings.newtabAppearanceButtonVisible.parse
   ]
 ].forEach(([storageKey, expectedStorageKey, normalize]) => {
   assert.strictEqual(storageKey, expectedStorageKey);
@@ -196,93 +197,93 @@ assert.strictEqual(
   assert.strictEqual(normalize('false'), true);
 });
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+  settings.newtabShortcutWidth.key,
   '_x_extension_newtab_shortcut_width_2026_unique_'
 );
 assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_MIN, 360);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_MAX, 1440);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_DEFAULT, 920);
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(undefined), 920);
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(359), 360);
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(920), 920);
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(1441), 1440);
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(720.5), 721);
+assert.strictEqual(settings.newtabShortcutWidth.parse(undefined), 920);
+assert.strictEqual(settings.newtabShortcutWidth.parse(359), 360);
+assert.strictEqual(settings.newtabShortcutWidth.parse(920), 920);
+assert.strictEqual(settings.newtabShortcutWidth.parse(1441), 1440);
+assert.strictEqual(settings.newtabShortcutWidth.parse(720.5), 721);
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+  settings.newtabShortcutColumns.key,
   '_x_extension_newtab_shortcut_columns_2026_unique_'
 );
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MIN, 4);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MAX, 16);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_DEFAULT, 10);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(undefined), 10);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(3), 4);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(10.5), 11);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(17), 16);
+assert.strictEqual(settings.newtabShortcutColumns.parse(undefined), 10);
+assert.strictEqual(settings.newtabShortcutColumns.parse(3), 4);
+assert.strictEqual(settings.newtabShortcutColumns.parse(10.5), 11);
+assert.strictEqual(settings.newtabShortcutColumns.parse(17), 16);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(360), 4);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(920), 10);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(1440), 16);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_MIN, 48);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_MAX, 112);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_DEFAULT, 64);
-assert.strictEqual(settings.normalizeNewtabShortcutSize(undefined), 64);
-assert.strictEqual(settings.normalizeNewtabShortcutSize(47), 48);
-assert.strictEqual(settings.normalizeNewtabShortcutSize(113), 112);
+assert.strictEqual(settings.newtabShortcutSize.parse(undefined), 64);
+assert.strictEqual(settings.newtabShortcutSize.parse(47), 48);
+assert.strictEqual(settings.newtabShortcutSize.parse(113), 112);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MIN, 0);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MAX, 24);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_DEFAULT, 4);
-assert.strictEqual(settings.normalizeNewtabShortcutGap(undefined), 4);
-assert.strictEqual(settings.normalizeNewtabShortcutGap(-1), 0);
-assert.strictEqual(settings.normalizeNewtabShortcutGap(25), 24);
+assert.strictEqual(settings.newtabShortcutGap.parse(undefined), 4);
+assert.strictEqual(settings.newtabShortcutGap.parse(-1), 0);
+assert.strictEqual(settings.newtabShortcutGap.parse(25), 24);
 
-assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(false), false);
-assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(true), true);
-assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(undefined), true);
-assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible('false'), true);
-assert.strictEqual(settings.normalizeBookmarkCount(0), 0);
-assert.strictEqual(settings.normalizeBookmarkCount(4), 4);
-assert.strictEqual(settings.normalizeBookmarkCount(8), 8);
-assert.strictEqual(settings.normalizeBookmarkCount(12), 12);
-assert.strictEqual(settings.normalizeBookmarkCount(20), 20);
-assert.strictEqual(settings.normalizeBookmarkCount(28), 28);
-assert.strictEqual(settings.normalizeBookmarkCount(32), 32);
-assert.strictEqual(settings.normalizeBookmarkCount(2), 8);
-assert.strictEqual(settings.normalizeBookmarkCount(36), 8);
-assert.strictEqual(settings.normalizeBookmarkCount(12.5), 8);
-assert.strictEqual(settings.normalizeBookmarkColumns(4), 4);
-assert.strictEqual(settings.normalizeBookmarkColumns('5'), 5);
-assert.strictEqual(settings.normalizeBookmarkColumns(6), 6);
-assert.strictEqual(settings.normalizeBookmarkColumns(7), 7);
-assert.strictEqual(settings.normalizeBookmarkColumns(8), 8);
-assert.strictEqual(settings.normalizeBookmarkColumns(3), 6);
-assert.strictEqual(settings.normalizeBookmarkColumns(9), 6);
-assert.strictEqual(settings.normalizeBookmarkColumns(5.5), 6);
+assert.strictEqual(settings.bookmarkFolderIconsVisible.parse(false), false);
+assert.strictEqual(settings.bookmarkFolderIconsVisible.parse(true), true);
+assert.strictEqual(settings.bookmarkFolderIconsVisible.parse(undefined), true);
+assert.strictEqual(settings.bookmarkFolderIconsVisible.parse('false'), true);
+assert.strictEqual(settings.bookmarkCount.parse(0), 0);
+assert.strictEqual(settings.bookmarkCount.parse(4), 4);
+assert.strictEqual(settings.bookmarkCount.parse(8), 8);
+assert.strictEqual(settings.bookmarkCount.parse(12), 12);
+assert.strictEqual(settings.bookmarkCount.parse(20), 20);
+assert.strictEqual(settings.bookmarkCount.parse(28), 28);
+assert.strictEqual(settings.bookmarkCount.parse(32), 32);
+assert.strictEqual(settings.bookmarkCount.parse(2), 8);
+assert.strictEqual(settings.bookmarkCount.parse(36), 8);
+assert.strictEqual(settings.bookmarkCount.parse(12.5), 8);
+assert.strictEqual(settings.bookmarkColumns.parse(4), 4);
+assert.strictEqual(settings.bookmarkColumns.parse('5'), 5);
+assert.strictEqual(settings.bookmarkColumns.parse(6), 6);
+assert.strictEqual(settings.bookmarkColumns.parse(7), 7);
+assert.strictEqual(settings.bookmarkColumns.parse(8), 8);
+assert.strictEqual(settings.bookmarkColumns.parse(3), 6);
+assert.strictEqual(settings.bookmarkColumns.parse(9), 6);
+assert.strictEqual(settings.bookmarkColumns.parse(5.5), 6);
 assert.strictEqual(
-  settings.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
+  settings.bookmarkFolderIconsVisible.key,
   '_x_extension_bookmark_folder_icons_visible_2026_unique_'
 );
 
-assert.strictEqual(settings.normalizeUpdateNoticeEnabled(false), false);
-assert.strictEqual(settings.normalizeUpdateNoticeEnabled(true), true);
-assert.strictEqual(settings.normalizeUpdateNoticeEnabled(undefined), true);
-assert.strictEqual(settings.normalizeUpdateNoticeEnabled('false'), true);
+assert.strictEqual(settings.updateNoticeEnabled.parse(false), false);
+assert.strictEqual(settings.updateNoticeEnabled.parse(true), true);
+assert.strictEqual(settings.updateNoticeEnabled.parse(undefined), true);
+assert.strictEqual(settings.updateNoticeEnabled.parse('false'), true);
 
-assert.strictEqual(settings.normalizeMotionEffectsEnabled(false), false);
-assert.strictEqual(settings.normalizeMotionEffectsEnabled(true), true);
-assert.strictEqual(settings.normalizeMotionEffectsEnabled(undefined), true);
-assert.strictEqual(settings.normalizeMotionEffectsEnabled('false'), true);
-assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(false), false);
-assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(true), true);
-assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(undefined), false);
-assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled('true'), false);
-assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled(true), true);
-assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled(undefined), false);
-assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled('true'), false);
-assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(false), false);
-assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(true), true);
-assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(undefined), false);
-assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled('true'), false);
+assert.strictEqual(settings.motionEffectsEnabled.parse(false), false);
+assert.strictEqual(settings.motionEffectsEnabled.parse(true), true);
+assert.strictEqual(settings.motionEffectsEnabled.parse(undefined), true);
+assert.strictEqual(settings.motionEffectsEnabled.parse('false'), true);
+assert.strictEqual(settings.numberShortcutInstantEnabled.parse(false), false);
+assert.strictEqual(settings.numberShortcutInstantEnabled.parse(true), true);
+assert.strictEqual(settings.numberShortcutInstantEnabled.parse(undefined), false);
+assert.strictEqual(settings.numberShortcutInstantEnabled.parse('true'), false);
+assert.strictEqual(settings.searchFuzzyPinyinEnabled.parse(true), true);
+assert.strictEqual(settings.searchFuzzyPinyinEnabled.parse(undefined), false);
+assert.strictEqual(settings.searchFuzzyPinyinEnabled.parse('true'), false);
+assert.strictEqual(settings.macosCtrlSuggestionNavigationEnabled.parse(false), false);
+assert.strictEqual(settings.macosCtrlSuggestionNavigationEnabled.parse(true), true);
+assert.strictEqual(settings.macosCtrlSuggestionNavigationEnabled.parse(undefined), false);
+assert.strictEqual(settings.macosCtrlSuggestionNavigationEnabled.parse('true'), false);
 assert.strictEqual(
-  settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
+  settings.macosCtrlSuggestionNavigationEnabled.key,
   '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_'
 );
 assert.strictEqual(settingsStorage.shouldSkipEntryMotion({
@@ -295,32 +296,32 @@ assert.strictEqual(settingsStorage.shouldSkipEntryMotion({
   matchMedia: () => ({ matches: false })
 }, true), false);
 
-assert.strictEqual(settings.normalizeFaviconEnhancedFetchEnabled(false), false);
-assert.strictEqual(settings.normalizeFaviconEnhancedFetchEnabled(true), true);
-assert.strictEqual(settings.normalizeFaviconEnhancedFetchEnabled(undefined), true);
-assert.strictEqual(settings.normalizeFaviconEnhancedFetchEnabled('false'), true);
+assert.strictEqual(settings.faviconEnhancedFetchEnabled.parse(false), false);
+assert.strictEqual(settings.faviconEnhancedFetchEnabled.parse(true), true);
+assert.strictEqual(settings.faviconEnhancedFetchEnabled.parse(undefined), true);
+assert.strictEqual(settings.faviconEnhancedFetchEnabled.parse('false'), true);
 
-assert.strictEqual(settings.normalizeOverlayOpenTabsDefaultVisible(false), false);
-assert.strictEqual(settings.normalizeOverlayOpenTabsDefaultVisible(true), true);
-assert.strictEqual(settings.normalizeOverlayOpenTabsDefaultVisible(undefined), true);
-assert.strictEqual(settings.normalizeOverlayOpenTabsDefaultVisible('false'), true);
+assert.strictEqual(settings.overlayOpenTabsDefaultVisible.parse(false), false);
+assert.strictEqual(settings.overlayOpenTabsDefaultVisible.parse(true), true);
+assert.strictEqual(settings.overlayOpenTabsDefaultVisible.parse(undefined), true);
+assert.strictEqual(settings.overlayOpenTabsDefaultVisible.parse('false'), true);
 
-assert.strictEqual(settings.normalizeOverlaySizeMode('compact'), 'compact');
-assert.strictEqual(settings.normalizeOverlaySizeMode('large'), 'large');
-assert.strictEqual(settings.normalizeOverlaySizeMode('standard'), 'standard');
-assert.strictEqual(settings.normalizeOverlaySizeMode('other'), 'standard');
+assert.strictEqual(settings.overlaySizeMode.parse('compact'), 'compact');
+assert.strictEqual(settings.overlaySizeMode.parse('large'), 'large');
+assert.strictEqual(settings.overlaySizeMode.parse('standard'), 'standard');
+assert.strictEqual(settings.overlaySizeMode.parse('other'), 'standard');
 
-assert.strictEqual(settings.normalizeOverlayEnterAnimation('elastic'), 'elastic');
-assert.strictEqual(settings.normalizeOverlayEnterAnimation('fade'), 'fade');
-assert.strictEqual(settings.normalizeOverlayEnterAnimation(undefined), 'elastic');
-assert.strictEqual(settings.normalizeOverlayEnterAnimation('other'), 'elastic');
+assert.strictEqual(settings.overlayEnterAnimation.parse('elastic'), 'elastic');
+assert.strictEqual(settings.overlayEnterAnimation.parse('fade'), 'fade');
+assert.strictEqual(settings.overlayEnterAnimation.parse(undefined), 'elastic');
+assert.strictEqual(settings.overlayEnterAnimation.parse('other'), 'elastic');
 assert.strictEqual(
-  settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
+  settings.overlayEnterAnimation.key,
   '_x_extension_overlay_enter_animation_2026_unique_'
 );
 
 assert.strictEqual(
-  settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
+  settings.overlayFontFamily.key,
   '_x_extension_overlay_font_family_2026_unique_'
 );
 assert.strictEqual(settings.normalizeOverlayFontFamily('Zapfino'), 'Zapfino');
@@ -374,74 +375,74 @@ assert.deepStrictEqual(settings.normalizeOverlayFontLabels(null), {});
 // The overlay's fonts are this computer's installed faces: device-local, so
 // neither Chrome Sync nor WebDAV (whose preferences follow the sync list) nor
 // an export carries them.
-assert.deepStrictEqual(settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS, [
-  settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
-  settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-  settings.OVERLAY_FONT_LABELS_STORAGE_KEY
+assert.deepStrictEqual(settings.OVERLAY_FONT_KEYS, [
+  settings.overlayFontFamily.key,
+  settings.overlayFontFallback.key,
+  settings.overlayFontLabels.key
 ]);
-settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {
-  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should stay on the device`);
+settings.OVERLAY_FONT_KEYS.forEach((key) => {
+  assert(!settings.BROWSER_SYNC_KEYS.includes(key), `${key} should stay on the device`);
 });
 
-assert.strictEqual(settings.normalizeOverlayTabPriorityMode('switchTabFirst'), true);
-assert.strictEqual(settings.normalizeOverlayTabPriorityMode('newtabFirst'), false);
-assert.strictEqual(settings.normalizeOverlayTabPriorityMode(false), false);
-assert.strictEqual(settings.normalizeOverlayTabPriorityMode(undefined), true);
+assert.strictEqual(settings.overlayTabPriority.parse('switchTabFirst'), true);
+assert.strictEqual(settings.overlayTabPriority.parse('newtabFirst'), false);
+assert.strictEqual(settings.overlayTabPriority.parse(false), false);
+assert.strictEqual(settings.overlayTabPriority.parse(undefined), true);
 
-assert.strictEqual(settings.normalizeSearchResultPriority('search'), 'search');
-assert.strictEqual(settings.normalizeSearchResultPriority('autocomplete'), 'autocomplete');
-assert.strictEqual(settings.normalizeSearchResultPriority('other'), 'autocomplete');
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(5), 5);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit('8'), 8);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(10), 10);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(4), 10);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(11), 10);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(7.5), 10);
-assert.strictEqual(settings.normalizeSearchResultDisplayLimit(undefined), 10);
+assert.strictEqual(settings.searchResultPriority.parse('search'), 'search');
+assert.strictEqual(settings.searchResultPriority.parse('autocomplete'), 'autocomplete');
+assert.strictEqual(settings.searchResultPriority.parse('other'), 'autocomplete');
+assert.strictEqual(settings.searchResultDisplayLimit.parse(5), 5);
+assert.strictEqual(settings.searchResultDisplayLimit.parse('8'), 8);
+assert.strictEqual(settings.searchResultDisplayLimit.parse(10), 10);
+assert.strictEqual(settings.searchResultDisplayLimit.parse(4), 10);
+assert.strictEqual(settings.searchResultDisplayLimit.parse(11), 10);
+assert.strictEqual(settings.searchResultDisplayLimit.parse(7.5), 10);
+assert.strictEqual(settings.searchResultDisplayLimit.parse(undefined), 10);
 assert.deepStrictEqual(
-  settings.normalizeSearchResultSourceTypes(['topSite', 'bookmark']),
+  settings.searchResultSourceTypes.parse(['topSite', 'bookmark']),
   ['topSite', 'bookmark']
 );
 assert.deepStrictEqual(
-  settings.normalizeSearchResultSourceTypes(['frequent', 'bookmarks', 'history', 'history']),
+  settings.searchResultSourceTypes.parse(['frequent', 'bookmarks', 'history', 'history']),
   ['topSite', 'bookmark', 'history']
 );
 assert.deepStrictEqual(
-  settings.normalizeSearchResultSourceTypes([]),
+  settings.searchResultSourceTypes.parse([]),
   ['topSite', 'bookmark', 'history']
 );
 
-assert.strictEqual(settings.normalizeTabRankScoreDebugMode(true), true);
-assert.strictEqual(settings.normalizeTabRankScoreDebugMode(false), false);
-assert.strictEqual(settings.normalizeTabRankScoreDebugMode('true'), false);
+assert.strictEqual(settings.tabRankScoreDebug.parse(true), true);
+assert.strictEqual(settings.tabRankScoreDebug.parse(false), false);
+assert.strictEqual(settings.tabRankScoreDebug.parse('true'), false);
 
-assert.strictEqual(settings.normalizeTabSwitcherEnabled(false), false);
-assert.strictEqual(settings.normalizeTabSwitcherEnabled(true), true);
-assert.strictEqual(settings.normalizeTabSwitcherEnabled(undefined), true);
-assert.strictEqual(settings.normalizeTabSwitcherEnabled('false'), true);
+assert.strictEqual(settings.tabSwitcherEnabled.parse(false), false);
+assert.strictEqual(settings.tabSwitcherEnabled.parse(true), true);
+assert.strictEqual(settings.tabSwitcherEnabled.parse(undefined), true);
+assert.strictEqual(settings.tabSwitcherEnabled.parse('false'), true);
 
-assert.strictEqual(settings.normalizeSelectionQuickActionsEnabled(false), false);
-assert.strictEqual(settings.normalizeSelectionQuickActionsEnabled(true), true);
-assert.strictEqual(settings.normalizeSelectionQuickActionsEnabled(undefined), false);
-assert.strictEqual(settings.normalizeSelectionQuickActionsEnabled('false'), false);
+assert.strictEqual(settings.selectionQuickActionsEnabled.parse(false), false);
+assert.strictEqual(settings.selectionQuickActionsEnabled.parse(true), true);
+assert.strictEqual(settings.selectionQuickActionsEnabled.parse(undefined), false);
+assert.strictEqual(settings.selectionQuickActionsEnabled.parse('false'), false);
 assert.strictEqual(
-  settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
+  settings.selectionQuickActionsEnabled.key,
   '_x_extension_selection_quick_actions_enabled_2026_unique_'
 );
-assert.strictEqual(settings.normalizeSelectionQuickActionsProvider('gpt'), 'gpt');
-assert.strictEqual(settings.normalizeSelectionQuickActionsProvider(' KIMI '), 'kimi');
-assert.strictEqual(settings.normalizeSelectionQuickActionsProvider('unsupported'), 'gpt');
-assert.strictEqual(settings.normalizeSelectionQuickActionsProvider(undefined), 'gpt');
+assert.strictEqual(settings.selectionQuickActionsProvider.parse('gpt'), 'gpt');
+assert.strictEqual(settings.selectionQuickActionsProvider.parse(' KIMI '), 'kimi');
+assert.strictEqual(settings.selectionQuickActionsProvider.parse('unsupported'), 'gpt');
+assert.strictEqual(settings.selectionQuickActionsProvider.parse(undefined), 'gpt');
 assert.strictEqual(
-  settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
+  settings.selectionQuickActionsProvider.key,
   '_x_extension_selection_quick_actions_provider_2026_unique_'
 );
-assert.strictEqual(settings.normalizeSelectionQuickActionsGroupEnabled(false), false);
-assert.strictEqual(settings.normalizeSelectionQuickActionsGroupEnabled(true), true);
-assert.strictEqual(settings.normalizeSelectionQuickActionsGroupEnabled(undefined), false);
-assert.strictEqual(settings.normalizeSelectionQuickActionsGroupEnabled('true'), false);
+assert.strictEqual(settings.selectionQuickActionsGroupEnabled.parse(false), false);
+assert.strictEqual(settings.selectionQuickActionsGroupEnabled.parse(true), true);
+assert.strictEqual(settings.selectionQuickActionsGroupEnabled.parse(undefined), false);
+assert.strictEqual(settings.selectionQuickActionsGroupEnabled.parse('true'), false);
 assert.strictEqual(
-  settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+  settings.selectionQuickActionsGroupEnabled.key,
   '_x_extension_selection_quick_actions_group_enabled_2026_unique_'
 );
 assert.strictEqual(settings.normalizeSelectionQuickActionsIconSet, undefined);
@@ -454,10 +455,10 @@ assert.strictEqual(settings.normalizeThemePreference('dark'), 'dark');
 assert.strictEqual(settings.normalizeThemePreference('light'), 'light');
 assert.strictEqual(settings.normalizeThemePreference('system'), '');
 
-assert.strictEqual(settings.normalizeThemeMode('dark'), 'dark');
-assert.strictEqual(settings.normalizeThemeMode('light'), 'light');
-assert.strictEqual(settings.normalizeThemeMode('system'), 'system');
-assert.strictEqual(settings.normalizeThemeMode('other'), 'system');
+assert.strictEqual(settings.themeMode.parse('dark'), 'dark');
+assert.strictEqual(settings.themeMode.parse('light'), 'light');
+assert.strictEqual(settings.themeMode.parse('system'), 'system');
+assert.strictEqual(settings.themeMode.parse('other'), 'system');
 assert.deepStrictEqual(
   settings.createGlobalThemeModeStorageUpdate('dark'),
   {
@@ -644,7 +645,7 @@ async function testStorageFailures() {
           api.runtime.lastError = null;
           return;
         }
-        callback({ [settings.LOCAL_PRIMARY_STORAGE_KEY]: true });
+        callback({ [settings.localPrimary.key]: true });
       } };
       return api;
     }

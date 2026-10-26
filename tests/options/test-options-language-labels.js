@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 const repoRoot = path.join(__dirname, '..', '..');
@@ -9,7 +9,7 @@ const readMessages = (locale) => JSON.parse(fs.readFileSync(path.join(repoRoot, 
 
 // Every UI language is listed in its own words, whatever language the page is in.
 async function testLanguagePickerListsEveryLocaleInItsOwnName() {
-  const page = await createOptionsPage({ sync: { [settings.LANGUAGE_STORAGE_KEY]: 'ja' } });
+  const page = await createOptionsPage({ sync: { [settings.language.key]: 'ja' } });
   await page.settle(200);
   const options = Array.from(page.byId('_x_extension_language_select_2024_unique_').options)
     .map((option) => [option.value, option.textContent]);
@@ -24,7 +24,7 @@ async function testLanguagePickerListsEveryLocaleInItsOwnName() {
 
 // A saved language Lumno no longer ships falls back to following the browser.
 async function testDroppedLanguageFallsBackToSystem() {
-  const page = await createOptionsPage({ sync: { [settings.LANGUAGE_STORAGE_KEY]: 'it' } });
+  const page = await createOptionsPage({ sync: { [settings.language.key]: 'it' } });
   await page.settle(200);
   assert.strictEqual(page.byId('_x_extension_language_select_2024_unique_').value, 'system');
   assert.ok(settings.resolveSupportedLocale(page.document.documentElement.lang),
@@ -37,12 +37,12 @@ async function testDroppedLanguageFallsBackToSystem() {
 async function testSourceLabelsFollowTheLanguage() {
   const KEYS = ['search_tag_top_site', 'search_tag_bookmark', 'search_tag_history'];
   const expected = (locale) => KEYS.map((key) => readMessages(locale)[key].message);
-  const page = await createOptionsPage({ sync: { [settings.LANGUAGE_STORAGE_KEY]: 'en' } });
+  const page = await createOptionsPage({ sync: { [settings.language.key]: 'en' } });
   await page.settle(200);
   const labels = () => Array.from(page.byId('_x_extension_search_result_source_types_2026_unique_').querySelectorAll('label'))
     .map((label) => label.textContent.trim());
   assert.deepStrictEqual(labels(), expected('en'), 'the first render should use the active language');
-  page.changeStorage('sync', settings.LANGUAGE_STORAGE_KEY, 'ja');
+  page.changeStorage('sync', settings.language.key, 'ja');
   await page.settle(300);
   assert.deepStrictEqual(labels(), expected('ja'), 'switching language should relabel the sources');
   page.close();

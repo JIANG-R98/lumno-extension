@@ -1,11 +1,12 @@
 const assert = require('assert');
 const iconCache = require('../../src/shared/search/site-search-icon-cache.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // Site search icons are read from storage once per surface; a change to the
 // stored copy replaces them at once and wins over a read still underway.
 
-const STORAGE_KEY = shortcutFavicon.SITE_SEARCH_STORAGE_KEY;
+const STORAGE_KEY = siteSearchIconCache.key;
 const CACHE_OPTIONS = shortcutFavicon.SITE_SEARCH_CACHE_OPTIONS;
 const NOW = 1_700_000_000_000;
 const PAGE = 'https://example.com/';

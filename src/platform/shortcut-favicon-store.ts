@@ -1,15 +1,11 @@
 // The saved icon snapshots (domain/favicon/shortcut-favicon.ts) in the
 // extension's local storage. Updates run one at a time across pages when
 // the page has Web Locks, so two pages never overwrite each other's icons.
-import {
-  DEFAULT_STORAGE_KEY,
-  normalizeCacheMap,
-  normalizeCacheOptions,
-  retainCachedIcons
-} from '../domain/favicon/shortcut-favicon';
+import { normalizeCacheMap, normalizeCacheOptions, retainCachedIcons } from '../domain/favicon/shortcut-favicon';
 import type { CachedIconMap, IconCacheOptions } from '../domain/favicon/shortcut-favicon';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { StorageChromeApi } from './settings-storage';
+import { newtabShortcutFaviconCache } from '../domain/settings/newtab-shortcuts';
 
 // navigator.locks.
 interface LockManagerLike {
@@ -38,7 +34,7 @@ interface ShortcutFaviconStore {
 function createShortcutFaviconStore(options?: ShortcutFaviconStoreOptions | null): Readonly<ShortcutFaviconStore> {
   const settings = options || {};
   const storageArea = settings.storageArea || null;
-  const storageKey = String(settings.storageKey || DEFAULT_STORAGE_KEY);
+  const storageKey = String(settings.storageKey || newtabShortcutFaviconCache.key);
   const chromeApi = settings.chromeApi || null;
   const lockManager = settings.lockManager || null;
   const lockName = `lumno-shortcut-favicon-store:${storageKey}`;

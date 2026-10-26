@@ -28,6 +28,7 @@ import type {
   WebDavConnection,
   WebDavDiagnostic
 } from './webdav-client';
+import { syncMeta } from '../domain/settings/sync-state';
 
 type StorageMethod = 'get' | 'set' | 'remove';
 type StorageCall =
@@ -208,7 +209,6 @@ const PROBE_CACHE_MS = 10 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 // Below the 30 s idle limit of Firefox event pages and Chrome service workers.
 const KEEP_ALIVE_INTERVAL_MS = 20 * 1000;
-const CHROME_SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
 // Synced connection hints stay far below chrome.storage.sync's 8 KB item quota.
 const MAX_HINTS = 10;
 const MAX_HINT_BYTES = 600;
@@ -385,7 +385,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   const localPrefsArea: chrome.storage.StorageArea = chromeApi.storage.local;
   const chromeFallbackArea: chrome.storage.SyncStorageArea | undefined = chromeApi.storage.sync;
   const runtime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-  const statusKey = opts.statusKey || settings.WEBDAV_STATUS_STORAGE_KEY;
+  const statusKey = opts.statusKey || settings.webdavStatus.key;
   const alarmName = opts.alarmName || ALARM_NAME;
   const withLocalWrite: WithLocalWrite = opts.withLocalWrite || ((fn) => Promise.resolve(fn()));
   const probeCache = opts.probeCache || createProbeCache();
@@ -419,8 +419,8 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   function report(context: string, cause: unknown): void {
     try { logger.warn(`[Lumno] ${context}`, cause); } catch (_error) { /* Logging never fails a sync. */ }
   }
-  const watchedKeys = [...settings.CHROME_SYNC_STORAGE_KEYS, contract.ICONS_KEY, ...contract.LOCAL_PREFERENCE_KEYS,
-    contract.OVERFLOW_KEY, settings.ASSET_REVISION_STORAGE_KEY];
+  const watchedKeys = [...settings.BROWSER_SYNC_KEYS, contract.ICONS_KEY, ...contract.LOCAL_PREFERENCE_KEYS,
+    contract.OVERFLOW_KEY, settings.assetRevision.key];
   const storageRetryDelayMs = opts.storageRetryDelayMs ?? 2500;
   // A write refused by the browser sync write quota is retried once, after
   // the quota has had time to refill.
@@ -575,7 +575,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
     if (runtime.isModeKnown && !runtime.isModeKnown()) fail('local-storage-failed');
     const capturedGeneration = generation;
     const local = await storage(localPrefsArea, 'get', watchedKeys);
-    const values = runtime.isActiveAreaName('local') ? local : await storage(chromeFallbackArea, 'get', [...settings.CHROME_SYNC_STORAGE_KEYS]);
+    const values = runtime.isActiveAreaName('local') ? local : await storage(chromeFallbackArea, 'get', [...settings.BROWSER_SYNC_KEYS]);
     const shortcutState = contract.readShortcutState(values, runtime.isActiveAreaName('sync') ? local[contract.OVERFLOW_KEY] : null);
     // Another device's browser sync save has only partly arrived.
     if (shortcutState.torn) fail('local-changed');
@@ -693,10 +693,10 @@ function createConnectionController(options?: ConnectionControllerOptions | null
       ...shortcuts.measureShortcutSyncUsage(existing), quotaBytes: chromeFallbackArea.QUOTA_BYTES
     }) : Number.MAX_SAFE_INTEGER;
     const payload = preferencePayload(state, captured, maxTotalBytes);
-    const synced: StorageItems = Object.fromEntries(settings.CHROME_SYNC_STORAGE_KEYS.filter((key) =>
+    const synced: StorageItems = Object.fromEntries(settings.BROWSER_SYNC_KEYS.filter((key) =>
       Object.prototype.hasOwnProperty.call(payload, key)).map((key) => [key, payload[key]]));
     // The legacy shortcut keys stay for devices that still read them.
-    const remove = settings.CHROME_SYNC_STORAGE_KEYS.filter((key) => !shortcuts.LEGACY_SHORTCUTS_CHUNK_KEYS.includes(key) &&
+    const remove = settings.BROWSER_SYNC_KEYS.filter((key) => !shortcuts.LEGACY_SHORTCUTS_CHUNK_KEYS.includes(key) &&
       Object.prototype.hasOwnProperty.call(existing, key) && !Object.prototype.hasOwnProperty.call(synced, key));
     const projected: StorageItems = { ...existing, ...synced };
     remove.forEach((key) => delete projected[key]);
@@ -766,8 +766,8 @@ function createConnectionController(options?: ConnectionControllerOptions | null
       const localValues: StorageItems = {
         ...pickLocalPreferences(payload),
         [contract.OVERFLOW_KEY]: payload[contract.OVERFLOW_KEY], [contract.ICONS_KEY]: icons,
-        [settings.ASSET_REVISION_STORAGE_KEY]: cryptoApi.randomUUID(),
-        ...(runtime.isActiveAreaName('local') && chromeFallbackArea ? { [settings.LOCAL_PRIMARY_STORAGE_KEY]: false } : {}) };
+        [settings.assetRevision.key]: cryptoApi.randomUUID(),
+        ...(runtime.isActiveAreaName('local') && chromeFallbackArea ? { [settings.localPrimary.key]: false } : {}) };
       let wrote = false;
       try {
         await expectOwnWrites(chromeFallbackArea || localPrefsArea, chromeFallbackArea ? 'sync' : 'local',
@@ -819,7 +819,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   function mirrorChrome(): Promise<MirrorResult> { return withLocalWrite(mirrorChromeInternal); }
   async function mirrorChromeInternal(): Promise<MirrorResult> {
     if (!chromeFallbackArea || !runtime.isActiveAreaName('local')) return { complete: false, skipped: [] };
-    const values = await storage(localPrefsArea, 'get', [...settings.CHROME_SYNC_STORAGE_KEYS]);
+    const values = await storage(localPrefsArea, 'get', [...settings.BROWSER_SYNC_KEYS]);
     const existing = await storage(chromeFallbackArea, 'get', null);
     const plan = contract.planChromeBackup(values, existing, { quota: chromeFallbackArea.QUOTA_BYTES,
       itemQuota: chromeFallbackArea.QUOTA_BYTES_PER_ITEM, maxItems: chromeFallbackArea.MAX_ITEMS });
@@ -833,7 +833,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
     try {
       if (plan.remove.length) await storage(chromeFallbackArea, 'remove', plan.remove);
       if (Object.keys(plan.payload).length) await storage(chromeFallbackArea, 'set', plan.payload);
-      await storage(localPrefsArea, 'set', { [settings.LOCAL_PRIMARY_STORAGE_KEY]: false });
+      await storage(localPrefsArea, 'set', { [settings.localPrimary.key]: false });
       await setStatus({ chromeBackup: 'complete', chromeSkipped: 0 });
     } catch (cause) {
       report('Could not write the browser sync backup.', cause);
@@ -1127,7 +1127,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
     if (!plan.complete) fail('chrome-capacity');
     await pause();
     if (capturedGeneration !== generation) fail('local-changed');
-    await storage(localPrefsArea, 'set', { [settings.LOCAL_PRIMARY_STORAGE_KEY]: false });
+    await storage(localPrefsArea, 'set', { [settings.localPrimary.key]: false });
     await setStatus({ state: 'browser', chromeBackup: 'complete' });
     return { ok: true };
   }
@@ -1156,12 +1156,12 @@ function createConnectionController(options?: ConnectionControllerOptions | null
       if (stopped) return;
       const changed = watchedKeys.filter((key) => changes[key]);
       // This controller's own apply: nothing new to capture or upload.
-      if (changed.length && !changes[CHROME_SYNC_META_KEY] &&
+      if (changed.length && !changes[syncMeta.key] &&
           changed.filter((key) => !isOwnWrite(areaName, key, changes[key])).length === 0) return;
       if ((areaName === 'local' || (areaName === 'sync' && !runtime.isActiveAreaName('local'))) &&
           changed.length) generation += 1;
       if (!((areaName === 'sync' && !runtime.isActiveAreaName('local')) || areaName === 'local') ||
-          !(watchedKeys.some((key) => changes[key]) || (areaName === 'sync' && changes[CHROME_SYNC_META_KEY]))) return;
+          !(watchedKeys.some((key) => changes[key]) || (areaName === 'sync' && changes[syncMeta.key]))) return;
       queueSync(1500);
   }
   let timerKeepsAlive = false;
@@ -1313,7 +1313,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
   const clientApi = opts.client || LumnoWebDavClient;
   function fail(code: string): never { throw clientApi.error(code); }
   const keyFor = (id: string, key: string): string => id === 'default' || key.startsWith('asset:') ? key : `connection:${id}:${key}`;
-  const statusKeyFor = (id: string): string => id === 'default' ? settings.WEBDAV_STATUS_STORAGE_KEY : `${settings.WEBDAV_STATUS_STORAGE_KEY}:${id}`;
+  const statusKeyFor = (id: string): string => id === 'default' ? settings.webdavStatus.key : `${settings.webdavStatus.key}:${id}`;
   function serialRegistry<T>(fn: () => Promise<T>): Promise<T> {
     const job = registryChain.then(fn);
     registryChain = job.catch(() => {});
@@ -1344,7 +1344,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
     });
   }
   async function notifyRegistry(): Promise<void> {
-    await localStorage('set', { [`${settings.WEBDAV_STATUS_STORAGE_KEY}:connections`]: cryptoApi.randomUUID() });
+    await localStorage('set', { [`${settings.webdavStatus.key}:connections`]: cryptoApi.randomUUID() });
   }
   // Every device publishes the address, directory and username of its
   // connections through browser sync, so a new device only asks for the app
@@ -1378,7 +1378,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
   // connection change that triggered it.
   function publishHints(removed: ReadonlyArray<ConnectionHint | null>, added: ReadonlyArray<ConnectionHint | null>): Promise<void> {
     return serialHints(async () => {
-      const key = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+      const key = settings.webdavConnections.key;
       const current = connectionHints((await syncStorage('get', [key]))[key]);
       const next = connectionHints({ version: 1, items: [
         ...current.filter((item) => !removed.some((config) => config && sameConnection(config, item))),
@@ -1465,8 +1465,8 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
   }
   // Synced connections this device has neither added nor dismissed.
   async function suggestions(connections: ReadonlyArray<ConnectionStatus>): Promise<ConnectionHint[]> {
-    const syncKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
-    const dismissedKey = settings.WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY;
+    const syncKey = settings.webdavConnections.key;
+    const dismissedKey = settings.webdavDismissedConnections.key;
     let hints: ConnectionHint[] = [];
     let dismissed: ConnectionHint[] = [];
     try {
@@ -1477,7 +1477,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
     return hints.filter((hint) => !known.some((config) => sameConnection(config, hint)));
   }
   async function dismissSuggestion(input: unknown): Promise<SyncResult> {
-    const key = settings.WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY;
+    const key = settings.webdavDismissedConnections.key;
     const [hint] = connectionHints({ version: 1, items: [input] });
     if (!hint) fail('connection-missing');
     const current = connectionHints((await localStorage('get', [key]))[key]);
@@ -1490,7 +1490,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
     // Another device withdrawing a connection this one still uses puts it
     // back at once, so a new device never misses it in the meantime.
     chromeApi.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== 'sync' || !changes[settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY]) return;
+      if (areaName !== 'sync' || !changes[settings.webdavConnections.key]) return;
       ready.then(async () => publishHints([], await Promise.all(ids.map(configOf)))).catch(() => {});
     });
     ready.then(() => Promise.all(ids.map(async (id) => {

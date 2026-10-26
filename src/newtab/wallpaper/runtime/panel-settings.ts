@@ -36,8 +36,8 @@ interface PanelSettingsDeps {
   setTimeFontWeight(weight: number): void;
   NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
   SETTINGS: Pick<typeof LumnoSettings,
-    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'normalizeNewtabTimeInk' |
-    'normalizeNewtabTimeFont' | 'getNewtabTimeFont' | 'normalizeNewtabTime12Hour'>;
+    'newtabTimeFontSize' | 'newtabTimeOpacity' | 'newtabTimeInk' |
+    'newtabTimeFont' | 'getNewtabTimeFont' | 'newtabTime12Hour'>;
   setTimeFontSize(size: number): void;
   NEWTAB_TIME_FONT_SIZE_STORAGE_KEY: string;
   setTimeOpacity(opacity: number): void;
@@ -151,7 +151,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
 
   // The clock follows the slider at once; the value is saved once it settles.
   function persistTimeFontSizeFromSlider(value: unknown, change?: SliderSaveOptions): void {
-    const size = SETTINGS.normalizeNewtabTimeFontSize(value);
+    const size = SETTINGS.newtabTimeFontSize.parse(value);
     setTimeFontSize(size);
     renderWallpaperPanelState();
     wallpaperState.saveSliderSetting('timeFontSize', () => {
@@ -162,7 +162,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
   }
 
   function persistTimeOpacityFromSlider(value: unknown, change?: SliderSaveOptions): void {
-    const opacity = SETTINGS.normalizeNewtabTimeOpacity(value);
+    const opacity = SETTINGS.newtabTimeOpacity.parse(value);
     setTimeOpacity(opacity);
     renderWallpaperPanelState();
     wallpaperState.saveSliderSetting('timeOpacity', () => {
@@ -173,7 +173,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
   }
 
   function persistTimeInk(value: unknown): void {
-    const ink = SETTINGS.normalizeNewtabTimeInk(value);
+    const ink = SETTINGS.newtabTimeInk.parse(value);
     // Redraws the panel when the ink changes.
     setTimeInk(ink);
     if (storageArea && NEWTAB_TIME_INK_STORAGE_KEY) {
@@ -182,7 +182,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
   }
 
   function applyTimeFont(value: unknown): void {
-    wallpaperState.currentTimeFont = SETTINGS.normalizeNewtabTimeFont(value);
+    wallpaperState.currentTimeFont = SETTINGS.newtabTimeFont.parse(value);
     setTimeFont(wallpaperState.currentTimeFont);
     renderWallpaperPanelState();
   }
@@ -190,7 +190,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
   // Each face opens at the weight it reads best at, so switching faces
   // also moves the weight to the new face's default.
   function persistTimeFont(value: unknown): void {
-    const nextValue = SETTINGS.normalizeNewtabTimeFont(value);
+    const nextValue = SETTINGS.newtabTimeFont.parse(value);
     const nextWeight = SETTINGS.getNewtabTimeFont(nextValue).defaultWeight;
     wallpaperState.currentTimeFontWeight = nextWeight;
     setTimeFontWeight(nextWeight);
@@ -220,7 +220,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
   }
 
   function persistTime12Hour(value: unknown): void {
-    const nextValue = SETTINGS.normalizeNewtabTime12Hour(value);
+    const nextValue = SETTINGS.newtabTime12Hour.parse(value);
     setTime12Hour(nextValue);
     renderWallpaperPanelState();
     if (storageArea && NEWTAB_TIME_12_HOUR_STORAGE_KEY) {

@@ -159,7 +159,7 @@ sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 
 vm.createContext(sandbox);
-vm.runInContext(moduleScript('src/domain/settings.ts', 'LumnoSettings'), sandbox, {
+vm.runInContext(moduleScript('src/domain/settings/index.ts', 'LumnoSettings'), sandbox, {
   filename: 'settings.ts'
 });
 vm.runInContext(moduleScript('src/options/theme-preload.ts'), sandbox, {

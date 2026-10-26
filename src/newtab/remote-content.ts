@@ -3,6 +3,8 @@
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { DailyQuote, RemoteWallpaper } from './remote-content-types';
 import { WALLPAPER_CATALOG as CATALOG } from './wallpaper/wallpaper-catalog';
+import { bingCatalogCache, bingDailyCache, bingWallpaperMeta } from '../domain/settings/newtab-wallpaper';
+import { quoteCache } from '../domain/settings/newtab-quote';
 
 type CatalogCategory = keyof typeof CATALOG;
 type CatalogRow = readonly (string | number)[];
@@ -47,10 +49,6 @@ function isCatalogCategory(value: string): value is CatalogCategory {
   return Object.hasOwn(CATALOG, value);
 }
 
-const QUOTE_CACHE_KEY = '_x_extension_newtab_quote_cache_2026_unique_';
-const BING_CACHE_KEY = '_x_extension_bing_catalog_cache_2026_unique_';
-const BING_DAILY_CACHE_KEY = '_x_extension_bing_daily_cache_2026_unique_';
-const BING_META_CACHE_KEY = '_x_extension_bing_wallpaper_meta_2026_unique_';
 const BING_DAILY_ID = 'bing-daily';
 const BING_ID_PATTERN = /^bing-(\d{8})-(OHR\.[a-zA-Z0-9_-]{1,160})$/;
 const BING_ORIGIN = 'https://www.bing.com';
@@ -350,7 +348,7 @@ function createClient(options?: RemoteContentClientOptions | null) {
     const pendingQuote = quoteTasks.get(taskKey);
     if (pendingQuote) return pendingQuote;
     const task = lock('lumno-daily-quote', async (): Promise<DailyQuote> => {
-      const cache = await readRecord(area, QUOTE_CACHE_KEY);
+      const cache = await readRecord(area, quoteCache.key);
       const entry = isRecord(cache[type]) ? cache[type] : null;
       const entryQuote = entry ? readCachedQuote(entry.quote) : null;
       const entryDay = entry && typeof entry.day === 'string' ? entry.day : '';
@@ -364,8 +362,8 @@ function createClient(options?: RemoteContentClientOptions | null) {
         // The pool is large but not endless; one more draw keeps a reroll from showing the same line.
         if (quote && entryQuote && quote.text === entryQuote.text) quote = normalizeQuote(await request(url));
         if (!quote) throw new Error('Invalid quote response.');
-        const latest = await readRecord(area, QUOTE_CACHE_KEY);
-        await write(area, QUOTE_CACHE_KEY, { ...latest, [type]: { quote, day: localDay(now()) } });
+        const latest = await readRecord(area, quoteCache.key);
+        await write(area, quoteCache.key, { ...latest, [type]: { quote, day: localDay(now()) } });
         return quote;
       }
       try {
@@ -373,8 +371,8 @@ function createClient(options?: RemoteContentClientOptions | null) {
         const quote = normalizeQuote(data);
         if (!quote) throw new Error('Invalid quote response.');
         // Read again so concurrently updated categories are not overwritten.
-        const latest = await readRecord(area, QUOTE_CACHE_KEY);
-        await write(area, QUOTE_CACHE_KEY, { ...latest, [type]: { quote, day: localDay(now()) } });
+        const latest = await readRecord(area, quoteCache.key);
+        await write(area, quoteCache.key, { ...latest, [type]: { quote, day: localDay(now()) } });
         return quote;
       } catch {
         const fallback = typeof config.fallbackQuote === 'function' ? config.fallbackQuote() : config.fallbackQuote;
@@ -382,8 +380,8 @@ function createClient(options?: RemoteContentClientOptions | null) {
           text: 'A journey of a thousand miles begins with a single step.', author: 'Laozi',
           source: 'Tao Te Ching', url: 'https://hitokoto.cn/'
         };
-        const latest = await readRecord(area, QUOTE_CACHE_KEY);
-        await write(area, QUOTE_CACHE_KEY, { ...latest,
+        const latest = await readRecord(area, quoteCache.key);
+        await write(area, quoteCache.key, { ...latest,
           [type]: { quote, day: entryDay, retryAt: now() + 15 * 60 * 1000 } }).catch(() => {});
         return quote;
       }
@@ -398,7 +396,7 @@ function createClient(options?: RemoteContentClientOptions | null) {
     const pendingCatalog = catalogTasks.get(taskKey);
     if (pendingCatalog) return pendingCatalog;
     const task = lock(`lumno-bing-catalog-${market}`, async (): Promise<RemoteWallpaper[]> => {
-      const catalog = await readRecord(area, BING_CACHE_KEY);
+      const catalog = await readRecord(area, bingCatalogCache.key);
       const entry = isRecord(catalog[market]) ? catalog[market] : {};
       const cached = readWallpaperList(entry.items);
       const entryDay = typeof entry.day === 'string' ? entry.day : '';
@@ -434,14 +432,14 @@ function createClient(options?: RemoteContentClientOptions | null) {
   }
   // Read again so markets updated while the request was in flight are not overwritten.
   async function writeCatalogEntry(market: string, entry: Record<string, unknown>): Promise<void> {
-    const latest = await readRecord(area, BING_CACHE_KEY);
-    await write(area, BING_CACHE_KEY, { ...latest, [market]: entry });
+    const latest = await readRecord(area, bingCatalogCache.key);
+    await write(area, bingCatalogCache.key, { ...latest, [market]: entry });
   }
   // Titles and credits of chosen photos outlive the 8-day catalog, so keep them separately.
   async function readStoredDetails(id: string): Promise<RemoteWallpaper | null> {
-    const saved = await readRecord(area, BING_META_CACHE_KEY);
+    const saved = await readRecord(area, bingWallpaperMeta.key);
     if (saved[id]) return normalizeStoredWallpaper(saved[id]);
-    const catalog = await readRecord(area, BING_CACHE_KEY);
+    const catalog = await readRecord(area, bingCatalogCache.key);
     const entry = Object.values(catalog)
       .flatMap((market): unknown[] => (isRecord(market) && Array.isArray(market.items) ? market.items : []))
       .find((item) => isRecord(item) && item.id === id);
@@ -449,8 +447,8 @@ function createClient(options?: RemoteContentClientOptions | null) {
   }
   function rememberDetails(item: RemoteWallpaper): Promise<void> {
     return lock('lumno-bing-meta', async () => {
-      const saved = await readRecord(area, BING_META_CACHE_KEY);
-      const dailyCache = await readRecord(area, BING_DAILY_CACHE_KEY);
+      const saved = await readRecord(area, bingWallpaperMeta.key);
+      const dailyCache = await readRecord(area, bingDailyCache.key);
       const keep = new Set<unknown>([item.id, ...pinnedIds,
         ...Object.values(dailyCache).map((entry) => (isRecord(entry) ? entry.id : undefined))]);
       const next: Record<string, unknown> = { [item.id]: { id: item.id, date: item.date, name: item.name, copyright: item.copyright,
@@ -461,7 +459,7 @@ function createClient(options?: RemoteContentClientOptions | null) {
         .forEach((entry) => {
           if (keep.has(entry.id) || Object.keys(next).length < 12) next[String(entry.id)] = entry;
         });
-      await write(area, BING_META_CACHE_KEY, next);
+      await write(area, bingWallpaperMeta.key, next);
     });
   }
   async function restoreWallpaper(id: string): Promise<RemoteWallpaper | null> {
@@ -471,14 +469,16 @@ function createClient(options?: RemoteContentClientOptions | null) {
     if (id === BING_DAILY_ID) {
       const market = getMarket();
       // New tabs wait on this, so read the photo's saved details along with the daily entry.
-      const stored = await readMany(area, [BING_DAILY_CACHE_KEY, BING_META_CACHE_KEY]);
-      const dailyCache = isRecord(stored[BING_DAILY_CACHE_KEY]) ? stored[BING_DAILY_CACHE_KEY] : {};
+      const stored = await readMany(area, [bingDailyCache.key, bingWallpaperMeta.key]);
+      const storedDaily = stored[bingDailyCache.key];
+      const dailyCache = isRecord(storedDaily) ? storedDaily : {};
       const entry = isRecord(dailyCache[market]) ? dailyCache[market] : null;
       const daily = entry ? wallpaperFromId(entry.id) : null;
       // Without an entry for this market (e.g. after a language change), keep the previous
       // photo on screen until ensureDailyWallpaper fetches this market's one.
       if (daily && daily.rawId) {
-        const metaCache = isRecord(stored[BING_META_CACHE_KEY]) ? stored[BING_META_CACHE_KEY] : {};
+        const storedMeta = stored[bingWallpaperMeta.key];
+        const metaCache = isRecord(storedMeta) ? storedMeta : {};
         const saved = metaCache[daily.id];
         const details = saved ? normalizeStoredWallpaper(saved) : null;
         if (details && !images.has(daily.id)) images.set(daily.id, details);
@@ -531,8 +531,8 @@ function createClient(options?: RemoteContentClientOptions | null) {
           return showDaily();
         }
         const record = await ensureWallpaper(latest.id);
-        const cache = await readRecord(area, BING_DAILY_CACHE_KEY);
-        await write(area, BING_DAILY_CACHE_KEY, { ...cache, [market]: { id: record.id } });
+        const cache = await readRecord(area, bingDailyCache.key);
+        await write(area, bingDailyCache.key, { ...cache, [market]: { id: record.id } });
         dailyWallpaper = record;
         dailyMarket = market;
         return showDaily();
@@ -575,10 +575,6 @@ function readWallpaperList(
 type RemoteContentClient = ReturnType<typeof createClient>;
 
 export {
-  QUOTE_CACHE_KEY,
-  BING_CACHE_KEY,
-  BING_DAILY_CACHE_KEY,
-  BING_META_CACHE_KEY,
   BING_DAILY_ID,
   CURATED_CATEGORIES,
   RANDOM_CATEGORY,

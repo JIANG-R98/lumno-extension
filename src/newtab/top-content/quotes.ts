@@ -15,6 +15,8 @@ import type { DailyQuote } from '../remote-content-types';
 import * as LumnoCustomQuotes from '../../domain/custom-quotes';
 import type { QuoteFile, QuoteLibrary } from '../../domain/custom-quotes';
 import { getQuoteLineViewApi } from '../react/quote-line';
+import { quoteCache } from '../../domain/settings/newtab-quote';
+import * as NewtabQuoteSettings from '../../domain/settings/newtab-quote';
 
 type QuoteStorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
 
@@ -62,7 +64,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   const window = config.windowObj || globalThis.window;
   const settings = LumnoSettings;
   const custom = LumnoCustomQuotes;
-  const key = settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY;
+  const key = settings.newtabQuotePrefs.key;
   const t = config.t;
   // Hitokoto only serves Chinese text, so the quote exists for Chinese UI languages only.
   const isLocaleSupported = () => !config.getLocale || /^zh_(CN|TW)$/.test(config.getLocale() || '');
@@ -82,7 +84,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   // Resolved on use: the page creates its tooltip controllers after the quote runtime.
   const getTooltip = () => (config.getTooltipController ? config.getTooltipController() : null);
   let origin = '';
-  let prefs = settings.normalizeNewtabQuotePrefs(null);
+  let prefs = settings.newtabQuotePrefs.parse(null);
   let quote: DailyQuote | null = null;
   let revision = 0;
   let settingsView: QuoteSettingsView | null = null;
@@ -116,7 +118,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   }
 
   function previewFontSize(size: number): void {
-    draftFontSize = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: size }).fontSize;
+    draftFontSize = settings.newtabQuotePrefs.parse({ ...prefs, fontSize: size }).fontSize;
     element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize}px`);
     renderSettings();
     syncBottomHeight();
@@ -124,7 +126,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   }
 
   function commitFontSize(size: number): void {
-    const normalized = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: size }).fontSize;
+    const normalized = settings.newtabQuotePrefs.parse({ ...prefs, fontSize: size }).fontSize;
     if (normalized !== prefs.fontSize) {
       draftFontSize = normalized;
       persist({ fontSize: normalized });
@@ -336,7 +338,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
       const values = await (cachedQuoteRead = readCustomValues());
       if (current !== revision || disposed || prefs.provider !== 'custom') return;
       library = custom.normalizeLibrary(values[custom.KEY]);
-      quote = library ? custom.select(library, new Date(), custom.readQuotePick(values[custom.PICK_KEY]), false).quote : null;
+      quote = library ? custom.select(library, new Date(), custom.readQuotePick(values[NewtabQuoteSettings.customQuotePick.key]), false).quote : null;
       render(); scheduleDaily(); return;
     }
     const category = prefs.category;
@@ -344,9 +346,9 @@ function createRuntime(options: QuoteRuntimeOptions) {
     const localArea = config.localStorageArea;
     if (localArea) {
       await (cachedQuoteRead = new Promise<void>((resolve) => {
-        void localArea.get([LumnoNewtabRemoteContent.QUOTE_CACHE_KEY], (values) => {
+        void localArea.get([quoteCache.key], (values) => {
           const cached = LumnoNewtabRemoteContent.readCachedQuoteFor(
-            values && values[LumnoNewtabRemoteContent.QUOTE_CACHE_KEY],
+            values && values[quoteCache.key],
             category
           );
           if (current === revision && cached) {
@@ -372,7 +374,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
     }, tomorrow.getTime() - Date.now());
   }
   function apply(value: unknown): void {
-    const next = settings.normalizeNewtabQuotePrefs(value);
+    const next = settings.newtabQuotePrefs.parse(value);
     const changedCategory = next.category !== prefs.category || next.provider !== prefs.provider;
     const activated = !isActive() && next.enabled && (next.provider === 'custom' || localeSupported);
     prefs = next;
@@ -397,7 +399,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   }
   // Saves a preference change; each value is normalized like a stored one.
   function persist(change: Partial<Record<keyof NewtabQuotePrefs, unknown>>): void {
-    const next = settings.normalizeNewtabQuotePrefs({ ...prefs, ...change });
+    const next = settings.newtabQuotePrefs.parse({ ...prefs, ...change });
     if (!area) return;
     void area.set({ [key]: next }, () => {
       const error = globalThis.chrome && globalThis.chrome.runtime && globalThis.chrome.runtime.lastError;
@@ -413,12 +415,12 @@ function createRuntime(options: QuoteRuntimeOptions) {
     const prefsChange = changes[key];
     if (prefsChange && (!config.isPreferenceArea || config.isPreferenceArea(areaName))) apply(prefsChange.newValue);
     const libraryChange = changes[custom.KEY];
-    if (areaName === 'local' && (libraryChange || changes[custom.PICK_KEY])) {
+    if (areaName === 'local' && (libraryChange || changes[NewtabQuoteSettings.customQuotePick.key])) {
       if (libraryChange) library = custom.normalizeLibrary(libraryChange.newValue);
       renderSettings();
       if (prefs.provider === 'custom') refresh().catch(() => {});
     }
-    const cacheChange = changes[LumnoNewtabRemoteContent.QUOTE_CACHE_KEY];
+    const cacheChange = changes[quoteCache.key];
     if (prefs.provider !== 'custom' && areaName === 'local' && cacheChange) {
       const cached = LumnoNewtabRemoteContent.readCachedQuoteFor(cacheChange.newValue, prefs.category);
       if (cached) {
@@ -443,8 +445,8 @@ function createRuntime(options: QuoteRuntimeOptions) {
         const values = await readCustomValues();
         const currentLibrary = custom.normalizeLibrary(values[custom.KEY]);
         if (!currentLibrary) return;
-        const selected = custom.select(currentLibrary, new Date(), custom.readQuotePick(values[custom.PICK_KEY]), true);
-        await saveCustomValues({ [custom.PICK_KEY]: selected.pick });
+        const selected = custom.select(currentLibrary, new Date(), custom.readQuotePick(values[NewtabQuoteSettings.customQuotePick.key]), true);
+        await saveCustomValues({ [NewtabQuoteSettings.customQuotePick.key]: selected.pick });
         next = selected.quote;
       } else next = await client.getQuote(category, { reroll: true });
       if (current !== revision || disposed || !isActive()) return;
@@ -469,7 +471,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
     return new Promise((resolve, reject) => {
       const localArea = config.localStorageArea;
       if (!localArea) return resolve({});
-      void localArea.get([custom.KEY, custom.PICK_KEY], values => {
+      void localArea.get([custom.KEY, NewtabQuoteSettings.customQuotePick.key], values => {
         const error = getLastError();
         if (error) reject(new Error(error.message)); else resolve(values || {});
       });
@@ -492,7 +494,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
     try {
       const next = await custom.readLibraryFile(file);
       saving = true;
-      await saveCustomValues({ [custom.KEY]: next, [custom.PICK_KEY]: null });
+      await saveCustomValues({ [custom.KEY]: next, [NewtabQuoteSettings.customQuotePick.key]: null });
       saving = false;
       if (disposed) return false;
       library = next;

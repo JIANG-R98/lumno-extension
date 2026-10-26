@@ -67,8 +67,6 @@ interface RecentSiteCollector {
   appendNormalized(normalized: RecentSite | null, isPinned: boolean): boolean;
 }
 
-const DEFAULT_PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
-const DEFAULT_HIDDEN_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
 const DEFAULT_MAX_PINNED = 3;
 const DEFAULT_MAX_HIDDEN = 60;
 
@@ -545,8 +543,6 @@ function mergeRecentSiteSources(input: RecentSiteSources | null | undefined): Re
 }
 
 export {
-  DEFAULT_PINNED_KEY,
-  DEFAULT_HIDDEN_KEY,
   DEFAULT_MAX_PINNED,
   DEFAULT_MAX_HIDDEN,
   normalizeRecentCount,

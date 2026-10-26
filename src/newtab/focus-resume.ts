@@ -1,9 +1,3 @@
-// The search shortcut reloads New Tab to take keyboard focus from the
-// address bar (see input-focus.ts). This carries the page across that
-// reload: the query, its search mode and the results on screen. A
-// cross-document view transition keeps the old page's last frame on screen
-// until the reloaded page shows the same search, so the reload never shows.
-const STORAGE_KEY = 'lumno:newtab-focus-resume';
 const MAX_AGE_MS = 5000;
 // Never hold the old frame longer than this, whatever is still loading.
 const MAX_HOLD_MS = 1200;
@@ -29,6 +23,7 @@ import type { SearchSourceType, SiteSearchProvider } from '../domain/search/type
 import type { Suggestion } from '../shared/react/search/suggestion-list/types';
 import type { ActiveLocalScope } from './search/search-types';
 import { publishBootValue, takeBootValue } from '../platform/boot-handoff';
+import { newtabFocusResume } from '../domain/settings/page-cache';
 
 // The search on screen, carried across the focus reload.
 interface SearchSnapshot {
@@ -118,12 +113,12 @@ function readSnapshot(consume: boolean): SearchSnapshot | null {
     return null;
   }
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(newtabFocusResume.key);
     if (!raw) {
       return null;
     }
     if (consume) {
-      storage.removeItem(STORAGE_KEY);
+      storage.removeItem(newtabFocusResume.key);
     }
     const snapshot = readSearchSnapshot(JSON.parse(raw));
     const age = Date.now() - Number(snapshot && snapshot.savedAt);
@@ -139,7 +134,7 @@ function saveSnapshot(snapshot: SearchSnapshot | null): boolean {
     return false;
   }
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    storage.setItem(newtabFocusResume.key, JSON.stringify(snapshot));
     return true;
   } catch {
     return false;

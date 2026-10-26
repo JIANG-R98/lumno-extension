@@ -11,6 +11,7 @@ import type {
   WallpaperPreloadState
 } from './wallpaper-preload-types';
 import { publishBootValue } from '../../platform/boot-handoff';
+import { newtabFavicon, newtabFaviconPreload, newtabWallpaperEffect, newtabWallpaperPreload } from '../../domain/settings/newtab-wallpaper';
 
 type OverlayPosition = 'top' | 'mid' | 'bottom';
 type OverlayStops = Record<WallpaperMode, Record<OverlayPosition, number>>;
@@ -36,11 +37,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 (function() {
-  const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
   const PRELOAD_STORAGE_VERSION = 4;
-  const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
-  const FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
-  const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
   const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(window.chrome);
   // Only bundled files paint on the first frame. Online photos and links paint from this device's
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
@@ -112,9 +109,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
     return new Promise((resolve) => {
       try {
-        void storage.get([WALLPAPER_EFFECT_STORAGE_KEY], (result) => {
+        void storage.get([newtabWallpaperEffect.key], (result) => {
           resolve(getEffectPrefsForMode(
-            result && result[WALLPAPER_EFFECT_STORAGE_KEY],
+            result && result[newtabWallpaperEffect.key],
             mode
           ));
         });
@@ -126,7 +123,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
   function readCachedWallpaper() {
     try {
-      const raw = window.localStorage ? window.localStorage.getItem(PRELOAD_STORAGE_KEY) : '';
+      const raw = window.localStorage ? window.localStorage.getItem(newtabWallpaperPreload.key) : '';
       if (!raw) {
         return null;
       }
@@ -329,7 +326,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   function readCachedFaviconId(): FaviconId | '' {
     try {
       return normalizeFaviconId(window.localStorage ?
-        window.localStorage.getItem(FAVICON_PRELOAD_STORAGE_KEY) :
+        window.localStorage.getItem(newtabFaviconPreload.key) :
         '');
     } catch {
       return '';
@@ -343,7 +340,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
     try {
       if (window.localStorage) {
-        window.localStorage.setItem(FAVICON_PRELOAD_STORAGE_KEY, normalized);
+        window.localStorage.setItem(newtabFaviconPreload.key, normalized);
       }
     } catch {
       // Ignore private-mode or quota failures; the runtime still applies the favicon later.
@@ -399,8 +396,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       if (!storage || typeof storage.get !== 'function') {
         return;
       }
-      void storage.get([FAVICON_STORAGE_KEY], (result) => {
-        const nextId = normalizeFaviconId(result && result[FAVICON_STORAGE_KEY]);
+      void storage.get([newtabFavicon.key], (result) => {
+        const nextId = normalizeFaviconId(result && result[newtabFavicon.key]);
         if (!nextId) {
           return;
         }

@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
 
@@ -8,13 +8,13 @@ const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 const settingsContract = [
   {
-    constant: 'NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY',
+    constant: 'newtabFeedbackButtonVisible',
     htmlId: '_x_extension_newtab_feedback_button_visible_toggle_2026_unique_',
     i18nKey: 'settings_newtab_feedback_button_visible_title',
     storageKey: '_x_extension_newtab_feedback_button_visible_2026_unique_'
   },
   {
-    constant: 'NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY',
+    constant: 'newtabAppearanceButtonVisible',
     htmlId: '_x_extension_newtab_appearance_button_visible_toggle_2026_unique_',
     i18nKey: 'settings_newtab_appearance_button_visible_title',
     storageKey: '_x_extension_newtab_appearance_button_visible_2026_unique_'
@@ -22,7 +22,7 @@ const settingsContract = [
 ];
 
 settingsContract.forEach((entry) => {
-  assert.strictEqual(settings[entry.constant], entry.storageKey);
+  assert.strictEqual(settings[entry.constant].key, entry.storageKey);
   localeNames.forEach((locale) => {
     const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
     assert(
@@ -35,8 +35,8 @@ settingsContract.forEach((entry) => {
 // On the New Tab page: each button follows its own setting, from the first
 // visible frame and live when Settings changes it.
 const CONTROLS = {
-  NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: '.x-nt-feedback-control',
-  NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: '.x-nt-wallpaper-control'
+  newtabFeedbackButtonVisible: '.x-nt-feedback-control',
+  newtabAppearanceButtonVisible: '.x-nt-wallpaper-control'
 };
 
 function shown(page, selector) {

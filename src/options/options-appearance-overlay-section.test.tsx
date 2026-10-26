@@ -81,15 +81,15 @@ describe('Options Appearance webpage overlay section', () => {
   it('binds its synced settings and this device\'s fonts', async () => {
     const { changes, localChanges } = await setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
-      Settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-      Settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-      Settings.OVERLAY_SIZE_MODE_STORAGE_KEY,
-      Settings.OVERLAY_WIDTH_STORAGE_KEY
+      Settings.overlayEnterAnimation.key,
+      Settings.overlayPageThemeAdaptationEnabled.key,
+      Settings.overlaySizeMode.key,
+      Settings.overlayWidth.key
     ].sort());
     expect(Array.from(localChanges.keys()).sort()).toEqual([
-      Settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-      Settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
-      Settings.OVERLAY_FONT_LABELS_STORAGE_KEY
+      Settings.overlayFontFallback.key,
+      Settings.overlayFontFamily.key,
+      Settings.overlayFontLabels.key
     ].sort());
   });
 
@@ -100,16 +100,16 @@ describe('Options Appearance webpage overlay section', () => {
     const large = Settings.getOverlaySizePreset('large').width;
     expect(slider.value).toBe(String(standard));
     act(() => getElement(host, '[data-overlay-size="large"]').click());
-    expect(writes).toEqual([{ [Settings.OVERLAY_SIZE_MODE_STORAGE_KEY]: 'large' }]);
+    expect(writes).toEqual([{ [Settings.overlaySizeMode.key]: 'large' }]);
     expect(slider.value).toBe(String(large));
 
     slide(host, 900);
-    expect(writes.at(-1)).toEqual({ [Settings.OVERLAY_WIDTH_STORAGE_KEY]: 900 });
+    expect(writes.at(-1)).toEqual({ [Settings.overlayWidth.key]: 900 });
     slide(host, large);
-    expect(removed).toEqual([Settings.OVERLAY_WIDTH_STORAGE_KEY]);
+    expect(removed).toEqual([Settings.overlayWidth.key]);
 
-    store(Settings.OVERLAY_WIDTH_STORAGE_KEY, 700);
-    store(Settings.OVERLAY_SIZE_MODE_STORAGE_KEY, 'compact');
+    store(Settings.overlayWidth.key, 700);
+    store(Settings.overlaySizeMode.key, 'compact');
     expect(slider.value).toBe('700');
   });
 
@@ -118,7 +118,7 @@ describe('Options Appearance webpage overlay section', () => {
     const pressed = () => getTags(host, '[data-overlay-enter-animation]', 'button').map((button) => button.getAttribute('aria-checked'));
     expect(pressed()).toEqual(['true', 'false']);
     act(() => getElement(host, '[data-overlay-enter-animation="fade"]').click());
-    expect(writes).toEqual([{ [Settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: 'fade' }]);
+    expect(writes).toEqual([{ [Settings.overlayEnterAnimation.key]: 'fade' }]);
     expect(pressed()).toEqual(['false', 'true']);
   });
 
@@ -133,31 +133,31 @@ describe('Options Appearance webpage overlay section', () => {
     pick(FONT, 'PingFangSC');
     pick(FALLBACK, 'Inter');
     expect(localWrites).toEqual([
-      { [Settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: 'PingFangSC', [Settings.OVERLAY_FONT_LABELS_STORAGE_KEY]: { PingFangSC: '苹方-简' } },
+      { [Settings.overlayFontFamily.key]: 'PingFangSC', [Settings.overlayFontLabels.key]: { PingFangSC: '苹方-简' } },
       {
-        [Settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY]: 'Inter',
-        [Settings.OVERLAY_FONT_LABELS_STORAGE_KEY]: { PingFangSC: '苹方-简', Inter: 'Inter' }
+        [Settings.overlayFontFallback.key]: 'Inter',
+        [Settings.overlayFontLabels.key]: { PingFangSC: '苹方-简', Inter: 'Inter' }
       }
     ]);
   });
 
   it('names a chosen font this device lacks and clears it in one click', async () => {
     const { host, localWrites, store } = await setUp();
-    store(Settings.OVERLAY_FONT_LABELS_STORAGE_KEY, { 'Missing Sans': 'Missing Sans Display' });
-    store(Settings.OVERLAY_FONT_FAMILY_STORAGE_KEY, 'Missing Sans');
+    store(Settings.overlayFontLabels.key, { 'Missing Sans': 'Missing Sans Display' });
+    store(Settings.overlayFontFamily.key, 'Missing Sans');
     const notice = getElement(host, '#_x_extension_overlay_font_missing_2026_unique_');
     expect(notice.hidden).toBe(false);
     expect(notice.textContent).toContain('Missing Sans Display is missing');
     expect(openMenu(FONT).at(-1)?.textContent).toBe('Missing Sans Display');
     expect(getElement(host, '#_x_extension_overlay_font_fallback_missing_2026_unique_').hidden).toBe(true);
     act(() => getTag(notice, '._x_extension_overlay_font_reset_2026_unique_', 'button').click());
-    expect(localWrites.at(-1)).toEqual({ [Settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: '', [Settings.OVERLAY_FONT_LABELS_STORAGE_KEY]: {} });
+    expect(localWrites.at(-1)).toEqual({ [Settings.overlayFontFamily.key]: '', [Settings.overlayFontLabels.key]: {} });
     expect(notice.hidden).toBe(true);
   });
 
   it('flags nothing as missing when the font list could not be read', async () => {
     const { host, store } = await setUp({ fonts: [] });
-    store(Settings.OVERLAY_FONT_FAMILY_STORAGE_KEY, 'Inter');
+    store(Settings.overlayFontFamily.key, 'Inter');
     expect(getElement(host, '#_x_extension_overlay_font_missing_2026_unique_').hidden).toBe(true);
     expect(openMenu(FONT).map((option) => option.dataset.value)).toEqual(['', 'Inter']);
   });
@@ -184,7 +184,7 @@ describe('Options Appearance webpage overlay section', () => {
     act(() => { changed = section.showThemeMode('system'); });
     expect([changed, row.hidden]).toEqual([true, false]);
     act(() => getTag(host, '#_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_', 'input').click());
-    expect(writes).toEqual([{ [Settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY]: false }]);
+    expect(writes).toEqual([{ [Settings.overlayPageThemeAdaptationEnabled.key]: false }]);
   });
 
   it('redraws once the installed fonts arrive', async () => {

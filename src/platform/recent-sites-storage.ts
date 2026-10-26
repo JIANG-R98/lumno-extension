@@ -1,13 +1,9 @@
 // Loading and saving the New Tab's pinned and hidden recent sites
 // (domain/recent-sites-store.ts normalizes them).
-import {
-  DEFAULT_HIDDEN_KEY,
-  DEFAULT_PINNED_KEY,
-  normalizeHiddenRecentSites,
-  normalizePinnedRecentSites
-} from '../domain/recent-sites-store';
+import { normalizeHiddenRecentSites, normalizePinnedRecentSites } from '../domain/recent-sites-store';
 import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
+import { hiddenRecentSites, pinnedRecentSites } from '../domain/settings/recent-sites';
 
 interface RecentSiteStorageOptions extends RecentSiteOptions {
   // The storage key; the default pinned or hidden key when absent.
@@ -41,7 +37,7 @@ function loadPinnedRecentSites(
   options?: RecentSiteStorageOptions | null
 ): Promise<RecentSite[]> {
   const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_PINNED_KEY;
+  const key = opts.key || pinnedRecentSites.key;
   return storageGet(storage, key).then((result) => normalizePinnedRecentSites(result[key], opts));
 }
 
@@ -51,7 +47,7 @@ function savePinnedRecentSites(
   options?: RecentSiteStorageOptions | null
 ): Promise<RecentSite[]> {
   const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_PINNED_KEY;
+  const key = opts.key || pinnedRecentSites.key;
   const normalized = normalizePinnedRecentSites(items, opts);
   return storageSet(storage, { [key]: normalized }).then(() => normalized);
 }
@@ -61,7 +57,7 @@ function loadHiddenRecentSites(
   options?: RecentSiteStorageOptions | null
 ): Promise<HiddenRecentSite[]> {
   const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_HIDDEN_KEY;
+  const key = opts.key || hiddenRecentSites.key;
   return storageGet(storage, key).then((result) => normalizeHiddenRecentSites(result[key], opts));
 }
 
@@ -71,7 +67,7 @@ function saveHiddenRecentSites(
   options?: RecentSiteStorageOptions | null
 ): Promise<HiddenRecentSite[]> {
   const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_HIDDEN_KEY;
+  const key = opts.key || hiddenRecentSites.key;
   const normalized = normalizeHiddenRecentSites(items, opts);
   return storageSet(storage, { [key]: normalized }).then(() => normalized);
 }

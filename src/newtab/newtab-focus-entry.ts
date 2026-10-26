@@ -4,6 +4,7 @@ import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoNewtabFocusResume from './focus-resume';
 import * as LumnoMessaging from '../platform/messaging';
+import { newtabInputAutoFocusEnabled } from '../domain/settings/newtab-page';
 
 (function() {
   const locationUrl = new URL(window.location.href);
@@ -28,9 +29,9 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
   const settings = LumnoSettings;
-  const storageKey = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
-    '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
-  const normalizeEnabled = settings.normalizeNewtabInputAutoFocusEnabled;
+  const storageKey = settings.newtabInputAutoFocusEnabled.key ||
+    newtabInputAutoFocusEnabled.key;
+  const normalizeEnabled = settings.newtabInputAutoFocusEnabled.parse;
   const chromeApi = window.chrome || null;
 
   function revealPage(): void {
@@ -89,7 +90,7 @@ import * as LumnoMessaging from '../platform/messaging';
   let cachedEnabled: string | null = null;
   try {
     cachedEnabled = window.localStorage
-      ? window.localStorage.getItem(settings.NEWTAB_INPUT_AUTO_FOCUS_CACHE_KEY)
+      ? window.localStorage.getItem(settings.newtabInputAutoFocusCache.key)
       : null;
   } catch {
     cachedEnabled = null;

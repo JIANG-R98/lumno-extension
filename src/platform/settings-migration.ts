@@ -1,15 +1,14 @@
 // Runs the settings migrations this device has not run yet
-// (domain/settings-migrations.ts) against its storage areas, and records
+// (domain/settings/migrations.ts) against its storage areas, and records
 // the version it reached. A failed write leaves the version where it was,
 // so the next start tries again.
 import {
-  SETTINGS_SCHEMA_VERSION_STORAGE_KEY,
   getPendingSettingsMigrations,
   getSettingsMigrationReads,
-  normalizeSettingsSchemaVersion,
   planSettingsMigrations
-} from '../domain/settings-migrations';
-import type { SettingsAreaPatch } from '../domain/settings-migrations';
+} from '../domain/settings/migrations';
+import type { SettingsAreaPatch } from '../domain/settings/migrations';
+import { settingsSchemaVersion } from '../domain/settings/sync-state';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { StorageChromeApi } from './settings-storage';
 import { callStorage, isRecord } from './storage-call';
@@ -51,8 +50,8 @@ async function runSettingsMigrations(chromeApi: StorageChromeApi | null | undefi
     return 0;
   }
   const syncArea = storage.sync;
-  const stored = await readArea(chromeApi, localArea, [SETTINGS_SCHEMA_VERSION_STORAGE_KEY]);
-  const version = normalizeSettingsSchemaVersion(stored[SETTINGS_SCHEMA_VERSION_STORAGE_KEY]);
+  const stored = await readArea(chromeApi, localArea, [settingsSchemaVersion.key]);
+  const version = settingsSchemaVersion.parse(stored[settingsSchemaVersion.key]);
   const pending = getPendingSettingsMigrations(version);
   if (pending.length === 0) {
     return version;
@@ -65,7 +64,7 @@ async function runSettingsMigrations(chromeApi: StorageChromeApi | null | undefi
   const plan = planSettingsMigrations(version, { sync: syncValues, local: localValues });
   await writeArea(chromeApi, syncArea, plan.patch.sync);
   await writeArea(chromeApi, localArea, plan.patch.local);
-  await callStorage(chromeApi, (done) => localArea.set({ [SETTINGS_SCHEMA_VERSION_STORAGE_KEY]: plan.version }, done));
+  await callStorage(chromeApi, (done) => localArea.set({ [settingsSchemaVersion.key]: plan.version }, done));
   return plan.version;
 }
 

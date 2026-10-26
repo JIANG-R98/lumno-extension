@@ -5,6 +5,7 @@ const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const bindings = require('../../src/platform/bookmark-folder-bindings.ts');
 const drag = require('../../src/newtab/cross-surface-drag.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
+const { newtabShortcutsLegacy, shortcutFolderBindings } = require('../../src/domain/settings/newtab-shortcuts.ts');
 
 function tree(folderId = '42', rootId = '1', rootTitle = '书签栏') {
   return [{ id: '0', children: [{ id: rootId, parentId: '0', title: rootTitle,
@@ -107,8 +108,8 @@ async function run() {
   assert.deepStrictEqual(complete.map((row) => row.id), ['before', item.id, 'after'], 'hiding preserves original order and list');
   assert.deepStrictEqual(bRuntime.visibleItems(complete, bMap).map((row) => row.id), ['before', item.id, 'after']);
   await bRuntime.flush();
-  assert.strictEqual(b.chrome.storage.local.values[refs.BINDINGS_KEY][item.id].folderId, '117');
-  assert(!Object.keys(b.chrome.storage.sync.values).includes(refs.BINDINGS_KEY));
+  assert.strictEqual(b.chrome.storage.local.values[shortcutFolderBindings.key][item.id].folderId, '117');
+  assert(!Object.keys(b.chrome.storage.sync.values).includes(shortcutFolderBindings.key));
 
   const moved = tree('117', '900');
   moved[0].children[0].children[0].title = '新名字';
@@ -136,7 +137,7 @@ async function run() {
     getFolderId: (row) => row.folderId || aRuntime.getNode(row, aMap)?.id });
   assert.strictEqual(plan.shortcutId, item.id, 'repeat drag uses the existing portable entry');
 
-  const sourceDevice = device({ sync: { [shortcuts.LEGACY_SHORTCUTS_KEY]: [legacy] } });
+  const sourceDevice = device({ sync: { [newtabShortcutsLegacy.key]: [legacy] } });
   const controller = bindings.createSyncController({ chrome: sourceDevice.chrome });
   controller.start();
   await controller.refresh();
@@ -155,13 +156,13 @@ async function run() {
   sourceDevice.setTree(renamed, 'onMoved');
   await controller.refresh();
   assert.deepStrictEqual((await shortcutStorage.loadShortcuts(sourceDevice.chrome.storage.sync))[0].folderRef.path, ['Design', 'Moved']);
-  assert.strictEqual(sourceDevice.chrome.storage.sync.values[refs.BINDINGS_KEY], undefined);
+  assert.strictEqual(sourceDevice.chrome.storage.sync.values[shortcutFolderBindings.key], undefined);
 
   // New Tab saves a site dragged out of a shortcut folder, then removes its
   // bookmark. When that save lands while the background is still updating
   // the folder's reference, the background must not write its older list
   // over it, or the site is gone from both places.
-  const raceDevice = device({ local: { [refs.BINDINGS_KEY]: { 'entry-a': { folderId: '42' } } } });
+  const raceDevice = device({ local: { [shortcutFolderBindings.key]: { 'entry-a': { folderId: '42' } } } });
   const site = shortcuts.createShortcutRecord({ url: 'https://example.com/site', title: 'Site' }, { now: 2 });
   await shortcutStorage.saveShortcuts(raceDevice.chrome.storage.sync, [entry(aMap)]);
   const raceTree = tree();
@@ -211,7 +212,7 @@ async function runPage() {
   assert.strictEqual(drop.toast(), 'Folder added to shortcuts', 'a selected folder is added without asking');
   const [added] = await shortcutStorage.loadShortcuts(drop.page.storage.sync);
   assert.ok(added.folderRef && !Object.hasOwn(added, 'folderId'), 'the synced entry is portable');
-  assert.strictEqual(drop.page.storage.local.data[refs.BINDINGS_KEY][added.id].folderId, '118',
+  assert.strictEqual(drop.page.storage.local.data[shortcutFolderBindings.key][added.id].folderId, '118',
     'the drop binds the dragged folder on this device even with an identical sibling');
   drop.clearToast();
   await drop.dragTo(drop.card('118'), drop.shortcutSlot(0));

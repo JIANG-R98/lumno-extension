@@ -8,24 +8,24 @@ const transfer = createSyncTransfer({
   deriveLegacyAutoGroupEnabled: createAggregateSearchModel({ aggregateSearchStore }).deriveLegacyAutoGroupEnabled,
   settings
 });
-const META = settings.SYNC_META_STORAGE_KEY;
-const [V2_HEAD, V2_CHUNK_2, V2_CHUNK_3] = settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
+const META = settings.syncMeta.key;
+const [V2_HEAD, V2_CHUNK_2, V2_CHUNK_3] = settings.NEWTAB_SHORTCUTS_GROUP_KEYS;
 
 // Export and "sync now" carry only the Chrome Sync contract.
 {
   const stored = {
-    [settings.THEME_STORAGE_KEY]: 'dark',
-    [settings.LANGUAGE_STORAGE_KEY]: undefined,
-    [settings.WEBDAV_STATUS_STORAGE_KEY]: { enabled: true },
+    [settings.themeMode.key]: 'dark',
+    [settings.language.key]: undefined,
+    [settings.webdavStatus.key]: { enabled: true },
     unrelated: 1
   };
   assert.deepStrictEqual(transfer.buildExportFile(stored, '2026-01-01T00:00:00.000Z'), {
     version: 1,
     exportedAt: '2026-01-01T00:00:00.000Z',
-    data: { [settings.THEME_STORAGE_KEY]: 'dark' }
+    data: { [settings.themeMode.key]: 'dark' }
   });
   assert.deepStrictEqual(transfer.buildManualSyncPayload(stored, 42), {
-    [settings.THEME_STORAGE_KEY]: 'dark',
+    [settings.themeMode.key]: 'dark',
     [META]: { lastSyncAt: 42, source: 'manual' }
   });
 }
@@ -42,30 +42,30 @@ assert.strictEqual(transfer.parseImportFile(''), null);
   assert.strictEqual(transfer.buildImportPlan({ unrelated: 1 }, 1), null, 'a file without known settings is invalid');
 
   const plan = transfer.buildImportPlan({
-    [settings.THEME_STORAGE_KEY]: 'light',
-    [settings.SITE_SEARCH_STORAGE_KEY]: [],
+    [settings.themeMode.key]: 'light',
+    [settings.siteSearchCustom.key]: [],
     unrelated: 1
   }, 7);
   assert.deepStrictEqual(plan, {
     keysToClear: [],
     payload: {
-      [settings.THEME_STORAGE_KEY]: 'light',
-      [settings.SITE_SEARCH_STORAGE_KEY]: [],
+      [settings.themeMode.key]: 'light',
+      [settings.siteSearchCustom.key]: [],
       [META]: { lastSyncAt: 7, source: 'import' }
     }
   });
 
   // A file from before shortcut chunks and groups.
-  const legacy = transfer.buildImportPlan({ [settings.NEWTAB_SHORTCUTS_STORAGE_KEY]: [{ url: 'https://a' }] }, 1);
-  assert.deepStrictEqual(legacy.payload[settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY], [],
+  const legacy = transfer.buildImportPlan({ [settings.newtabShortcutsLegacy.key]: [{ url: 'https://a' }] }, 1);
+  assert.deepStrictEqual(legacy.payload[settings.newtabShortcutsLegacyChunk2.key], [],
     'stale shortcut chunks are cleared with a single-key list');
-  assert.deepStrictEqual(legacy.payload[settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY], []);
+  assert.deepStrictEqual(legacy.payload[settings.newtabShortcutsLegacyChunk3.key], []);
   assert.deepStrictEqual(legacy.keysToClear, [V2_HEAD, V2_CHUNK_2, V2_CHUNK_3],
     'grouped shortcuts are cleared so New Tab migrates the imported flat list');
 
   // Grouped shortcuts move only as a whole save.
   const partialGroups = transfer.buildImportPlan({
-    [settings.THEME_STORAGE_KEY]: 'dark',
+    [settings.themeMode.key]: 'dark',
     [V2_CHUNK_2]: ['orphan']
   }, 1);
   assert(!Object.prototype.hasOwnProperty.call(partialGroups.payload, V2_CHUNK_2),
@@ -79,17 +79,17 @@ assert.strictEqual(transfer.parseImportFile(''), null);
   // Old exports derive the global aggregate tab-group switch.
   const refs = ['builtin:a', 'builtin:b'];
   const aggregates = transfer.buildImportPlan({
-    [settings.AGGREGATE_SEARCH_STORAGE_KEY]: {
+    [settings.aggregateSearches.key]: {
       version: 1,
       items: [{ id: 'x', key: 'x', name: 'X', sourceRefs: refs, autoCreateTabGroup: false }]
     }
   }, 1);
-  assert.strictEqual(aggregates.payload[settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY], false);
+  assert.strictEqual(aggregates.payload[settings.aggregateSearchAutoGroupEnabled.key], false);
   const explicit = transfer.buildImportPlan({
-    [settings.AGGREGATE_SEARCH_STORAGE_KEY]: [],
-    [settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]: true
+    [settings.aggregateSearches.key]: [],
+    [settings.aggregateSearchAutoGroupEnabled.key]: true
   }, 1);
-  assert.strictEqual(explicit.payload[settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY], true,
+  assert.strictEqual(explicit.payload[settings.aggregateSearchAutoGroupEnabled.key], true,
     'an exported switch value wins');
 }
 

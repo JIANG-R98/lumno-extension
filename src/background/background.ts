@@ -101,24 +101,7 @@ import {
   isSiteSearchShortcutIconStorageChange,
   markFaviconDirtyForUrl
 } from './favicon-service';
-import {
-  SEARCH_SELECTION_STATS_STORAGE_KEY,
-  clearPendingSearch,
-  getSiteSearchProviderEntryUrl,
-  invalidateSearchBlacklistCache,
-  invalidateSearchResultSourceTypesCache,
-  invalidateSiteSearchProviderCache,
-  normalizeSearchSelectionStats,
-  pendingSearchAt,
-  pendingSearchGroupContext,
-  pendingSearchTabId,
-  refreshDefaultSearchEngineState,
-  replaceSearchSelectionStatsCache,
-  setPendingSearchTabId,
-  setSearchFuzzyPinyinEnabled,
-  updateDefaultSearchEngineFromUrl,
-  warmSiteSearchProviderIcons
-} from './search-suggestions-service';
+import { clearPendingSearch, getSiteSearchProviderEntryUrl, invalidateSearchBlacklistCache, invalidateSearchResultSourceTypesCache, invalidateSiteSearchProviderCache, normalizeSearchSelectionStats, pendingSearchAt, pendingSearchGroupContext, pendingSearchTabId, refreshDefaultSearchEngineState, replaceSearchSelectionStatsCache, setPendingSearchTabId, setSearchFuzzyPinyinEnabled, updateDefaultSearchEngineFromUrl, warmSiteSearchProviderIcons } from './search-suggestions-service';
 import {
   maybeAutoSelectRestrictedBrowserSetting,
   moveTabToSourceGroupContext,
@@ -165,18 +148,18 @@ import {
   TAB_MESSAGE_HANDLERS
 } from './message-handlers-service';
 import {
-  DOCUMENT_PIP_ENABLED_STORAGE_KEY,
-  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-  RESTRICTED_ACTION_STORAGE_KEY,
-  SEARCH_BLACKLIST_STORAGE_KEY,
-  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-  SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-  SITE_SEARCH_DISABLED_STORAGE_KEY,
-  SITE_SEARCH_STORAGE_KEY,
-  TAB_SWITCHER_ENABLED_STORAGE_KEY
+  documentPipEnabled,
+  faviconEnhancedFetchEnabled,
+  faviconRequestBlacklist,
+  pinnedTabRecoveryEnabled,
+  restrictedActionAutoBrowserSettingDone,
+  restrictedAction,
+  searchBlacklist,
+  searchResultSourceTypes,
+  selectionQuickActionsEnabled,
+  siteSearchDisabled,
+  siteSearchCustom,
+  tabSwitcherEnabled
 } from '../domain/settings';
 import {
   PINYIN_DATA_SCRIPT_PATH,
@@ -197,6 +180,7 @@ import {
   storageArea,
   warnBackgroundFailure
 } from './worker-context';
+import { searchSelectionStats } from '../domain/settings/search';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
@@ -226,37 +210,37 @@ startProgressTracking();
 // wake here, and kept current by the storage.onChanged listener further down.
 // The tab switcher and pinned-tab recovery services keep their own.
 storageArea.get([
-  RESTRICTED_ACTION_STORAGE_KEY,
-  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-  DOCUMENT_PIP_ENABLED_STORAGE_KEY,
-  TAB_SWITCHER_ENABLED_STORAGE_KEY,
-  SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
-  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY
+  restrictedAction.key,
+  restrictedActionAutoBrowserSettingDone.key,
+  documentPipEnabled.key,
+  tabSwitcherEnabled.key,
+  SETTINGS.tabSwitcherCurrentWindowOnly.key,
+  pinnedTabRecoveryEnabled.key
 ], (storedResult) => {
   const result = storedResult || {};
-  const stored = result[RESTRICTED_ACTION_STORAGE_KEY];
-  const normalized = SETTINGS.normalizeRestrictedAction(stored);
+  const stored = result[restrictedAction.key];
+  const normalized = SETTINGS.restrictedAction.parse(stored);
   if (normalized !== stored) {
-    storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: normalized });
+    storageArea.set({ [restrictedAction.key]: normalized });
   }
   setRestrictedAction(normalized);
-  setRestrictedActionAutoBrowserSettingDone(result[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY] === true);
-  const documentPipStored = result[DOCUMENT_PIP_ENABLED_STORAGE_KEY];
+  setRestrictedActionAutoBrowserSettingDone(result[restrictedActionAutoBrowserSettingDone.key] === true);
+  const documentPipStored = result[documentPipEnabled.key];
   const normalizedDocumentPip = documentPipStored === true;
   if (documentPipStored !== normalizedDocumentPip) {
-    storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalizedDocumentPip });
+    storageArea.set({ [documentPipEnabled.key]: normalizedDocumentPip });
   }
   setDocumentPipEnabled(normalizedDocumentPip);
-  const tabSwitcherStored = result[TAB_SWITCHER_ENABLED_STORAGE_KEY];
-  const normalizedTabSwitcher = SETTINGS.normalizeTabSwitcherEnabled(tabSwitcherStored);
+  const tabSwitcherStored = result[tabSwitcherEnabled.key];
+  const normalizedTabSwitcher = SETTINGS.tabSwitcherEnabled.parse(tabSwitcherStored);
   if (tabSwitcherStored !== normalizedTabSwitcher) {
-    storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalizedTabSwitcher });
+    storageArea.set({ [tabSwitcherEnabled.key]: normalizedTabSwitcher });
   }
   applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
-  applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
-    result[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]
+  applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.tabSwitcherCurrentWindowOnly.parse(
+    result[SETTINGS.tabSwitcherCurrentWindowOnly.key]
   ));
-  const pinnedTabRecoveryStored = result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY];
+  const pinnedTabRecoveryStored = result[pinnedTabRecoveryEnabled.key];
   applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
   markBackgroundSettingsLoaded();
 });
@@ -587,9 +571,9 @@ LumnoPipPageBridgeRegistration
   .sync(true);
 loadSelectionQuickActionsEnabled().then((enabled) => selectionScriptRegistration.sync(enabled));
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  const storageModeChanged = areaName === 'local' && Boolean(changes[SETTINGS.LOCAL_PRIMARY_STORAGE_KEY]);
+  const storageModeChanged = areaName === 'local' && Boolean(changes[SETTINGS.localPrimary.key]);
   if (!storageModeChanged &&
-      !(isPrimaryStorageAreaName(areaName) && changes[SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY])) {
+      !(isPrimaryStorageAreaName(areaName) && changes[selectionQuickActionsEnabled.key])) {
     return;
   }
   loadSelectionQuickActionsEnabled().then((enabled) => {
@@ -718,7 +702,7 @@ function dispatchBackgroundMessage(
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
 
 providerStorageRuntime.ready.then(() => {
-  migrateStorageIfNeeded([...LumnoSettings.CHROME_SYNC_STORAGE_KEYS]);
+  migrateStorageIfNeeded([...LumnoSettings.BROWSER_SYNC_KEYS]);
 });
 
 getBackgroundFaviconCacheRuntime();
@@ -780,76 +764,76 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isPrimaryStorageAreaName(areaName)) {
     return;
   }
-  if (changes[RESTRICTED_ACTION_STORAGE_KEY]) {
-    const next = changes[RESTRICTED_ACTION_STORAGE_KEY].newValue;
-    const normalized = SETTINGS.normalizeRestrictedAction(next);
+  if (changes[restrictedAction.key]) {
+    const next = changes[restrictedAction.key].newValue;
+    const normalized = SETTINGS.restrictedAction.parse(next);
     setRestrictedAction(normalized);
     if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: normalized });
+      storageArea.set({ [restrictedAction.key]: normalized });
     }
   }
-  if (changes[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]) {
-    const next = changes[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY].newValue;
+  if (changes[restrictedActionAutoBrowserSettingDone.key]) {
+    const next = changes[restrictedActionAutoBrowserSettingDone.key].newValue;
     setRestrictedActionAutoBrowserSettingDone(next === true);
   }
-  if (changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY]) {
-    const next = changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY].newValue;
+  if (changes[documentPipEnabled.key]) {
+    const next = changes[documentPipEnabled.key].newValue;
     const normalized = next === true;
     setDocumentPipEnabled(normalized);
     if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalized });
+      storageArea.set({ [documentPipEnabled.key]: normalized });
     }
   }
-  if (changes[TAB_SWITCHER_ENABLED_STORAGE_KEY]) {
-    const next = changes[TAB_SWITCHER_ENABLED_STORAGE_KEY].newValue;
-    const normalized = SETTINGS.normalizeTabSwitcherEnabled(next);
+  if (changes[tabSwitcherEnabled.key]) {
+    const next = changes[tabSwitcherEnabled.key].newValue;
+    const normalized = SETTINGS.tabSwitcherEnabled.parse(next);
     applyTabSwitcherEnabledSetting(normalized);
     if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalized });
+      storageArea.set({ [tabSwitcherEnabled.key]: normalized });
     }
   }
-  if (changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]) {
-    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
-      changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY].newValue
+  if (changes[SETTINGS.tabSwitcherCurrentWindowOnly.key]) {
+    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.tabSwitcherCurrentWindowOnly.parse(
+      changes[SETTINGS.tabSwitcherCurrentWindowOnly.key].newValue
     ));
   }
-  if (changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]) {
-    const next = changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY].newValue;
+  if (changes[pinnedTabRecoveryEnabled.key]) {
+    const next = changes[pinnedTabRecoveryEnabled.key].newValue;
     const normalized = applyPinnedTabRecoverySetting(next);
     if (normalized) {
       schedulePersistPinnedTabSnapshot();
     }
   }
-  if (changes[SITE_SEARCH_STORAGE_KEY] || changes[SITE_SEARCH_DISABLED_STORAGE_KEY]) {
+  if (changes[siteSearchCustom.key] || changes[siteSearchDisabled.key]) {
     invalidateSiteSearchProviderCache();
     warmSiteSearchProviderIcons();
   }
-  if (changes[SEARCH_BLACKLIST_STORAGE_KEY]) {
+  if (changes[searchBlacklist.key]) {
     invalidateSearchBlacklistCache();
   }
-  if (changes[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]) {
+  if (changes[faviconRequestBlacklist.key]) {
     invalidateFaviconRequestBlacklistCache();
     invalidateShortcutFaviconPolicyCache();
   }
-  if (changes[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]) {
+  if (changes[faviconEnhancedFetchEnabled.key]) {
     invalidateFaviconEnhancedFetchEnabledCache();
     invalidateShortcutFaviconPolicyCache();
   }
-  if (changes[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]) {
+  if (changes[searchResultSourceTypes.key]) {
     invalidateSearchResultSourceTypesCache();
   }
-  if (changes[SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY]) {
-    setSearchFuzzyPinyinEnabled(SETTINGS.normalizeSearchFuzzyPinyinEnabled(
-      changes[SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY].newValue
+  if (changes[SETTINGS.searchFuzzyPinyinEnabled.key]) {
+    setSearchFuzzyPinyinEnabled(SETTINGS.searchFuzzyPinyinEnabled.parse(
+      changes[SETTINGS.searchFuzzyPinyinEnabled.key].newValue
     ));
   }
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'local' || !changes[SEARCH_SELECTION_STATS_STORAGE_KEY]) {
+  if (areaName !== 'local' || !changes[searchSelectionStats.key]) {
     return;
   }
   replaceSearchSelectionStatsCache(normalizeSearchSelectionStats(
-    changes[SEARCH_SELECTION_STATS_STORAGE_KEY].newValue
+    changes[searchSelectionStats.key].newValue
   ));
 });

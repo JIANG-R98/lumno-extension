@@ -20,7 +20,7 @@ interface FaviconPolicyDeps {
   FAVICON_UTILS: Pick<typeof FaviconUtils,
     'getCanonicalPageUrlForFavicon' | 'isLocalNetworkHost' | 'shouldBlockFaviconForHost' |
     'createFaviconUrlResolver' | 'shouldAvoidDirectFaviconForHost' | 'isBlockedLocalFaviconUrl'>;
-  SETTINGS: Pick<typeof Settings, 'normalizeSearchResultDisplayLimit'>;
+  SETTINGS: Pick<typeof Settings, 'searchResultDisplayLimit'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'limitSearchSuggestionsForDisplay'>;
   logOverlayFaviconDecision: FaviconDecisionLogger;
   overlayState: FaviconPolicyState;
@@ -110,7 +110,7 @@ function createFaviconPolicy(deps: FaviconPolicyDeps) {
   }
 
   function normalizeSearchResultDisplayLimit(value: unknown): number {
-    return SETTINGS.normalizeSearchResultDisplayLimit(value);
+    return SETTINGS.searchResultDisplayLimit.parse(value);
   }
 
   // The rows the user's display limit allows; uncapped keeps them all.

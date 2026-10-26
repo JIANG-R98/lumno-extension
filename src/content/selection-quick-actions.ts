@@ -1,6 +1,7 @@
 import * as ACTION_ICON_LIBRARY from '../domain/selection-action-icons';
 import * as INTENT from '../domain/selection-intent';
-import * as SETTINGS from '../domain/settings';
+import * as FeatureSettings from '../domain/settings/features';
+import * as LocaleSettings from '../domain/settings/locale';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { SelectionAction } from '../domain/selection-intent';
 import type { LocaleMessage } from '../domain/messages';
@@ -122,8 +123,6 @@ function isTextControlType(type: string): boolean {
     return;
   }
 
-  const ENABLED_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY;
-  const LANGUAGE_STORAGE_KEY = SETTINGS.LANGUAGE_STORAGE_KEY;
   const HOST_ID = '_x_extension_selection_quick_actions_host_2026_unique_';
   const DEVELOPMENT_EXTENSION_ID = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
   const RUNTIME_REVISION = 'selection-toolbar-v32';
@@ -277,7 +276,7 @@ function isTextControlType(type: string): boolean {
   }
 
   function normalizeLocale(value: unknown): string {
-    return SETTINGS.localeToHtmlLang(value);
+    return LocaleSettings.localeToHtmlLang(value);
   }
 
   function getCurrentLocale(): string {
@@ -2131,15 +2130,15 @@ function isTextControlType(type: string): boolean {
 
   function hydrateSettings(): void {
     storageArea.get([
-      ENABLED_STORAGE_KEY,
-      LANGUAGE_STORAGE_KEY
+      FeatureSettings.selectionQuickActionsEnabled.key,
+      LocaleSettings.language.key
     ], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         return;
       }
-      enabled = Boolean(result && result[ENABLED_STORAGE_KEY] === true);
-      languageMode = result && result[LANGUAGE_STORAGE_KEY]
-        ? String(result[LANGUAGE_STORAGE_KEY])
+      enabled = Boolean(result && result[FeatureSettings.selectionQuickActionsEnabled.key] === true);
+      languageMode = result && result[LocaleSettings.language.key]
+        ? String(result[LocaleSettings.language.key])
         : 'system';
       refreshLocaleMessages();
       if (!enabled) {
@@ -2160,7 +2159,7 @@ function isTextControlType(type: string): boolean {
       if (!providerStorageRuntime.isActiveAreaName(areaName)) {
         return;
       }
-      const enabledChange = changes[ENABLED_STORAGE_KEY];
+      const enabledChange = changes[FeatureSettings.selectionQuickActionsEnabled.key];
       if (enabledChange) {
         enabled = enabledChange.newValue === true;
         setFeatureActive(enabled);
@@ -2169,7 +2168,7 @@ function isTextControlType(type: string): boolean {
           clearOwnedSurface();
         }
       }
-      if (changes[LANGUAGE_STORAGE_KEY]) {
+      if (changes[LocaleSettings.language.key]) {
         hydrateSettings();
       }
     });

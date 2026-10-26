@@ -2,7 +2,8 @@
 // with a toast in the page, in the chosen language and the page's theme.
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import type { PageTheme } from '../shared/page-color-scheme';
-import * as SETTINGS from '../domain/settings';
+import * as AppearanceSettings from '../domain/settings/appearance';
+import * as LocaleSettings from '../domain/settings/locale';
 import { readStartCommand } from '../domain/injected-commands';
 import type { LocaleMessage, PageReply } from '../domain/messages';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
@@ -86,7 +87,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   function readLanguageMode(): Promise<string> {
-    return readStoredMode(SETTINGS.LANGUAGE_STORAGE_KEY);
+    return readStoredMode(LocaleSettings.language.key);
   }
 
   // Like the tab switcher: the page's own light or dark look first, then the
@@ -96,7 +97,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     if (pageTheme) {
       return Promise.resolve(pageTheme);
     }
-    return readStoredMode(SETTINGS.THEME_STORAGE_KEY).then((mode): PageTheme => {
+    return readStoredMode(AppearanceSettings.themeMode.key).then((mode): PageTheme => {
       const normalized = String(mode || '').trim().toLowerCase();
       if (normalized === 'dark' || normalized === 'light') {
         return normalized;
@@ -133,7 +134,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       if (!languageMode || languageMode === 'system') {
         return null;
       }
-      const locale = SETTINGS.normalizeLocale(languageMode);
+      const locale = LocaleSettings.normalizeLocale(languageMode);
       const cached = toastMessagesByLocale.get(locale);
       if (cached) {
         return cached;

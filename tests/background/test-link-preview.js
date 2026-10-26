@@ -2,7 +2,7 @@ const assert = require('assert');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { moduleScript } = require('../helpers/module-script');
 const linkPreview = require('../../src/background/link-preview.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { toPreviewFrameUrl } = require('../../src/domain/link-preview-frame-url.ts');
 
 // The link preview: the background service that prepares and opens a
@@ -863,7 +863,7 @@ function createTriggerStorage(values) {
 }
 
 function testSwitchTurnsTriggerOff() {
-  const ENABLED_KEY = settings.LINK_PREVIEW_ENABLED_STORAGE_KEY;
+  const ENABLED_KEY = settings.linkPreviewEnabled.key;
   const storage = createTriggerStorage({ sync: { [ENABLED_KEY]: false } });
   const page = loadTrigger({ storage });
   assert.deepStrictEqual(page.press('out'), [], 'with the switch off a Shift+click keeps Chrome\'s own behavior');
@@ -874,11 +874,11 @@ function testSwitchTurnsTriggerOff() {
 
   const localPrimary = createTriggerStorage({
     sync: { [ENABLED_KEY]: true },
-    local: { [ENABLED_KEY]: false, [settings.LOCAL_PRIMARY_STORAGE_KEY]: true }
+    local: { [ENABLED_KEY]: false, [settings.localPrimary.key]: true }
   });
   assert.deepStrictEqual(loadTrigger({ storage: localPrimary }).press('out'), [],
     'when settings stay local, the local value decides');
-  assert.strictEqual(settings.normalizeLinkPreviewEnabled(undefined), true, 'link preview is on until turned off');
+  assert.strictEqual(settings.linkPreviewEnabled.parse(undefined), true, 'link preview is on until turned off');
 }
 
 function testPreviewFrameReportsIn() {

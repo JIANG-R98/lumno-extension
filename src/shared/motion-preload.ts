@@ -2,7 +2,7 @@
 // before the page draws, keeps it current, and hands the first value to the
 // page script through the boot handoff (motionPreferenceReady).
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { MOTION_EFFECTS_ENABLED_STORAGE_KEY, normalizeMotionEffectsEnabled } from '../domain/settings';
+import { motionEffectsEnabled } from '../domain/settings/appearance';
 import { publishBootValue } from '../platform/boot-handoff';
 
 (function() {
@@ -17,7 +17,7 @@ import { publishBootValue } from '../platform/boot-handoff';
   publishBootValue('motionPreferenceReady', initialPreferenceReady);
 
   function applyMotionEffectsPreference(value: unknown): void {
-    const enabled = normalizeMotionEffectsEnabled(value);
+    const enabled = motionEffectsEnabled.parse(value);
     root.setAttribute('data-lumno-motion-effects', enabled ? 'on' : 'off');
     if (resolveInitialPreference) {
       resolveInitialPreference(enabled);
@@ -25,21 +25,21 @@ import { publishBootValue } from '../platform/boot-handoff';
     }
   }
 
-  storageArea.get([MOTION_EFFECTS_ENABLED_STORAGE_KEY], (result) => {
-    const rawValue = result ? result[MOTION_EFFECTS_ENABLED_STORAGE_KEY] : undefined;
-    const enabled = normalizeMotionEffectsEnabled(rawValue);
+  storageArea.get([motionEffectsEnabled.key], (result) => {
+    const rawValue = result ? result[motionEffectsEnabled.key] : undefined;
+    const enabled = motionEffectsEnabled.parse(rawValue);
     applyMotionEffectsPreference(enabled);
     if (rawValue !== enabled) {
-      storageArea.set({ [MOTION_EFFECTS_ENABLED_STORAGE_KEY]: enabled });
+      storageArea.set({ [motionEffectsEnabled.key]: enabled });
     }
   });
 
   if (chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (!providerRuntime.isActiveAreaName(areaName) || !changes[MOTION_EFFECTS_ENABLED_STORAGE_KEY]) {
+      if (!providerRuntime.isActiveAreaName(areaName) || !changes[motionEffectsEnabled.key]) {
         return;
       }
-      applyMotionEffectsPreference(changes[MOTION_EFFECTS_ENABLED_STORAGE_KEY].newValue);
+      applyMotionEffectsPreference(changes[motionEffectsEnabled.key].newValue);
     });
   }
 })();

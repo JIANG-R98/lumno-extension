@@ -72,7 +72,7 @@ interface SiteSearchProvidersDeps {
   getDirectNavigationUrl: NonNullable<Parameters<typeof SearchUtils.promoteStrongNavigationMatch>[2]>['getDirectNavigationUrl'];
   getUrlDisplay(url: string): string;
   getHelpCenterLocale?(): string;
-  SETTINGS: Pick<typeof Settings, 'normalizeSearchResultSourceTypes' | 'normalizeSearchResultDisplayLimit'>;
+  SETTINGS: Pick<typeof Settings, 'searchResultSourceTypes' | 'searchResultDisplayLimit'>;
   pageState: SiteSearchProvidersState;
 }
 
@@ -465,11 +465,11 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function normalizeEnabledSearchResultSourceTypes(value: unknown): SearchSourceType[] {
-    return SETTINGS.normalizeSearchResultSourceTypes(value);
+    return SETTINGS.searchResultSourceTypes.parse(value);
   }
 
   function normalizeSearchResultDisplayLimit(value: unknown): number {
-    return SETTINGS.normalizeSearchResultDisplayLimit(value);
+    return SETTINGS.searchResultDisplayLimit.parse(value);
   }
 
   function getLocalSearchScopeCandidate(

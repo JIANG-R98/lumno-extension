@@ -51,14 +51,14 @@ describe('Options General features section', () => {
   it('binds every setting of the section', () => {
     const { changes } = setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
-      Settings.AUTO_PIP_ENABLED_STORAGE_KEY,
-      Settings.LINK_PREVIEW_ENABLED_STORAGE_KEY,
-      Settings.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-      Settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-      Settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-      Settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
-      Settings.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
-      Settings.TAB_SWITCHER_ENABLED_STORAGE_KEY
+      Settings.autoPipEnabled.key,
+      Settings.linkPreviewEnabled.key,
+      Settings.pinnedTabRecoveryEnabled.key,
+      Settings.selectionQuickActionsEnabled.key,
+      Settings.selectionQuickActionsGroupEnabled.key,
+      Settings.selectionQuickActionsProvider.key,
+      Settings.tabSwitcherCurrentWindowOnly.key,
+      Settings.tabSwitcherEnabled.key
     ].sort());
   });
 
@@ -78,10 +78,10 @@ describe('Options General features section', () => {
     expect(subrows.dataset.expanded).toBe('true');
     expect(subrows.dataset.motion).toBe('off');
     act(() => toggle(host, TAB_SWITCHER_TOGGLE).click());
-    expect(writes).toEqual([{ [Settings.TAB_SWITCHER_ENABLED_STORAGE_KEY]: false }]);
+    expect(writes).toEqual([{ [Settings.tabSwitcherEnabled.key]: false }]);
     expect(subrows.dataset.expanded).toBe('false');
     expect(subrows.hasAttribute('inert')).toBe(true);
-    store(Settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, true);
+    store(Settings.tabSwitcherEnabled.key, true);
     expect(subrows.dataset.expanded).toBe('true');
   });
 
@@ -109,7 +109,7 @@ describe('Options General features section', () => {
     expect(providerRow.dataset.disabled).toBe('true');
     expect(getTag(host, `#${PROVIDER_SELECT}`, 'select').disabled).toBe(true);
     expect(toggle(host, GROUP_TOGGLE).disabled).toBe(true);
-    store(Settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, true);
+    store(Settings.selectionQuickActionsEnabled.key, true);
     expect(providerRow.dataset.disabled).toBe('false');
     expect(getTag(host, `#${PROVIDER_SELECT}`, 'select').disabled).toBe(false);
     expect(toggle(host, GROUP_TOGGLE).disabled).toBe(false);
@@ -118,7 +118,7 @@ describe('Options General features section', () => {
 
   it('pairs each selection provider with its bundled tile and describes grouping as a background query', () => {
     const { host, store } = setUp();
-    store(Settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, true);
+    store(Settings.selectionQuickActionsEnabled.key, true);
     const options = getTags(host, `#${PROVIDER_SELECT} option`, 'option');
     expect(options.length).toBeGreaterThanOrEqual(8);
     const groupRow = getElement(host, '#_x_extension_selection_quick_actions_group_row_2026_unique_');
@@ -128,7 +128,7 @@ describe('Options General features section', () => {
 
   it('saves the chosen provider', async () => {
     const { host, writes, store } = setUp();
-    store(Settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, true);
+    store(Settings.selectionQuickActionsEnabled.key, true);
     const frame = getElement(host, `[data-select="${PROVIDER_SELECT}"]`);
     await act(async () => {
       getTag(frame, '._x_extension_select_trigger_2024_unique_', 'button').click();
@@ -136,12 +136,12 @@ describe('Options General features section', () => {
     await act(async () => {
       getElement(frame, '[data-value="gm"]').click();
     });
-    expect(writes).toEqual([{ [Settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY]: 'gm' }]);
+    expect(writes).toEqual([{ [Settings.selectionQuickActionsProvider.key]: 'gm' }]);
   });
 
   it('keeps picture-in-picture off and disabled on Firefox without touching the synced value', () => {
     const { host, writes, store } = setUp('firefox');
-    store(Settings.AUTO_PIP_ENABLED_STORAGE_KEY, true);
+    store(Settings.autoPipEnabled.key, true);
     const input = toggle(host, AUTO_PIP_TOGGLE);
     expect(input.checked).toBe(false);
     expect(input.disabled).toBe(true);

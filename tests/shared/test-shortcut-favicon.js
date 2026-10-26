@@ -7,6 +7,8 @@ const shortcutFaviconStore = require('../../src/platform/shortcut-favicon-store.
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { createNewtabPage } = require('../helpers/newtab-page');
+const { newtabShortcutFaviconCache } = require('../../src/domain/settings/newtab-shortcuts.ts');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 function createPngHeader(width, height) {
   const bytes = new Uint8Array(24);
@@ -165,7 +167,7 @@ async function testLocalCache() {
   );
 
   const storage = createMemoryStorage({
-    [shortcutFavicon.DEFAULT_STORAGE_KEY]: cache
+    [newtabShortcutFaviconCache.key]: cache
   });
   const store = shortcutFaviconStore.createShortcutFaviconStore({
     storageArea: storage,
@@ -177,7 +179,7 @@ async function testLocalCache() {
     dataUrl
   );
   await store.writeAll(loaded);
-  assert.deepStrictEqual(storage.data[shortcutFavicon.DEFAULT_STORAGE_KEY], loaded);
+  assert.deepStrictEqual(storage.data[newtabShortcutFaviconCache.key], loaded);
 }
 
 function testStableShortcutArtwork() {
@@ -286,7 +288,7 @@ async function testConcurrentCacheUpdates() {
 // fetched into what other tabs saved meanwhile, and drops icons of removed
 // shortcuts in the same serialized path.
 async function testNewtabCacheWrites() {
-  const KEY = shortcutFavicon.DEFAULT_STORAGE_KEY;
+  const KEY = newtabShortcutFaviconCache.key;
   const locks = [];
   const entry = (url, data) => ({ dataUrl: `data:image/png;base64,${data}`, sourceUrl: `${url}icon.png`, updatedAt: Date.now() });
   let local = null;
@@ -364,11 +366,11 @@ async function testDedicatedSiteSearchCachePolicy() {
   );
 
   const storage = createMemoryStorage({
-    [shortcutFavicon.SITE_SEARCH_STORAGE_KEY]: cache
+    [siteSearchIconCache.key]: cache
   });
   const store = shortcutFaviconStore.createShortcutFaviconStore({
     storageArea: storage,
-    storageKey: shortcutFavicon.SITE_SEARCH_STORAGE_KEY,
+    storageKey: siteSearchIconCache.key,
     chromeApi: { runtime: {} },
     ...shortcutFavicon.SITE_SEARCH_CACHE_OPTIONS
   });
@@ -552,7 +554,7 @@ function testCanonicalProviderResolution() {
       'bundled providers should resolve instantly without a network or cache lookup'
     );
   });
-  assert.match(shortcutFavicon.SITE_SEARCH_STORAGE_KEY, /canonical/);
+  assert.match(siteSearchIconCache.key, /canonical/);
 }
 
 async function run() {

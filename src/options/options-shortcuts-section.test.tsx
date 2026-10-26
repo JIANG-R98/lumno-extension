@@ -8,7 +8,7 @@ import { createShortcutsTabApi } from './react/shortcuts-tab';
 import type { SiteSearchListRenderModel } from './react/site-search-list';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
-const AUTO_GROUP_KEY = Settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
+const AUTO_GROUP_KEY = Settings.aggregateSearchAutoGroupEnabled.key;
 const AUTO_GROUP_TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
 
 const listModel: SiteSearchListRenderModel = {
@@ -181,7 +181,7 @@ describe('Options Shortcuts tab', () => {
   });
 
   it('derives the auto-group switch from older aggregate searches and saves it once', () => {
-    const { host, section, binder, writes } = setUp({ [Settings.AGGREGATE_SEARCH_STORAGE_KEY]: [] });
+    const { host, section, binder, writes } = setUp({ [Settings.aggregateSearches.key]: [] });
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').checked).toBe(true);
     act(() => section.bindSettings(binder));
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').checked).toBe(false);

@@ -4,6 +4,7 @@ import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { OpenDisposition } from '../domain/messages';
 import type { StorageAreaLike } from '../domain/storage-port';
+import { releasePageOpened } from '../domain/settings/features';
 
 interface PageOpenOptions {
   disposition?: OpenDisposition;
@@ -39,7 +40,6 @@ const ONBOARDING_WEB_URL = 'https://lumno.kubai.design/onboarding/';
 const ONBOARDING_ROUTE_PATH = 'src/onboarding/onboarding.html';
 const ONBOARDING_UPDATE_MIGRATION_VERSION = 'v0.9.11';
 const RELEASE_URL = 'https://lumno.kubai.design/release/';
-const RELEASE_PAGE_OPENED_STORAGE_KEY = '_x_lumno_release_page_opened_2026_unique_';
 
 function getChromeApi(): typeof chrome | null {
   return typeof chrome !== 'undefined' ? chrome : null;
@@ -252,7 +252,7 @@ function openReleasePage(options?: PageOpenOptions | null, callback?: OpenCallba
     }
     try {
       storageArea.set({
-        [RELEASE_PAGE_OPENED_STORAGE_KEY]: {
+        [releasePageOpened.key]: {
           version,
           reason: getReleaseOpenReason(options),
           openedAt: Date.now()
@@ -268,21 +268,21 @@ function openReleasePage(options?: PageOpenOptions | null, callback?: OpenCallba
     return;
   }
   try {
-    storageArea.get([RELEASE_PAGE_OPENED_STORAGE_KEY], (result) => {
+    storageArea.get([releasePageOpened.key], (result) => {
       const runtimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
       const stored = runtimeError
         ? null
-        : getStoredReleasePageOpen(result && result[RELEASE_PAGE_OPENED_STORAGE_KEY]);
+        : getStoredReleasePageOpen(result && result[releasePageOpened.key]);
       if (stored && stored.version === version) {
         done(false);
         return;
       }
       if (storageArea !== localStorageArea && localStorageArea) {
-        localStorageArea.get([RELEASE_PAGE_OPENED_STORAGE_KEY], (localResult) => {
+        localStorageArea.get([releasePageOpened.key], (localResult) => {
           const localRuntimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
           const legacyStored = localRuntimeError
             ? null
-            : getStoredReleasePageOpen(localResult && localResult[RELEASE_PAGE_OPENED_STORAGE_KEY]);
+            : getStoredReleasePageOpen(localResult && localResult[releasePageOpened.key]);
           if (legacyStored && legacyStored.version === version) {
             markOpened();
             done(false);
@@ -391,7 +391,6 @@ export {
   ONBOARDING_WEB_URL,
   ONBOARDING_UPDATE_MIGRATION_VERSION,
   ONBOARDING_ROUTE_PATH,
-  RELEASE_PAGE_OPENED_STORAGE_KEY,
   getBookmarkManagerUrls,
   getExtensionDetailsUrl,
   getExtensionVersionTag,

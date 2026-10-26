@@ -1,14 +1,14 @@
 // Settings export, import and "sync now" payloads. Only keys in the shared
-// Chrome Sync contract (LumnoSettings.CHROME_SYNC_STORAGE_KEYS) ever leave
+// Chrome Sync contract (LumnoSettings.BROWSER_SYNC_KEYS) ever leave
 // or enter through these paths.
 import type * as Settings from '../domain/settings';
 
 type StoredValues = Record<string, unknown>;
 
 interface SyncTransferDeps {
-  settings: Pick<typeof Settings, 'CHROME_SYNC_STORAGE_KEYS' | 'NEWTAB_SHORTCUTS_V2_STORAGE_KEYS' |
-    'NEWTAB_SHORTCUTS_STORAGE_KEY' | 'NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY' | 'NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY' |
-    'SYNC_META_STORAGE_KEY' | 'AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY' | 'AGGREGATE_SEARCH_STORAGE_KEY'>;
+  settings: Pick<typeof Settings, 'BROWSER_SYNC_KEYS' | 'NEWTAB_SHORTCUTS_GROUP_KEYS' |
+    'newtabShortcutsLegacy' | 'newtabShortcutsLegacyChunk2' | 'newtabShortcutsLegacyChunk3' |
+    'syncMeta' | 'aggregateSearchAutoGroupEnabled' | 'aggregateSearches'>;
   deriveLegacyAutoGroupEnabled(value: unknown): boolean;
 }
 
@@ -36,12 +36,12 @@ function isStoredValues(value: unknown): value is StoredValues {
 function createSyncTransfer(deps: SyncTransferDeps) {
   const settings = deps.settings;
   const deriveLegacyAutoGroupEnabled = deps.deriveLegacyAutoGroupEnabled;
-  const syncKeys = settings.CHROME_SYNC_STORAGE_KEYS;
-  const groupedShortcutKeys = settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
+  const syncKeys = settings.BROWSER_SYNC_KEYS;
+  const groupedShortcutKeys = settings.NEWTAB_SHORTCUTS_GROUP_KEYS;
   const legacyShortcutKeys = [
-    settings.NEWTAB_SHORTCUTS_STORAGE_KEY,
-    settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY,
-    settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY
+    settings.newtabShortcutsLegacy.key,
+    settings.newtabShortcutsLegacyChunk2.key,
+    settings.newtabShortcutsLegacyChunk3.key
   ];
   const has = (object: StoredValues, key: string): boolean => Object.prototype.hasOwnProperty.call(object, key);
 
@@ -71,7 +71,7 @@ function createSyncTransfer(deps: SyncTransferDeps) {
   // What "Sync now" writes back to browser sync to push the values again.
   function buildManualSyncPayload(storedValues: StoredValues | null | undefined, now: number): StoredValues {
     const payload = pickSyncValues(storedValues || {}, (values, key) => typeof values[key] !== 'undefined');
-    payload[settings.SYNC_META_STORAGE_KEY] = createSyncMeta('manual', now);
+    payload[settings.syncMeta.key] = createSyncMeta('manual', now);
     return payload;
   }
 
@@ -94,8 +94,8 @@ function createSyncTransfer(deps: SyncTransferDeps) {
     const payload = pickSyncValues(data, has);
     // A single-key shortcut list from an old file must not be joined with
     // chunks of a newer list already in storage.
-    if (has(data, settings.NEWTAB_SHORTCUTS_STORAGE_KEY)) {
-      [settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY, settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY]
+    if (has(data, settings.newtabShortcutsLegacy.key)) {
+      [settings.newtabShortcutsLegacyChunk2.key, settings.newtabShortcutsLegacyChunk3.key]
         .forEach((key) => {
           if (!has(data, key)) {
             payload[key] = [];
@@ -112,14 +112,14 @@ function createSyncTransfer(deps: SyncTransferDeps) {
     if (!importsGroupedShortcuts) {
       groupedShortcutKeys.forEach((key) => { delete payload[key]; });
     }
-    const autoGroupKey = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
-    if (!has(data, autoGroupKey) && has(data, settings.AGGREGATE_SEARCH_STORAGE_KEY)) {
-      payload[autoGroupKey] = deriveLegacyAutoGroupEnabled(data[settings.AGGREGATE_SEARCH_STORAGE_KEY]);
+    const autoGroupKey = settings.aggregateSearchAutoGroupEnabled.key;
+    if (!has(data, autoGroupKey) && has(data, settings.aggregateSearches.key)) {
+      payload[autoGroupKey] = deriveLegacyAutoGroupEnabled(data[settings.aggregateSearches.key]);
     }
     if (Object.keys(payload).length === 0) {
       return null;
     }
-    payload[settings.SYNC_META_STORAGE_KEY] = createSyncMeta('import', now);
+    payload[settings.syncMeta.key] = createSyncMeta('import', now);
     return { keysToClear, payload };
   }
 

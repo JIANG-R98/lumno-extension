@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { getManifestContentScripts } = require('../helpers/runtime-scripts');
 
 // What the tab switcher needs from the manifest, the locales and the Settings
@@ -58,8 +58,8 @@ localeNames.forEach((locale) => {
 });
 assert.notStrictEqual(localeMessages.zh_CN.tab_switcher_title.message, localeMessages.en.tab_switcher_title.message);
 
-assert.strictEqual(settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, '_x_extension_tab_switcher_enabled_2026_unique_');
-assert.strictEqual(settings.normalizeTabSwitcherEnabled(undefined), true, 'the tab switcher is on until turned off');
+assert.strictEqual(settings.tabSwitcherEnabled.key, '_x_extension_tab_switcher_enabled_2026_unique_');
+assert.strictEqual(settings.tabSwitcherEnabled.parse(undefined), true, 'the tab switcher is on until turned off');
 // The Settings row is covered by src/options/options-general-features-section.test.tsx.
 
 console.log('tab switcher wiring tests passed');

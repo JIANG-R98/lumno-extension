@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const remote = require('../../src/newtab/remote-content.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
+const { quoteCache } = require('../../src/domain/settings/newtab-quote.ts');
+const { bingCatalogCache, bingDailyCache, bingWallpaperMeta } = require('../../src/domain/settings/newtab-wallpaper.ts');
 
 function storage(initial = {}) {
   const values = structuredClone(initial);
@@ -29,29 +31,29 @@ const todayId = 'bing-20261002-OHR.River_ZH-CN123';
 const yesterdayId = 'bing-20261001-OHR.Lake_ZH-CN456';
 
 async function main() {
-  assert.deepEqual(settings.normalizeNewtabQuotePrefs({ position: 'bogus', category: 'invalid' }),
+  assert.deepEqual(settings.newtabQuotePrefs.parse({ position: 'bogus', category: 'invalid' }),
     { enabled: false, position: 'search', category: 'literature', fontSize: 15, provider: 'hitokoto', font: 'wenkai' });
-  assert.deepEqual(settings.normalizeNewtabQuotePrefs({ position: 'bottom', category: 'poetry', fontSize: 20 }),
+  assert.deepEqual(settings.newtabQuotePrefs.parse({ position: 'bottom', category: 'poetry', fontSize: 20 }),
     { enabled: false, position: 'bottom', category: 'poetry', fontSize: 20, provider: 'hitokoto', font: 'wenkai' }, 'A saved position alone must not turn quotes on');
-  assert.deepEqual(settings.normalizeNewtabQuotePrefs({ enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }),
+  assert.deepEqual(settings.newtabQuotePrefs.parse({ enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }),
     { enabled: true, position: 'bottom', category: 'poetry', fontSize: 20, provider: 'hitokoto', font: 'wenkai' }, 'Existing enabled quotes should keep their preferences');
-  assert.deepEqual(settings.normalizeNewtabQuotePrefs({ enabled: false, position: 'bottom', category: 'poetry', fontSize: 20 }),
+  assert.deepEqual(settings.newtabQuotePrefs.parse({ enabled: false, position: 'bottom', category: 'poetry', fontSize: 20 }),
     { enabled: false, position: 'bottom', category: 'poetry', fontSize: 20, provider: 'hitokoto', font: 'wenkai' }, 'Disabling must retain the selected position');
-  assert.equal(settings.normalizeNewtabQuotePrefs({ fontSize: '' }).fontSize, 15);
-  assert.equal(settings.normalizeNewtabQuotePrefs({ fontSize: null }).fontSize, 15);
-  assert.equal(settings.normalizeNewtabQuotePrefs({ fontSize: 8 }).fontSize, 12);
-  assert.equal(settings.normalizeNewtabQuotePrefs({ fontSize: '30' }).fontSize, 24);
-  assert.equal(settings.normalizeNewtabQuotePrefs({ font: 'xiaowei' }).font, 'xiaowei');
-  assert.equal(settings.normalizeNewtabQuotePrefs({ font: 'sans' }).font, 'sans');
-  assert.equal(settings.normalizeNewtabQuotePrefs({ font: 'comic-sans' }).font, 'wenkai', 'An unknown face falls back to WenKai');
+  assert.equal(settings.newtabQuotePrefs.parse({ fontSize: '' }).fontSize, 15);
+  assert.equal(settings.newtabQuotePrefs.parse({ fontSize: null }).fontSize, 15);
+  assert.equal(settings.newtabQuotePrefs.parse({ fontSize: 8 }).fontSize, 12);
+  assert.equal(settings.newtabQuotePrefs.parse({ fontSize: '30' }).fontSize, 24);
+  assert.equal(settings.newtabQuotePrefs.parse({ font: 'xiaowei' }).font, 'xiaowei');
+  assert.equal(settings.newtabQuotePrefs.parse({ font: 'sans' }).font, 'sans');
+  assert.equal(settings.newtabQuotePrefs.parse({ font: 'comic-sans' }).font, 'wenkai', 'An unknown face falls back to WenKai');
   assert.deepEqual(settings.NEWTAB_QUOTE_FONTS.map((font) => font.id), ['wenkai', 'xiaowei', 'sans']);
-  assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY));
-  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(remote.QUOTE_CACHE_KEY));
-  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(remote.BING_CACHE_KEY));
+  assert(settings.BROWSER_SYNC_KEYS.includes(settings.newtabQuotePrefs.key));
+  assert(!settings.BROWSER_SYNC_KEYS.includes(quoteCache.key));
+  assert(!settings.BROWSER_SYNC_KEYS.includes(bingCatalogCache.key));
   assert.equal(remote.normalizeQuote({ hitokoto: '' }), null);
   assert.equal(remote.normalizeQuote({ hitokoto: 'x'.repeat(121) }), null);
   assert.equal(remote.normalizeQuote({ hitokoto: 'test', uuid: 'javascript:alert(1)' }).url, 'https://hitokoto.cn/');
-  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(remote.BING_DAILY_CACHE_KEY));
+  assert(!settings.BROWSER_SYNC_KEYS.includes(bingDailyCache.key));
   assert.equal(remote.normalizeMarket('zh_CN'), 'zh-CN');
   assert.equal(remote.normalizeMarket('zh-Hant'), 'zh-TW');
   assert.equal(remote.normalizeMarket('ja'), 'ja-JP');
@@ -108,7 +110,7 @@ async function main() {
   assert.equal(rerollFetches, 3);
   await assert.rejects(rerollClient.getQuote('literature', { reroll: true }), /offline/,
     'A failed reroll reports the failure instead of falling back');
-  assert.equal(rerollStorage.values[remote.QUOTE_CACHE_KEY].literature.quote.text, 'fresh',
+  assert.equal(rerollStorage.values[quoteCache.key].literature.quote.text, 'fresh',
     'A failed reroll keeps the cached quote');
   const rerollTomorrow = remote.createClient({ storageArea: rerollStorage, now: () => time + 86400000,
     fetch: async () => response({ hitokoto: 'tomorrow' }) });
@@ -148,16 +150,16 @@ async function main() {
   assert.equal(saved.imageUrl, 'https://www.bing.com/th?id=OHR.River_ZH-CN123_1920x1080.jpg&pid=hp',
     'A chosen wallpaper should be shown straight from Bing');
   assert(!('imageDataUrl' in saved));
-  assert.equal(imageStorage.values[remote.BING_META_CACHE_KEY], undefined, 'Do not store details Bing never provided');
-  imageStorage.values[remote.BING_CACHE_KEY] = { 'en-US': { items: [remote.normalizeWallpaper(wallpaper())] } };
+  assert.equal(imageStorage.values[bingWallpaperMeta.key], undefined, 'Do not store details Bing never provided');
+  imageStorage.values[bingCatalogCache.key] = { 'en-US': { items: [remote.normalizeWallpaper(wallpaper())] } };
   const restoredClient = remote.createClient({ storageArea: imageStorage, fetch: async () => { throw new Error('offline'); } });
   assert.equal((await restoredClient.restoreWallpaper(todayId)).name, 'River', 'Restore titles from the catalog cache');
-  const metaClient = remote.createClient({ storageArea: storage({ [remote.BING_META_CACHE_KEY]: {
+  const metaClient = remote.createClient({ storageArea: storage({ [bingWallpaperMeta.key]: {
     [todayId]: { id: todayId, date: '20261002', name: 'Saved river', copyright: '', sourceUrl: 'https://www.bing.com' } } }) });
   assert.equal((await metaClient.restoreWallpaper(todayId)).name, 'Saved river',
     'Chosen photos keep their title after leaving the 8-day catalog');
   await restoredClient.ensureWallpaper(todayId);
-  assert.equal(imageStorage.values[remote.BING_META_CACHE_KEY][todayId].name, 'River', 'Choosing a photo keeps its details');
+  assert.equal(imageStorage.values[bingWallpaperMeta.key][todayId].name, 'River', 'Choosing a photo keeps its details');
   assert.equal((await remote.createClient({ storageArea: storage() }).restoreWallpaper(todayId)).imageUrl, saved.imageUrl,
     'A synced fixed wallpaper resolves from its ID alone');
   await assert.rejects(imageClient.ensureWallpaper('javascript:evil'), /Invalid wallpaper/);
@@ -198,7 +200,7 @@ async function main() {
   offline = false;
   await remote.createClient(options).ensureWallpaper(remote.BING_DAILY_ID);
   assert.equal(dailyFetches, fetchesAfterFailure, 'Catalog backoff should survive page reopens');
-  assert.equal(dailyStorage.values[remote.BING_DAILY_CACHE_KEY]['zh-CN'].id, nextDay.dailyId);
+  assert.equal(dailyStorage.values[bingDailyCache.key]['zh-CN'].id, nextDay.dailyId);
 
   assert.equal(remote.normalizeWallpaper({ ...wallpaper(), copyrightlink: '/search?q=river' }).sourceUrl,
     'https://www.bing.com/search?q=river', 'Relative credit links resolve against Bing');
@@ -248,7 +250,7 @@ async function main() {
     fetch: marketFetch('OHR.River_JA-JP123') }).getCatalog();
   releaseZh();
   await zhLoad;
-  assert.deepEqual(Object.keys(marketStorage.values[remote.BING_CACHE_KEY]).sort(), ['en-US', 'ja-JP', 'zh-CN'],
+  assert.deepEqual(Object.keys(marketStorage.values[bingCatalogCache.key]).sort(), ['en-US', 'ja-JP', 'zh-CN'],
     'Writing one market must not drop markets saved while its request was in flight');
 
   const zhDaily = await zhClient.ensureWallpaper(remote.BING_DAILY_ID);

@@ -1,14 +1,14 @@
-import * as LumnoSettings from '../domain/settings';
+import * as AppearanceSettings from '../domain/settings/appearance';
+import * as PageCacheSettings from '../domain/settings/page-cache';
 
 (function() {
   // Paints the last theme the extension pages saw before the popup's first
   // render, so a light or dark choice that differs from the OS does not flash.
   // The popup reads the stored mode afterwards and updates this copy.
-  const settings = LumnoSettings;
   let mode = 'system';
   try {
-    mode = settings.normalizeThemeMode(
-      globalThis.localStorage.getItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY)
+    mode = AppearanceSettings.themeMode.parse(
+      globalThis.localStorage.getItem(PageCacheSettings.optionsThemePreload.key)
     );
   } catch (error) {
     mode = 'system';

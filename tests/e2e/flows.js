@@ -6,8 +6,7 @@
 
 const assert = require('assert');
 const { delay } = require('./browser');
-const SETTINGS = require('../../src/domain/settings.ts');
-const { DIAGNOSTIC_ERRORS_STORAGE_KEY } = require('../../src/domain/diagnostics.ts');
+const SETTINGS = require('../../src/domain/settings/index.ts');
 
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_INPUT = '#_x_extension_search_input_2024_unique_';
@@ -64,44 +63,44 @@ async function surfaces({ browser }) {
   ];
   const settingsRounds = [
     {
-      THEME_STORAGE_KEY: 'dark',
-      LANGUAGE_STORAGE_KEY: 'en',
-      NEWTAB_THEME_MODE_STORAGE_KEY: 'dark',
-      NEWTAB_GLASS_STYLE_STORAGE_KEY: 'liquid',
-      NEWTAB_GLASS_THEME_STORAGE_KEY: 'dark',
-      NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: 'time',
-      NEWTAB_TIME_FONT_SIZE_STORAGE_KEY: 72,
-      NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY: true,
-      NEWTAB_WIDTH_MODE_STORAGE_KEY: 'wide',
-      NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: 6,
-      NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: 64,
-      NEWTAB_SHORTCUT_GAP_STORAGE_KEY: 20,
-      NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: false,
-      BOOKMARK_COUNT_STORAGE_KEY: 12,
-      BOOKMARK_COLUMNS_STORAGE_KEY: 3,
-      BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY: false,
-      RECENT_COUNT_STORAGE_KEY: 12,
-      NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: false,
-      NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: false,
-      NEWTAB_ZEN_MODE_STORAGE_KEY: true,
-      SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: 6,
-      NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: true,
-      NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: true,
-      SEARCH_BLACKLIST_STORAGE_KEY: ['example.com'],
-      FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: true
+      themeMode: 'dark',
+      language: 'en',
+      newtabThemeMode: 'dark',
+      newtabGlassStyle: 'liquid',
+      newtabGlassTheme: 'dark',
+      newtabTopContentMode: 'time',
+      newtabTimeFontSize: 72,
+      newtabTimeSecondsVisible: true,
+      newtabWidthMode: 'wide',
+      newtabShortcutColumns: 6,
+      newtabShortcutSize: 64,
+      newtabShortcutGap: 20,
+      newtabShortcutsVisible: false,
+      bookmarkCount: 12,
+      bookmarkColumns: 3,
+      bookmarkFolderIconsVisible: false,
+      recentCount: 12,
+      newtabFeedbackButtonVisible: false,
+      newtabAppearanceButtonVisible: false,
+      newtabZenMode: true,
+      searchResultDisplayLimit: 6,
+      newtabOpenInNewTab: true,
+      numberShortcutInstantEnabled: true,
+      searchBlacklist: ['example.com'],
+      faviconEnhancedFetchEnabled: true
     },
     {
-      THEME_STORAGE_KEY: 'light',
-      LANGUAGE_STORAGE_KEY: 'zh_CN',
-      NEWTAB_GLASS_STYLE_STORAGE_KEY: 'frosted',
-      NEWTAB_ZEN_MODE_STORAGE_KEY: false,
-      NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: true,
-      NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: true,
-      NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: true
+      themeMode: 'light',
+      language: 'zh_CN',
+      newtabGlassStyle: 'frosted',
+      newtabZenMode: false,
+      newtabShortcutsVisible: true,
+      newtabFeedbackButtonVisible: true,
+      newtabAppearanceButtonVisible: true
     }
   ].map((round) => Object.fromEntries(Object.entries(round).map(([name, value]) => {
-    assert.ok(SETTINGS[name], `settings.ts has no ${name}`);
-    return [SETTINGS[name], value];
+    assert.ok(SETTINGS[name], `the settings registry has no ${name}`);
+    return [SETTINGS[name].key, value];
   })));
 
   for (const file of pages) {
@@ -284,8 +283,8 @@ async function linkPreview({ browser, fixtures }) {
     message: 'the switch did not turn off'
   });
   await browser.worker.waitFor(`Promise.all([chrome.storage.sync.get(null), chrome.storage.local.get(null)])
-    .then(([sync, local]) => sync[${JSON.stringify(SETTINGS.LINK_PREVIEW_ENABLED_STORAGE_KEY)}] === false
-      || local[${JSON.stringify(SETTINGS.LINK_PREVIEW_ENABLED_STORAGE_KEY)}] === false)`, {
+    .then(([sync, local]) => sync[${JSON.stringify(SETTINGS.linkPreviewEnabled.key)}] === false
+      || local[${JSON.stringify(SETTINGS.linkPreviewEnabled.key)}] === false)`, {
     message: 'the switch did not save the setting'
   });
 
@@ -305,8 +304,8 @@ async function diagnostics({ browser }) {
     message: 'probe',
     error: new Error('Probe failure at https://intranet.example/private?q=1')
   }))`);
-  await browser.worker.waitFor(`chrome.storage.local.get(${JSON.stringify(DIAGNOSTIC_ERRORS_STORAGE_KEY)})
-    .then((items) => (items[${JSON.stringify(DIAGNOSTIC_ERRORS_STORAGE_KEY)}] || [])
+  await browser.worker.waitFor(`chrome.storage.local.get(${JSON.stringify(SETTINGS.diagnosticErrors.key)})
+    .then((items) => (items[${JSON.stringify(SETTINGS.diagnosticErrors.key)}] || [])
       .some((entry) => entry.message === 'Probe failure at https://...'))`, {
     message: 'the worker did not record the failure'
   });

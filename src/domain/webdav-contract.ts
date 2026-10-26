@@ -4,10 +4,11 @@
 // sync.
 import * as settings from './settings';
 import * as shortcutStore from './shortcuts-store';
-import * as SHORTCUT_ICON_MAP from './shortcut-icon-map';
 import type { GroupedShortcutItem, ShortcutGroup, ShortcutStateRead } from './shortcuts-store';
 import type { WebDavOperation } from './messages';
 import type { StorageItems } from './storage-port';
+import { customQuotes } from './settings/newtab-quote';
+import { newtabShortcutIcons, newtabShortcutsLocalOverflow } from './settings/newtab-shortcuts';
 
 type WebDavAssetMime = 'image/png' | 'image/webp';
 
@@ -119,26 +120,19 @@ class WebDavContractError extends Error {
 // Grouped and legacy shortcut keys: none of them is a plain preference.
 const SHORTCUT_KEYS = shortcutStore.SHORTCUT_STORAGE_KEYS;
 const SHORTCUT_SYNC_KEYS = shortcutStore.SHORTCUTS_SYNC_KEYS;
-const OVERFLOW_KEY = shortcutStore.SHORTCUTS_LOCAL_OVERFLOW_KEY;
+const OVERFLOW_KEY = newtabShortcutsLocalOverflow.key;
 // Version 3 states carry shortcut groups and more shortcuts than older
 // versions accept; a state is only written as version 3 when it needs to be.
 const GROUPED_STATE_VERSION = 3;
 const LEGACY_MAX_SHORTCUTS = 60;
 const MAX_SHORTCUTS = shortcutStore.DEFAULT_MAX_SHORTCUTS;
-const ICONS_KEY = SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY;
-const WALLPAPER_KEY = settings.NEWTAB_WALLPAPER_STORAGE_KEY;
-const LOCAL_WALLPAPER_KEY = settings.NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY;
-const LINK_WALLPAPERS_KEY = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;
+const ICONS_KEY = newtabShortcutIcons.key;
+const WALLPAPER_KEY = settings.newtabWallpaper.key;
+const LOCAL_WALLPAPER_KEY = settings.newtabLocalWallpaper.key;
 // Browser sync stores the link list as one item of at most 8 KB.
 const MAX_LINK_WALLPAPERS_BYTES = 8000;
-const PREFERENCE_KEYS: readonly string[] = settings.CHROME_SYNC_STORAGE_KEYS.filter((key) => !SHORTCUT_KEYS.includes(key));
-// Preferences kept in chrome.storage.local that WebDAV carries but browser
-// sync never does: the custom wallpaper selection, the bookmark bar
-// material chosen against it, and the imported quote collection (too large
-// for browser sync). Each device keeps its own daily pick.
-const TOPBAR_KEYS = settings.BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS;
-const CUSTOM_QUOTES_KEY = '_x_extension_custom_quotes_2026_unique_';
-const LOCAL_PREFERENCE_KEYS: readonly string[] = [LOCAL_WALLPAPER_KEY, ...TOPBAR_KEYS, CUSTOM_QUOTES_KEY];
+const PREFERENCE_KEYS: readonly string[] = settings.BROWSER_SYNC_KEYS.filter((key) => !SHORTCUT_KEYS.includes(key));
+const LOCAL_PREFERENCE_KEYS: readonly string[] = [LOCAL_WALLPAPER_KEY, ...settings.BOOKMARK_TOPBAR_WEBDAV_KEYS, customQuotes.key];
 // Every preference this version reads and writes. A state carries its
 // writer's list as `keys`, so a reader can tell a value the writer removed
 // from one the writer never knew: an older version drops what it does not
@@ -146,21 +140,18 @@ const LOCAL_PREFERENCE_KEYS: readonly string[] = [LOCAL_WALLPAPER_KEY, ...TOPBAR
 // earlier, which knew every key except these.
 const KNOWN_KEYS: readonly string[] = Object.freeze([...PREFERENCE_KEYS, ...LOCAL_PREFERENCE_KEYS]);
 const KEYS_UNKNOWN_TO_LEGACY_WRITERS: readonly string[] = Object.freeze([
-  settings.NEWTAB_GLASS_STYLE_STORAGE_KEY,
-  settings.NEWTAB_GLASS_THEME_STORAGE_KEY,
-  settings.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
-  settings.NEWTAB_TIME_OPACITY_STORAGE_KEY,
-  settings.NEWTAB_TIME_FONT_STORAGE_KEY,
-  settings.NEWTAB_TIME_INK_STORAGE_KEY,
-  settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY,
-  settings.SEARCH_SOURCE_ORDER_STORAGE_KEY,
-  CUSTOM_QUOTES_KEY
+  settings.newtabGlassStyle.key,
+  settings.newtabGlassTheme.key,
+  settings.newtabTimeFontSize.key,
+  settings.newtabTimeOpacity.key,
+  settings.newtabTimeFont.key,
+  settings.newtabTimeInk.key,
+  settings.newtabTime12Hour.key,
+  settings.searchSourceOrder.key,
+  customQuotes.key
 ]);
-// Records whose fields are independent settings merge field by field, so
-// two devices editing different fields of one record do not conflict.
-// Folder colors merge per folder for the same reason.
-const FIELD_MERGE_KEYS: readonly string[] = [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY,
-  settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY];
+const FIELD_MERGE_KEYS: readonly string[] = [settings.newtabQuotePrefs.key,
+  settings.bookmarkFolderColorRefs.key];
 const MAX_STATE_BYTES = 2 * 1024 * 1024;
 const MAX_ASSET_BYTES = 2 * 1024 * 1024;
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -362,8 +353,8 @@ function mergeInitialWallpapers(local: WebDavState, remote: WebDavState): WebDav
   const wallpapers = remote.wallpapers.concat(local.wallpapers.filter((item) =>
     !remoteImages.has(item.image) && !remoteIds.has(item.id)));
   const data = { ...adoptRemote(local, remote).data };
-  const remoteLinkValue = remote.data[LINK_WALLPAPERS_KEY];
-  const localLinkValue = local.data[LINK_WALLPAPERS_KEY];
+  const remoteLinkValue = remote.data[settings.newtabLinkWallpapers.key];
+  const localLinkValue = local.data[settings.newtabLinkWallpapers.key];
   const remoteLinks: unknown[] = Array.isArray(remoteLinkValue) ? remoteLinkValue : [];
   const localLinks: unknown[] = Array.isArray(localLinkValue) ? localLinkValue : [];
   const linkUrls = new Set(remoteLinks.map((item) => asRecord(item).url));
@@ -371,7 +362,7 @@ function mergeInitialWallpapers(local: WebDavState, remote: WebDavState): WebDav
   const links = remoteLinks.concat(localLinks.filter((item) => isObject(item) && !linkUrls.has(item.url) && !linkIds.has(item.id)));
   if (links.length) {
     if (byteLength(JSON.stringify(links)) > MAX_LINK_WALLPAPERS_BYTES) fail('merge-too-large');
-    data[LINK_WALLPAPERS_KEY] = links;
+    data[settings.newtabLinkWallpapers.key] = links;
   }
   try {
     return validateState({ version: Math.max(local.version, remote.version), data, groups: remote.groups,
@@ -501,7 +492,7 @@ function describeWallpapers(base: WebDavState, side: WebDavState): ListChangeSum
 // A folder color entry also carries the folder's creation time; only the
 // color means anything to the person choosing a side.
 function fieldValue(key: string, value: unknown): unknown {
-  return key === settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY && isObject(value) ? value.color : value;
+  return key === settings.bookmarkFolderColorRefs.key && isObject(value) ? value.color : value;
 }
 
 // A field-merged record lists only the fields both sides changed apart.
@@ -656,7 +647,7 @@ function planChromeBackup(values: StorageItems, existing: StorageItems, options?
   const quota = opts.quota || 102400;
   const itemQuota = opts.itemQuota || 8192;
   const maxItems = opts.maxItems || 512;
-  const keys = settings.CHROME_SYNC_STORAGE_KEYS;
+  const keys = settings.BROWSER_SYNC_KEYS;
   const bytes = (key: string, value: unknown): number => byteLength(key) + byteLength(JSON.stringify(value));
   const totalBytes = (record: StorageItems): number =>
     Object.entries(record).reduce((sum, [name, value]) => sum + bytes(name, value), 0);

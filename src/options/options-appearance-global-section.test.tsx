@@ -51,8 +51,8 @@ describe('Options Appearance global section', () => {
   it('keeps its copy and defaults: motion on with its guidance, simple mode off with its description', () => {
     const { host, changes } = setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
-      Settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-      Settings.SIMPLE_MODE_ENABLED_STORAGE_KEY
+      Settings.motionEffectsEnabled.key,
+      Settings.simpleModeEnabled.key
     ].sort());
     expect(getTag(host, `#${MOTION}`, 'input').checked).toBe(true);
     expect(getTag(host, `#${SIMPLE}`, 'input').checked).toBe(false);
@@ -67,7 +67,7 @@ describe('Options Appearance global section', () => {
   it('saves a switched setting', () => {
     const { host, writes } = setUp();
     act(() => getTag(host, `#${SIMPLE}`, 'input').click());
-    expect(writes).toEqual([{ [Settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true }]);
+    expect(writes).toEqual([{ [Settings.simpleModeEnabled.key]: true }]);
   });
 
   it('draws the gallery the theme section hands over and reports a choice with its button', () => {

@@ -31,28 +31,21 @@ interface PagePreferencesDeps {
   applyNewtabShortcutLayoutPreferences: PageLayout['applyNewtabShortcutLayoutPreferences'];
   getBookmarkGridColumnCount: PageLayout['getBookmarkGridColumnCount'];
   SETTINGS: Pick<typeof LumnoSettings,
-    'inferNewtabShortcutColumnsFromWidth' | 'normalizeBookmarkColumns' | 'normalizeBookmarkCount' |
-    'normalizeBookmarkFolderIconsVisible' | 'normalizeMacosCtrlSuggestionNavigationEnabled' |
-    'normalizeNewtabAppearanceButtonVisible' | 'normalizeNewtabFeedbackButtonVisible' |
-    'normalizeNewtabInputAutoFocusEnabled' | 'normalizeNewtabSearchWidth' |
-    'normalizeNewtabShortcutAddVisible' | 'normalizeNewtabShortcutColumns' |
-    'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutGap' |
-    'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabTimeFont' |
-    'normalizeNewtabTimeFontWeight' | 'normalizeNewtabTimeSecondsVisible' |
-    'normalizeNewtabTopContentMode' | 'normalizeNewtabWidthMode' |
-    'normalizeNumberShortcutInstantEnabled' | 'normalizeOverlayTabPriorityMode' |
-    'normalizeSearchResultPriority' | 'normalizeSimpleModeEnabled' |
-    'normalizeTabRankScoreDebugMode'>;
+    'inferNewtabShortcutColumnsFromWidth' | 'bookmarkColumns' | 'bookmarkCount' |
+    'bookmarkFolderIconsVisible' | 'macosCtrlSuggestionNavigationEnabled' |
+    'newtabAppearanceButtonVisible' | 'newtabFeedbackButtonVisible' |
+    'newtabInputAutoFocusEnabled' | 'normalizeNewtabSearchWidth' |
+    'newtabShortcutAddVisible' | 'newtabShortcutColumns' |
+    'newtabShortcutDockMagnificationEnabled' | 'newtabShortcutGap' |
+    'newtabShortcutSize' | 'newtabShortcutsVisible' | 'newtabTimeFont' |
+    'newtabTimeFontWeight' | 'newtabTimeSecondsVisible' |
+    'newtabTopContentMode' | 'newtabWidthMode' |
+    'numberShortcutInstantEnabled' | 'overlayTabPriority' |
+    'searchResultPriority' | 'simpleModeEnabled' |
+    'tabRankScoreDebug'>;
   NEWTAB_SEARCH_WIDTH_CONFIG: NonNullable<Parameters<typeof LumnoSettings.normalizeNewtabSearchWidth>[1]>;
   NEWTAB_SHORTCUT_COLUMNS_MIN: number;
   NEWTAB_SHORTCUT_COLUMNS_MAX: number;
-  NEWTAB_SHORTCUT_COLUMNS_DEFAULT: number;
-  NEWTAB_SHORTCUT_SIZE_MIN: number;
-  NEWTAB_SHORTCUT_SIZE_MAX: number;
-  NEWTAB_SHORTCUT_SIZE_DEFAULT: number;
-  NEWTAB_SHORTCUT_GAP_MIN: number;
-  NEWTAB_SHORTCUT_GAP_MAX: number;
-  NEWTAB_SHORTCUT_GAP_DEFAULT: number;
   NEWTAB_SHORTCUT_WIDTH_MIN: number;
   NEWTAB_SHORTCUT_WIDTH_MAX: number;
   storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
@@ -78,13 +71,6 @@ function createPagePreferences(deps: PagePreferencesDeps) {
     NEWTAB_SEARCH_WIDTH_CONFIG,
     NEWTAB_SHORTCUT_COLUMNS_MIN,
     NEWTAB_SHORTCUT_COLUMNS_MAX,
-    NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
-    NEWTAB_SHORTCUT_SIZE_MIN,
-    NEWTAB_SHORTCUT_SIZE_MAX,
-    NEWTAB_SHORTCUT_SIZE_DEFAULT,
-    NEWTAB_SHORTCUT_GAP_MIN,
-    NEWTAB_SHORTCUT_GAP_MAX,
-    NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_SHORTCUT_WIDTH_MIN,
     NEWTAB_SHORTCUT_WIDTH_MAX,
     storageArea,
@@ -112,7 +98,7 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   const pageState = deps.pageState;
 
   function normalizeNewtabWidthMode(value: unknown) {
-    return SETTINGS.normalizeNewtabWidthMode(value);
+    return SETTINGS.newtabWidthMode.parse(value);
   }
 
   function normalizeNewtabSearchWidth(
@@ -123,55 +109,43 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function normalizeNewtabTopContentMode(value: unknown) {
-    return SETTINGS.normalizeNewtabTopContentMode(value);
+    return SETTINGS.newtabTopContentMode.parse(value);
   }
 
   function normalizeNewtabTimeSecondsVisible(value: unknown) {
-    return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
+    return SETTINGS.newtabTimeSecondsVisible.parse(value);
   }
 
   function normalizeNewtabTimeFontWeight(value: unknown) {
-    return SETTINGS.normalizeNewtabTimeFontWeight(value);
+    return SETTINGS.newtabTimeFontWeight.parse(value);
   }
 
   function normalizeNewtabTimeFont(value: unknown) {
-    return SETTINGS.normalizeNewtabTimeFont(value);
+    return SETTINGS.newtabTimeFont.parse(value);
   }
 
   function normalizeNewtabShortcutsVisible(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutsVisible(value);
+    return SETTINGS.newtabShortcutsVisible.parse(value);
   }
 
   function normalizeNewtabShortcutAddVisible(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutAddVisible(value);
+    return SETTINGS.newtabShortcutAddVisible.parse(value);
   }
 
   function normalizeNewtabShortcutDockMagnificationEnabled(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value);
+    return SETTINGS.newtabShortcutDockMagnificationEnabled.parse(value);
   }
 
   function normalizeNewtabShortcutColumns(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutColumns(value, {
-      min: NEWTAB_SHORTCUT_COLUMNS_MIN,
-      max: NEWTAB_SHORTCUT_COLUMNS_MAX,
-      fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
-    });
+    return SETTINGS.newtabShortcutColumns.parse(value);
   }
 
   function normalizeNewtabShortcutSize(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutSize(value, {
-      min: NEWTAB_SHORTCUT_SIZE_MIN,
-      max: NEWTAB_SHORTCUT_SIZE_MAX,
-      fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
-    });
+    return SETTINGS.newtabShortcutSize.parse(value);
   }
 
   function normalizeNewtabShortcutGap(value: unknown) {
-    return SETTINGS.normalizeNewtabShortcutGap(value, {
-      min: NEWTAB_SHORTCUT_GAP_MIN,
-      max: NEWTAB_SHORTCUT_GAP_MAX,
-      fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
-    });
+    return SETTINGS.newtabShortcutGap.parse(value);
   }
 
   function inferNewtabShortcutColumnsFromWidth(value: unknown) {
@@ -184,7 +158,7 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function normalizeNewtabInputAutoFocusEnabled(value: unknown) {
-    return SETTINGS.normalizeNewtabInputAutoFocusEnabled(value);
+    return SETTINGS.newtabInputAutoFocusEnabled.parse(value);
   }
 
   function cacheNewtabInputAutoFocusEnabled(value: unknown): void {
@@ -192,11 +166,11 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function normalizeNewtabFeedbackButtonVisible(value: unknown) {
-    return SETTINGS.normalizeNewtabFeedbackButtonVisible(value);
+    return SETTINGS.newtabFeedbackButtonVisible.parse(value);
   }
 
   function normalizeNewtabAppearanceButtonVisible(value: unknown) {
-    return SETTINGS.normalizeNewtabAppearanceButtonVisible(value);
+    return SETTINGS.newtabAppearanceButtonVisible.parse(value);
   }
 
   function updateNewtabInputAutoFocusUi(): void {
@@ -345,7 +319,7 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   void loadNumberShortcutInstantEnabled();
 
   function normalizeSimpleModeEnabled(value: unknown) {
-    return SETTINGS.normalizeSimpleModeEnabled(value);
+    return SETTINGS.simpleModeEnabled.parse(value);
   }
 
   function loadSimpleModeEnabled(): Promise<boolean> {
@@ -366,7 +340,7 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   void loadSimpleModeEnabled();
 
   function normalizeMacosCtrlSuggestionNavigationEnabled(value: unknown) {
-    return SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(value);
+    return SETTINGS.macosCtrlSuggestionNavigationEnabled.parse(value);
   }
 
   function loadMacosCtrlSuggestionNavigationEnabled(): Promise<boolean> {
@@ -388,11 +362,11 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   void loadMacosCtrlSuggestionNavigationEnabled();
 
   function normalizeNumberShortcutInstantEnabled(value: unknown) {
-    return SETTINGS.normalizeNumberShortcutInstantEnabled(value);
+    return SETTINGS.numberShortcutInstantEnabled.parse(value);
   }
 
   function normalizeBookmarkFolderIconsVisible(value: unknown) {
-    return SETTINGS.normalizeBookmarkFolderIconsVisible(value);
+    return SETTINGS.bookmarkFolderIconsVisible.parse(value);
   }
 
   function normalizeZenModeEnabled(value: unknown) {
@@ -400,15 +374,15 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function normalizeSearchResultPriority(value: unknown) {
-    return SETTINGS.normalizeSearchResultPriority(value);
+    return SETTINGS.searchResultPriority.parse(value);
   }
 
   function normalizeOverlayTabPriorityMode(value: unknown) {
-    return SETTINGS.normalizeOverlayTabPriorityMode(value);
+    return SETTINGS.overlayTabPriority.parse(value);
   }
 
   function normalizeBookmarkCount(value: unknown) {
-    return SETTINGS.normalizeBookmarkCount(value);
+    return SETTINGS.bookmarkCount.parse(value);
   }
 
   function getBookmarkLimit(): number {
@@ -423,11 +397,11 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function normalizeBookmarkColumns(value: unknown) {
-    return SETTINGS.normalizeBookmarkColumns(value);
+    return SETTINGS.bookmarkColumns.parse(value);
   }
 
   function normalizeTabRankScoreDebugMode(value: unknown) {
-    return SETTINGS.normalizeTabRankScoreDebugMode(value);
+    return SETTINGS.tabRankScoreDebug.parse(value);
   }
 
   return {

@@ -1,6 +1,5 @@
 // Earlier versions of tracked cards, newest first, keyed by site. Kept in
 // local storage: the pinned cards sync, and synced items are capped at 8 KB.
-const STORAGE_KEY = '_x_extension_newtab_progress_history_2026_unique_';
 const MAX_VERSIONS = 10;
 
 // A page a tracked card pointed at before.
@@ -96,7 +95,6 @@ function removeSite(map: unknown, siteKey: string): ProgressHistoryMap {
 }
 
 export {
-  STORAGE_KEY,
   MAX_VERSIONS,
   normalizeVersions,
   normalizeHistoryMap,

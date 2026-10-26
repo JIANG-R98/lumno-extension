@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
@@ -137,9 +137,9 @@ async function testNewTab() {
   assert.strictEqual(vertical('--x-extension-menu-surface-open-transform'), closed,
     'the New Tab scope panel should open without moving vertically');
   const topContent = surface.page.document.getElementById('_x_extension_newtab_wordmark_2026_unique_');
-  surface.page.changeStorage('sync', settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY, settings.NEWTAB_TOP_CONTENT_OFF);
+  surface.page.changeStorage('sync', settings.newtabTopContentMode.key, settings.NEWTAB_TOP_CONTENT_OFF);
   await surface.settle(200);
-  surface.page.changeStorage('sync', settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY, settings.NEWTAB_TOP_CONTENT_TIME);
+  surface.page.changeStorage('sync', settings.newtabTopContentMode.key, settings.NEWTAB_TOP_CONTENT_TIME);
   await surface.settle(200);
   assert.doesNotMatch(topContent.getAttribute('style') || '', verticalTranslationPattern, 'top content should show and hide in place');
   surface.close();

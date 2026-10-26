@@ -4,9 +4,9 @@
 import type * as Settings from '../../domain/settings';
 import type { NewtabGlassTheme } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
-import * as LumnoNewtabWallpaperAdaptiveTone from '../wallpaper/wallpaper-adaptive-tone';
 import type { ToneScheduleOptions } from '../wallpaper/wallpaper-adaptive-tone';
 import { createLiquidSurfaces } from '../react/liquid-glass';
+import { newtabGlassInkHint } from '../../domain/settings/newtab-wallpaper';
 
 interface GlassSurfacesState {
   newtabGlassTheme: NewtabGlassTheme;
@@ -18,7 +18,7 @@ interface GlassSurfacesState {
 interface GlassSurfacesDeps {
   // { resetInk: true } when a setting changed what the glass ink should be.
   scheduleWallpaperAdaptiveToneUpdate(options?: ToneScheduleOptions): void;
-  SETTINGS: Pick<typeof Settings, 'normalizeNewtabGlassStyle' | 'normalizeNewtabGlassTheme' | 'getNewtabGlassThemeOverride'>;
+  SETTINGS: Pick<typeof Settings, 'newtabGlassStyle' | 'newtabGlassTheme' | 'getNewtabGlassThemeOverride'>;
   syncBookmarkTopbarSurfaceAppearance(options: { updateMenu: boolean }): void;
   updateWallpaperAppearanceSelectionUi(): void;
   applyScopedThemeMode(): void;
@@ -115,7 +115,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
       return;
     }
     try {
-      const hint = window.localStorage.getItem(LumnoNewtabWallpaperAdaptiveTone.GLASS_INK_HINT_STORAGE_KEY);
+      const hint = window.localStorage.getItem(newtabGlassInkHint.key);
       if (hint === 'light' || hint === 'dark') {
         document.body.setAttribute('data-glass-ink-hint', hint);
       }
@@ -125,7 +125,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
   }
 
   function applyNewtabGlassStyle(value: unknown): void {
-    const style = SETTINGS.normalizeNewtabGlassStyle(value);
+    const style = SETTINGS.newtabGlassStyle.parse(value);
     if (style === 'none') {
       document.body.removeAttribute('data-glass-style');
     } else {
@@ -168,7 +168,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
   }
 
   function applyNewtabGlassTheme(value: unknown): void {
-    pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(value);
+    pageState.newtabGlassTheme = SETTINGS.newtabGlassTheme.parse(value);
     syncNewtabGlassThemeOverride();
     updateWallpaperAppearanceSelectionUi();
     scheduleWallpaperAdaptiveToneUpdate({ resetInk: true });
@@ -183,7 +183,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
     const area = storageArea;
     return new Promise((resolve) => {
       void area.get([NEWTAB_GLASS_STYLE_STORAGE_KEY, NEWTAB_GLASS_THEME_STORAGE_KEY], (result) => {
-        pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(result && result[NEWTAB_GLASS_THEME_STORAGE_KEY]);
+        pageState.newtabGlassTheme = SETTINGS.newtabGlassTheme.parse(result && result[NEWTAB_GLASS_THEME_STORAGE_KEY]);
         applyNewtabGlassStyle(result && result[NEWTAB_GLASS_STYLE_STORAGE_KEY]);
         resolve();
       });

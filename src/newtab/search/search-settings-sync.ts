@@ -54,7 +54,7 @@ interface SearchSettingsSyncDeps {
   normalizeSearchResultDisplayLimit(value: unknown): number;
   renderSuggestions: RenderSuggestions;
   NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
-  SETTINGS: Pick<typeof Settings, 'normalizeNewtabOpenInNewTab'>;
+  SETTINGS: Pick<typeof Settings, 'newtabOpenInNewTab'>;
   NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: string;
   normalizeNumberShortcutInstantEnabled(value: unknown): boolean;
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
@@ -156,7 +156,7 @@ function createSearchSettingsSync(deps: SearchSettingsSyncDeps): void {
     }
   });
   storageChanges.on(NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY, (changes) => {
-    pageState.newtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(
+    pageState.newtabOpenInNewTab = SETTINGS.newtabOpenInNewTab.parse(
       changes[NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY].newValue
     );
   });

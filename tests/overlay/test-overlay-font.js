@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const webdavContract = require('../../src/domain/webdav-contract.ts');
 const { toFirefoxManifest } = require('../../scripts/build/firefox-manifest.js');
 const { parseCss } = require('../helpers/css-rules');
@@ -14,8 +14,8 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), 'utf8');
-const FAMILY_KEY = settings.OVERLAY_FONT_FAMILY_STORAGE_KEY;
-const FALLBACK_KEY = settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY;
+const FAMILY_KEY = settings.overlayFontFamily.key;
+const FALLBACK_KEY = settings.overlayFontFallback.key;
 const FONT_VAR = '--lumno-font-sans';
 
 async function testOverlayAppliesTheDeviceFont() {
@@ -81,13 +81,13 @@ async function testFontsStayOnTheDevice() {
   const firefox = toFirefoxManifest(manifest, { lazyBackgroundDeps: ['build/pinyin-data.js'], importShim: 'build/firefox-import-shim.js' });
   assert.ok(!firefox.permissions.includes('fontSettings'), 'the Firefox package should drop the Chrome-only permission');
 
-  settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {
-    assert.ok(!settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} must not reach browser sync`);
+  settings.OVERLAY_FONT_KEYS.forEach((key) => {
+    assert.ok(!settings.BROWSER_SYNC_KEYS.includes(key), `${key} must not reach browser sync`);
     assert.ok(!webdavContract.KNOWN_KEYS.includes(key), `${key} must not reach WebDAV`);
   });
   assert.deepStrictEqual(
-    webdavContract.selectPreferences({ [FAMILY_KEY]: 'PingFang SC', [settings.OVERLAY_SIZE_MODE_STORAGE_KEY]: 'large' }),
-    { [settings.OVERLAY_SIZE_MODE_STORAGE_KEY]: 'large' },
+    webdavContract.selectPreferences({ [FAMILY_KEY]: 'PingFang SC', [settings.overlaySizeMode.key]: 'large' }),
+    { [settings.overlaySizeMode.key]: 'large' },
     'a WebDAV state that still carries a font (an earlier build wrote one) must not apply it'
   );
 

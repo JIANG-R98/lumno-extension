@@ -2,7 +2,7 @@
 // src/content/youtube-auto-pip.ts, loaded after settings.ts by both of their
 // content_scripts entries. Nothing here touches the page until a content
 // script calls createAutoPipCore.
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettings from '../domain/settings/features';
 import {
   PIP_PAGE_BRIDGE_REQUEST_EVENT,
   PIP_PAGE_BRIDGE_RESPONSE_EVENT,
@@ -79,7 +79,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
 
-const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
 const MAIN_WORLD_EXIT_TIMEOUT_MS = 760;
 const PAGE_BRIDGE_EXIT_TIMEOUT_MS = 520;
 const MIN_DEFERRED_ENTER_DELAY_MS = 40;
@@ -208,12 +207,12 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
       return;
     }
     const storageArea = providerStorage.area;
-    storageArea.get([AUTO_PIP_ENABLED_STORAGE_KEY], (result) => {
-      const rawValue = result ? result[AUTO_PIP_ENABLED_STORAGE_KEY] : undefined;
+    storageArea.get([LumnoSettings.autoPipEnabled.key], (result) => {
+      const rawValue = result ? result[LumnoSettings.autoPipEnabled.key] : undefined;
       const normalized = normalizeAutoPipEnabled(rawValue);
       setAutoPipEnabled(normalized);
       if (rawValue !== normalized) {
-        storageArea.set({ [AUTO_PIP_ENABLED_STORAGE_KEY]: normalized });
+        storageArea.set({ [LumnoSettings.autoPipEnabled.key]: normalized });
       }
     });
     if (!chrome.storage.onChanged || typeof chrome.storage.onChanged.addListener !== 'function') {
@@ -223,10 +222,10 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
       if (!providerStorage.runtime.isActiveAreaName(areaName)) {
         return;
       }
-      if (!changes || !changes[AUTO_PIP_ENABLED_STORAGE_KEY]) {
+      if (!changes || !changes[LumnoSettings.autoPipEnabled.key]) {
         return;
       }
-      setAutoPipEnabled(changes[AUTO_PIP_ENABLED_STORAGE_KEY].newValue);
+      setAutoPipEnabled(changes[LumnoSettings.autoPipEnabled.key].newValue);
       if (!state.autoPipEnabled) {
         clearPlaybackRecoveryState();
       }
@@ -564,7 +563,6 @@ type AutoPipCore = ReturnType<typeof createAutoPipCore>;
 
 export type { AutoPipCore, AutoPipCoreConfig, AutoPipCoreOptions, AutoPipHooks, AutoPipState };
 export {
-  AUTO_PIP_ENABLED_STORAGE_KEY,
   normalizeAutoPipEnabled,
   isVideoPlaying,
   warnUnexpected,

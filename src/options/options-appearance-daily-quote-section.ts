@@ -6,7 +6,7 @@
 import type * as CustomQuotes from '../domain/custom-quotes';
 import type { QuoteLibrary } from '../domain/custom-quotes';
 import type * as Settings from '../domain/settings';
-import type { NewtabQuotePosition, NewtabQuotePrefs } from '../domain/settings';
+import type { NewtabQuotePosition, NewtabQuotePrefs } from '../domain/settings/newtab-quote';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
 import type { SectionSettingBinder } from './options-section-setting';
@@ -15,14 +15,15 @@ import type { GetMessage } from './options-types';
 import type { DailyQuoteSectionHandlers, DailyQuoteSectionModel, QuoteLibraryRowModel } from './react/daily-quote-section';
 import type { SelectControlItemModel } from './react/select-control';
 import type { SettingsRowModel } from './react/settings-rows-view';
+import * as NewtabQuoteSettings from '../domain/settings/newtab-quote';
 
 const POSITIONS: readonly NewtabQuotePosition[] = Object.freeze(['top', 'input', 'search', 'bottom']);
 
 interface DailyQuoteSectionDeps {
   view(handlers: DailyQuoteSectionHandlers): SectionView<DailyQuoteSectionModel>;
-  settings: Pick<typeof Settings, 'normalizeNewtabQuotePrefs' | 'NEWTAB_QUOTE_PREFS_STORAGE_KEY' | 'NEWTAB_QUOTE_FONTS' |
+  settings: Pick<typeof Settings, 'newtabQuotePrefs' | 'newtabQuotePrefs' | 'NEWTAB_QUOTE_FONTS' |
     'NEWTAB_QUOTE_FONT_SIZE_MIN' | 'NEWTAB_QUOTE_FONT_SIZE_MAX' | 'NEWTAB_QUOTE_FONT_SIZE_DEFAULT'>;
-  customQuotes: Pick<typeof CustomQuotes, 'KEY' | 'PICK_KEY' | 'readLibraryFile' | 'normalizeLibrary' | 'select' |
+  customQuotes: Pick<typeof CustomQuotes, 'KEY' | 'readLibraryFile' | 'normalizeLibrary' | 'select' |
     'readQuotePick'>;
   getMessage: GetMessage;
   showToast?(message: string, isError?: boolean): void;
@@ -35,7 +36,7 @@ interface DailyQuoteSectionDeps {
 
 function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
   const { view, settings, customQuotes: custom, getMessage, getViewportTopInset } = deps;
-  let prefs: NewtabQuotePrefs = settings.normalizeNewtabQuotePrefs(null);
+  let prefs: NewtabQuotePrefs = settings.newtabQuotePrefs.parse(null);
   let library: QuoteLibrary | null = null;
   let importing = false;
   let shuffling = false;
@@ -44,11 +45,11 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
   const render = (): void => controller.render({ rows: getRows(), library: getLibraryRow() });
 
   function persist(patch: Partial<NewtabQuotePrefs>): Promise<void> {
-    const next = settings.normalizeNewtabQuotePrefs({ ...prefs, ...patch });
+    const next = settings.newtabQuotePrefs.parse({ ...prefs, ...patch });
     prefs = next;
     render();
     return deps.syncArea
-      ? Promise.resolve(deps.syncArea.set({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: next })).then(() => {})
+      ? Promise.resolve(deps.syncArea.set({ [settings.newtabQuotePrefs.key]: next })).then(() => {})
       : Promise.resolve();
   }
 
@@ -86,7 +87,7 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
     try {
       const next = await custom.readLibraryFile(file);
       saving = true;
-      await writeLocal({ [custom.KEY]: next, [custom.PICK_KEY]: null });
+      await writeLocal({ [custom.KEY]: next, [NewtabQuoteSettings.customQuotePick.key]: null });
       library = next;
       await persist({ provider: 'custom' });
     } catch (_error) {
@@ -106,11 +107,11 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
     shuffling = true;
     render();
     try {
-      const values = await readLocal([custom.KEY, custom.PICK_KEY]);
+      const values = await readLocal([custom.KEY, NewtabQuoteSettings.customQuotePick.key]);
       const current = custom.normalizeLibrary(values[custom.KEY]);
       if (!current) return;
-      const selected = custom.select(current, new Date(), custom.readQuotePick(values[custom.PICK_KEY]), true);
-      await writeLocal({ [custom.PICK_KEY]: selected.pick });
+      const selected = custom.select(current, new Date(), custom.readQuotePick(values[NewtabQuoteSettings.customQuotePick.key]), true);
+      await writeLocal({ [NewtabQuoteSettings.customQuotePick.key]: selected.pick });
       if (deps.showToast) {
         deps.showToast(selected.quote.text);
       }
@@ -339,8 +340,8 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
   // Follows the synced preferences and this device's collection.
   function bindSettings(settingBinder: SectionSettingBinder, storageChanges: Pick<StorageChangeRegistry, 'on'>): void {
     settingBinder.bindSetting({
-      key: settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY,
-      normalize: settings.normalizeNewtabQuotePrefs,
+      key: settings.newtabQuotePrefs.key,
+      normalize: settings.newtabQuotePrefs.parse,
       apply(next) {
         prefs = next;
         render();

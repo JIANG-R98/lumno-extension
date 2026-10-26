@@ -109,10 +109,10 @@ describe('Options General global section', () => {
 
   it('keeps the update notice on by default and saves a change', () => {
     const { host, writes, changes } = setUp();
-    expect(Array.from(changes.keys())).toEqual([Settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY]);
+    expect(Array.from(changes.keys())).toEqual([Settings.updateNoticeEnabled.key]);
     const toggle = getTag(host, '#_x_extension_update_notice_toggle_2026_unique_', 'input');
     expect(toggle.checked).toBe(true);
     act(() => toggle.click());
-    expect(writes).toEqual([{ [Settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY]: false }]);
+    expect(writes).toEqual([{ [Settings.updateNoticeEnabled.key]: false }]);
   });
 });

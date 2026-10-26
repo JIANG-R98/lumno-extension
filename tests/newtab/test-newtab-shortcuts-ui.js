@@ -1333,7 +1333,7 @@ assert.strictEqual(
 
 
 // On New Tab itself.
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
 const SITES = [
@@ -1383,7 +1383,7 @@ async function testOpeningShortcuts() {
   assert.strictEqual(page.updated.length, 1);
   page.close();
 
-  const newTab = await openShortcuts({ sync: { [settings.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY]: { shortcuts: true } } });
+  const newTab = await openShortcuts({ sync: { [settings.newtabOpenInNewTab.key]: { shortcuts: true } } });
   newTab.click(newTab.tile('One'));
   newTab.click(newTab.tile('One'), { metaKey: true });
   await newTab.page.settle(60);
@@ -1394,15 +1394,15 @@ async function testOpeningShortcuts() {
 }
 
 async function testVisibilitySettings() {
-  const hidden = await openShortcuts({ sync: { [settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: false } });
+  const hidden = await openShortcuts({ sync: { [settings.newtabShortcutsVisible.key]: false } });
   const section = () => hidden.doc.getElementById('_x_extension_newtab_shortcuts_2026_unique_');
   assert.notStrictEqual(section().getAttribute('data-visible'), 'true', 'turning shortcuts off should hide the rail');
-  hidden.page.changeStorage('sync', settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY, true);
+  hidden.page.changeStorage('sync', settings.newtabShortcutsVisible.key, true);
   await hidden.page.settle(100);
   assert.strictEqual(section().getAttribute('data-visible'), 'true', 'and turning them on should bring it back at once');
   hidden.page.close();
 
-  const empty = await openShortcuts({ shortcuts: [], sync: { [settings.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: false } });
+  const empty = await openShortcuts({ shortcuts: [], sync: { [settings.newtabShortcutAddVisible.key]: false } });
   assert.notStrictEqual(empty.doc.getElementById('_x_extension_newtab_shortcuts_2026_unique_').getAttribute('data-visible'), 'true',
     'a rail with nothing to show stays hidden');
   assert.strictEqual(empty.doc.querySelector('.x-nt-shortcut-tile--add').hidden, true, 'and the add tile hidden');
@@ -1411,7 +1411,7 @@ async function testVisibilitySettings() {
 
 async function testDockMagnification() {
   for (const enabled of [true, false]) {
-    const shortcuts = await openShortcuts({ sync: { [settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: enabled } });
+    const shortcuts = await openShortcuts({ sync: { [settings.newtabShortcutDockMagnificationEnabled.key]: enabled } });
     const { page, grid } = shortcuts;
     const box = shortcuts.tile('One').getBoundingClientRect();
     page.pointer('pointerover', box.left + 30, box.top + 30);

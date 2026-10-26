@@ -1,17 +1,17 @@
 const assert = require('assert');
-const migrations = require('../../src/domain/settings-migrations.ts');
-const settings = require('../../src/domain/settings.ts');
+const migrations = { ...require('../../src/domain/settings/migrations.ts'), ...require('../../src/domain/settings/removed.ts'), settingsSchemaVersion: require('../../src/domain/settings/sync-state.ts').settingsSchemaVersion };
+const settings = require('../../src/domain/settings/index.ts');
 const { runSettingsMigrations } = require('../../src/platform/settings-migration.ts');
 
-const VERSION_KEY = migrations.SETTINGS_SCHEMA_VERSION_STORAGE_KEY;
+const VERSION_KEY = migrations.settingsSchemaVersion.key;
 
 // What devices that ran older versions hold, in the shapes those versions
 // wrote. Preferences every version shares stay next to the leftovers so a
 // test can tell the two apart.
 const SHARED_SYNC_PREFERENCES = Object.freeze({
-  [settings.THEME_STORAGE_KEY]: 'dark',
-  [settings.LANGUAGE_STORAGE_KEY]: 'zh_CN',
-  [settings.BOOKMARK_VIEW_MODE_STORAGE_KEY]: 'top'
+  [settings.themeMode.key]: 'dark',
+  [settings.language.key]: 'zh_CN',
+  [settings.bookmarkViewMode.key]: 'top'
 });
 
 // 0.9.3-0.9.45 cached the loaded messages.json of the UI language.
@@ -40,13 +40,13 @@ const BOOKMARK_TOPBAR_SYNC = Object.freeze({
 
 // Development builds before the fonts became device-only.
 const OVERLAY_FONT_SYNC = Object.freeze({
-  [settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: 'PingFang SC',
-  [settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY]: '',
-  [settings.OVERLAY_FONT_LABELS_STORAGE_KEY]: { 'PingFang SC': '苹方-简' }
+  [settings.overlayFontFamily.key]: 'PingFang SC',
+  [settings.overlayFontFallback.key]: '',
+  [settings.overlayFontLabels.key]: { 'PingFang SC': '苹方-简' }
 });
 
 const LEGACY_ICON_CACHES = Object.freeze(Object.fromEntries(
-  migrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.map((key) => [key, { google: { dataUrl: 'data:image/png;base64,AAAA', updatedAt: 1769817600000 } }])
+  migrations.LEGACY_SITE_SEARCH_ICON_KEYS.map((key) => [key, { google: { dataUrl: 'data:image/png;base64,AAAA', updatedAt: 1769817600000 } }])
 ));
 
 function createArea(initial, failures) {
@@ -111,7 +111,7 @@ function testMigrationList() {
 // A migration must never delete a preference the current version syncs.
 function testRemovalsSpareLivePreferences() {
   const plan = migrations.planSettingsMigrations(0, { sync: {}, local: {} });
-  const live = new Set(settings.CHROME_SYNC_STORAGE_KEYS);
+  const live = new Set(settings.BROWSER_SYNC_KEYS);
   plan.patch.sync.remove.forEach((key) => {
     assert.ok(!live.has(key), `${key} is a live synced preference and must not be removed from sync`);
   });
@@ -127,15 +127,15 @@ function testPlanFromAnOldDevice() {
   assert.deepStrictEqual(plan.patch.sync.set, {});
   assert.deepStrictEqual(plan.patch.local.set, {});
   assert.deepStrictEqual(new Set(plan.patch.sync.remove), new Set([
-    migrations.LANGUAGE_MESSAGES_STORAGE_KEY,
-    ...migrations.REMOVED_AI_SYNC_STORAGE_KEYS,
-    ...settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
-    ...settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+    migrations.LANGUAGE_MESSAGES_KEY,
+    ...migrations.REMOVED_AI_SYNC_KEYS,
+    ...settings.BOOKMARK_TOPBAR_SURFACE_KEYS,
+    ...settings.OVERLAY_FONT_KEYS
   ]));
   assert.deepStrictEqual(new Set(plan.patch.local.remove), new Set([
-    migrations.LANGUAGE_MESSAGES_STORAGE_KEY,
-    ...migrations.REMOVED_AI_LOCAL_STORAGE_KEYS,
-    ...migrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS
+    migrations.LANGUAGE_MESSAGES_KEY,
+    ...migrations.REMOVED_AI_LOCAL_KEYS,
+    ...migrations.LEGACY_SITE_SEARCH_ICON_KEYS
   ]));
   assert.ok(Object.keys(SHARED_SYNC_PREFERENCES).every((key) => !plan.patch.sync.remove.includes(key)),
     'preferences every version shares are left alone');
@@ -147,8 +147,8 @@ function testPlanFromAnOldDevice() {
     { sync: { set: {}, remove: [] }, local: { set: {}, remove: [] } });
   assert.strictEqual(migrations.planSettingsMigrations(99, { sync: {}, local: {} }).version, 99,
     'a device that ran a newer version keeps its version when an older one starts');
-  assert.strictEqual(migrations.normalizeSettingsSchemaVersion('3'), 0);
-  assert.strictEqual(migrations.normalizeSettingsSchemaVersion(2.5), 0);
+  assert.strictEqual(migrations.settingsSchemaVersion.parse('3'), 0);
+  assert.strictEqual(migrations.settingsSchemaVersion.parse(2.5), 0);
 }
 
 // Each migration sees the data as the ones before it left it, and the
@@ -193,12 +193,12 @@ async function testRunOnAnOldDevice() {
   const chrome = createChrome({
     sync: { ...SHARED_SYNC_PREFERENCES, ...AI_SEARCH_SYNC, ...BOOKMARK_TOPBAR_SYNC, ...OVERLAY_FONT_SYNC },
     local: { _x_extension_language_messages_2024_unique_: LANGUAGE_MESSAGES_CACHE, ...AI_SEARCH_LOCAL, ...LEGACY_ICON_CACHES,
-      [settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: 'PingFang SC' }
+      [settings.overlayFontFamily.key]: 'PingFang SC' }
   });
   assert.strictEqual(await runSettingsMigrations(chrome), migrations.SETTINGS_SCHEMA_VERSION);
   assert.deepStrictEqual(chrome.storage.sync.values, SHARED_SYNC_PREFERENCES);
   assert.deepStrictEqual(chrome.storage.local.values, {
-    [settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: 'PingFang SC',
+    [settings.overlayFontFamily.key]: 'PingFang SC',
     [VERSION_KEY]: migrations.SETTINGS_SCHEMA_VERSION
   }, 'the device keeps its own font choice; the sync copy is what goes');
 

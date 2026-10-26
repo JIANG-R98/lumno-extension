@@ -2,7 +2,7 @@
 // on the page, and the localStorage copy theme-preload.ts paints from on the
 // next load. While the mode is "system" the page follows the OS setting.
 import type * as Settings from '../domain/settings';
-import type { ThemeMode } from '../domain/settings';
+import type { ThemeMode } from '../domain/settings/appearance';
 import type { GetMessage } from './options-types';
 import type { ThemePickerRenderModel } from './react/theme-picker';
 
@@ -17,8 +17,8 @@ interface ThemeSectionOptions {
   windowObj: Window;
   panel: HTMLElement;
   storageArea: ThemeStorageArea | null;
-  settings: Pick<typeof Settings, 'THEME_STORAGE_KEY' | 'OPTIONS_THEME_PRELOAD_STORAGE_KEY' |
-    'createGlobalThemeModeStorageUpdate' | 'normalizeThemeMode'>;
+  settings: Pick<typeof Settings, 'themeMode' | 'optionsThemePreload' |
+    'createGlobalThemeModeStorageUpdate' | 'themeMode'>;
   picker: { render(model: ThemePickerRenderModel): void };
   getMessage: GetMessage;
   // Runs whenever the picker shows a mode.
@@ -36,7 +36,7 @@ function createThemeSection(options: ThemeSectionOptions) {
   const { documentObj, windowObj, panel, storageArea, settings, picker } = options;
   const getMessage = options.getMessage;
   const onModeShown = options.onModeShown || (() => {});
-  const themeKey = settings.THEME_STORAGE_KEY;
+  const themeKey = settings.themeMode.key;
   const mediaQuery = windowObj.matchMedia('(prefers-color-scheme: dark)');
   let currentMode: ThemeMode = 'system';
   let followsSystem = false;
@@ -105,7 +105,7 @@ function createThemeSection(options: ThemeSectionOptions) {
 
   function cacheMode(mode: ThemeMode): void {
     try {
-      windowObj.localStorage.setItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY, mode);
+      windowObj.localStorage.setItem(settings.optionsThemePreload.key, mode);
     } catch (e) {
       // The early theme preloader falls back to the system theme when caching is unavailable.
     }
@@ -129,7 +129,7 @@ function createThemeSection(options: ThemeSectionOptions) {
         return;
       }
       storageArea.get([themeKey], (result) => {
-        resolve(settings.normalizeThemeMode(result ? result[themeKey] : undefined));
+        resolve(settings.themeMode.parse(result ? result[themeKey] : undefined));
       });
     }).then((storedMode) => {
       cacheMode(storedMode);
@@ -149,7 +149,7 @@ function createThemeSection(options: ThemeSectionOptions) {
   }
 
   function applyStorageChange(value: unknown): void {
-    show(settings.normalizeThemeMode(value));
+    show(settings.themeMode.parse(value));
   }
 
   return Object.freeze({ applyStorageChange, init, render, setMode });

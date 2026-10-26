@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 // /mode on New Tab switches the theme the page is showing: the global theme
@@ -7,8 +7,8 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 // appearance panel's Global / New Tab scope picker is covered by
 // src/newtab/react/wallpaper-view.test.tsx and test-newtab-wallpaper-panel.js.
 
-const THEME = settings.THEME_STORAGE_KEY;
-const NEWTAB_THEME = settings.NEWTAB_THEME_MODE_STORAGE_KEY;
+const THEME = settings.themeMode.key;
+const NEWTAB_THEME = settings.newtabThemeMode.key;
 
 async function run(sync, activate) {
   const surface = await openSearchSurface('newtab', { sync });

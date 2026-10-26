@@ -5,7 +5,8 @@
 
 const engagementNotice = require('../../src/shared/engagement-notice.ts');
 const featureHints = require('../../src/shared/ui/feature-hints.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
+const { engagementNoticeState } = require('../../src/domain/settings/features.ts');
 
 function dismissedFeatureHints() {
   const areas = { sync: {}, local: {}, session: {} };
@@ -42,11 +43,11 @@ function engagementStorage(options) {
   const hints = dismissedFeatureHints();
   return {
     sync: Object.assign({
-      [settings.LANGUAGE_STORAGE_KEY]: config.language || 'en',
-      [settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY]: config.updateNotice === true
+      [settings.language.key]: config.language || 'en',
+      [settings.updateNoticeEnabled.key]: config.updateNotice === true
     }, hints.sync, config.sync || {}),
     local: Object.assign({
-      [engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY]: engagementState('newtab', config.newtab)
+      [engagementNoticeState.key]: engagementState('newtab', config.newtab)
     }, hints.local, config.local || {}),
     session: hints.session
   };

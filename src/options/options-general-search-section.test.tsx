@@ -9,7 +9,7 @@ import { getElement, getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
 
-const SOURCE_TYPES_KEY = Settings.SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY;
+const SOURCE_TYPES_KEY = Settings.searchResultSourceTypes.key;
 const RESET = '_x_extension_search_result_source_types_reset_2026_unique_';
 
 function setUp(stored: StorageItems = {}) {
@@ -69,12 +69,12 @@ describe('Options General search results section', () => {
   it('binds every setting of the section and attaches the type drag', () => {
     const { changes, orderController } = setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
-      Settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-      Settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
-      Settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-      Settings.SEARCH_RESULT_PRIORITY_STORAGE_KEY,
+      Settings.overlayOpenTabsDefaultVisible.key,
+      Settings.searchFuzzyPinyinEnabled.key,
+      Settings.searchResultDisplayLimit.key,
+      Settings.searchResultPriority.key,
       SOURCE_TYPES_KEY,
-      Settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY
+      Settings.searchResultTabPosition.key
     ].sort());
     expect(orderController.attachLocalDrag).toHaveBeenCalledTimes(1);
   });
@@ -122,23 +122,23 @@ describe('Options General search results section', () => {
     const buttons = getTags(host, '#_x_extension_search_result_priority_tabs_wrap_2026_unique_ button', 'button');
     expect(buttons.map((button) => button.dataset.active)).toEqual(['true', 'false']);
     act(() => buttons[1]?.click());
-    expect(writes).toContainEqual({ [Settings.SEARCH_RESULT_PRIORITY_STORAGE_KEY]: 'search' });
+    expect(writes).toContainEqual({ [Settings.searchResultPriority.key]: 'search' });
     expect(getTag(host, '#_x_extension_search_result_priority_select_2026_unique_', 'select').value).toBe('search');
-    store(Settings.SEARCH_RESULT_PRIORITY_STORAGE_KEY, 'autocomplete');
+    store(Settings.searchResultPriority.key, 'autocomplete');
     expect(getTags(host, '#_x_extension_search_result_priority_tabs_wrap_2026_unique_ button', 'button')
       .map((button) => button.dataset.active)).toEqual(['true', 'false']);
   });
 
   it('saves the display limit from its slider', () => {
     const { host, writes, store } = setUp();
-    store(Settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY, 7);
+    store(Settings.searchResultDisplayLimit.key, 7);
     const slider = getTag(host, '#_x_extension_search_result_display_limit_slider_2026_unique_', 'input');
     expect(slider.value).toBe('7');
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(slider, '9');
       slider.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    expect(writes).toContainEqual({ [Settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: 9 });
+    expect(writes).toContainEqual({ [Settings.searchResultDisplayLimit.key]: 9 });
     expect(getElement(host, '#_x_extension_search_result_display_limit_setting_row_2026_unique_')).toBeTruthy();
   });
 
@@ -147,8 +147,8 @@ describe('Options General search results section', () => {
     act(() => getTag(host, '#_x_extension_overlay_open_tabs_default_visible_toggle_2026_unique_', 'input').click());
     act(() => getTag(host, '#_x_extension_search_fuzzy_pinyin_toggle_2026_unique_', 'input').click());
     expect(writes).toEqual([
-      { [Settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY]: !Settings.normalizeOverlayOpenTabsDefaultVisible(undefined) },
-      { [Settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY]: !Settings.normalizeSearchFuzzyPinyinEnabled(undefined) }
+      { [Settings.overlayOpenTabsDefaultVisible.key]: !Settings.overlayOpenTabsDefaultVisible.parse(undefined) },
+      { [Settings.searchFuzzyPinyinEnabled.key]: !Settings.searchFuzzyPinyinEnabled.parse(undefined) }
     ]);
   });
 });

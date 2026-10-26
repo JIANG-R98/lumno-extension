@@ -9,7 +9,7 @@ import { getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
 
-const OPEN_KEY = Settings.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY;
+const OPEN_KEY = Settings.newtabOpenInNewTab.key;
 
 function setUp() {
   const host = document.createElement('div');
@@ -42,7 +42,7 @@ afterEach(() => {
 describe('Options General New Tab section', () => {
   it('shows both settings as stored and never rewrites them on its own', () => {
     const { specs } = setUp();
-    expect(Array.from(specs.keys()).sort()).toEqual([OPEN_KEY, Settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY].sort());
+    expect(Array.from(specs.keys()).sort()).toEqual([OPEN_KEY, Settings.progressTrackingEnabled.key].sort());
     specs.forEach((spec) => {
       expect([spec.repairOnLoad, spec.repairOnChange]).toEqual([false, false]);
     });

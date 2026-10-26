@@ -4,7 +4,6 @@
 // Icon images by shortcut id.
 type ShortcutIconMap = Record<string, string>;
 
-const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
 const MAX_STORED_DATA_URL_LENGTH = 160 * 1024;
 const MAX_OUTPUT_BYTES = 96 * 1024;
 
@@ -48,7 +47,6 @@ function normalizeIconMap(value: unknown): ShortcutIconMap {
 }
 
 export {
-  DEFAULT_STORAGE_KEY,
   MAX_OUTPUT_BYTES,
   getDataUrlByteLength,
   normalizeIconDataUrl,

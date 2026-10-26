@@ -12,10 +12,7 @@ import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import {
-  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-  RESTRICTED_ACTION_STORAGE_KEY
-} from '../domain/settings';
+import { restrictedActionAutoBrowserSettingDone, restrictedAction } from '../domain/settings';
 import {
   areBackgroundSettingsLoaded,
   isRestrictedActionAutoBrowserSettingDone,
@@ -108,12 +105,12 @@ export function createTabWithSourceGroup(
 }
 
 export function resolveSearchResultTabPlacement(sourceTab: chrome.tabs.Tab | null | undefined): Promise<TabPlacement> {
-  return LumnoSettingsStorage.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
+  return LumnoSettingsStorage.readStorageValue(storageArea, chrome, SETTINGS.searchResultTabPosition.key)
     .catch(() => undefined)
     .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
       chrome,
       sourceTab,
-      SETTINGS.normalizeSearchResultTabPosition(value)
+      SETTINGS.searchResultTabPosition.parse(value)
     ));
 }
 
@@ -293,8 +290,8 @@ function setRestrictedActionFromBrowserNewtabProvider(
   const url = getResolvedTabUrl(tab);
   markRestrictedActionAutoSelected();
   const payload = {
-    [RESTRICTED_ACTION_STORAGE_KEY]: 'none',
-    [RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
+    [restrictedAction.key]: 'none',
+    [restrictedActionAutoBrowserSettingDone.key]: true
   };
   void storageArea.set(payload);
   logHotkeyDebug('restricted-action-auto-browser-setting', {

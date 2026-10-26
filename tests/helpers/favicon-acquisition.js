@@ -5,12 +5,12 @@
 // shortcut asks it for an icon, keeps a snapshot and edits it in the
 // shortcut editor.
 
-const settings = require('../../src/domain/settings.ts');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const faviconCache = require('../../src/domain/favicon/favicon-cache.ts');
 const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
 const { loadBackground } = require('./background-harness');
 const { createNewtabPage } = require('./newtab-page');
+const { newtabShortcutFaviconCache } = require('../../src/domain/settings/newtab-shortcuts.ts');
 
 const EXTENSION_ORIGIN = 'chrome-extension://lumno-test';
 
@@ -42,9 +42,9 @@ function createAcquisition(options = {}) {
   };
   const placeholderImage = options.placeholderImage || png(16, 0);
   const firefox = options.firefox || null;
-  const sync = { [settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]: options.enhanced !== false };
+  const sync = { [settings.faviconEnhancedFetchEnabled.key]: options.enhanced !== false };
   if (options.excluded) {
-    sync[settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY] = [{ pattern: options.excluded === true ? 'chrome.com' : options.excluded, matchModes: ['suffix'] }];
+    sync[settings.faviconRequestBlacklist.key] = [{ pattern: options.excluded === true ? 'chrome.com' : options.excluded, matchModes: ['suffix'] }];
   }
   const answer = (callback, value) => {
     if (typeof callback === 'function') {
@@ -101,7 +101,7 @@ function createAcquisition(options = {}) {
   };
 }
 
-const SNAPSHOT_KEY = shortcutFavicon.DEFAULT_STORAGE_KEY;
+const SNAPSHOT_KEY = newtabShortcutFaviconCache.key;
 const PERSISTED_DATA_KEY = faviconCache.DEFAULTS.faviconDataPersistStorageKey;
 
 // A New Tab with one shortcut to `pageUrl` (stored with `iconSource`) that

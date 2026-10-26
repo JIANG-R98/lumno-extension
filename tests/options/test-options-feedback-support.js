@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 const { getPageScripts } = require('../helpers/runtime-scripts');
@@ -53,7 +53,7 @@ function testCopy() {
 
 async function openPage(language, disabledSiteSearch) {
   const page = await createOptionsPage({
-    sync: { [settings.LANGUAGE_STORAGE_KEY]: language, [settings.SITE_SEARCH_DISABLED_STORAGE_KEY]: disabledSiteSearch || [] }
+    sync: { [settings.language.key]: language, [settings.siteSearchDisabled.key]: disabledSiteSearch || [] }
   });
   await page.settle(400);
   page.channels = () => Array.from(page.byId(HOST_ID).querySelectorAll('._x_extension_feedback_support_link_2026_unique_'));
@@ -107,14 +107,14 @@ async function testChannels() {
 async function testHelpCenterAskFollowsTheSiteSearch() {
   const on = await openPage('en');
   assert.strictEqual(on.helpCenter(), 'ask', 'with lm on, the Help Center row should offer asking in the search box');
-  on.changeStorage('sync', settings.SITE_SEARCH_DISABLED_STORAGE_KEY, ['lm']);
+  on.changeStorage('sync', settings.siteSearchDisabled.key, ['lm']);
   await on.settle(300);
   assert.strictEqual(on.helpCenter(), 'link', 'turning lm off should re-render the feedback section');
   on.close();
 
   const off = await openPage('en', ['lm']);
   assert.strictEqual(off.helpCenter(), 'link', 'with lm off, the row should link to the Help Center');
-  off.changeStorage('sync', settings.SITE_SEARCH_DISABLED_STORAGE_KEY, []);
+  off.changeStorage('sync', settings.siteSearchDisabled.key, []);
   await off.settle(300);
   assert.strictEqual(off.helpCenter(), 'ask', 'turning lm back on should bring back the ask demo');
   off.close();

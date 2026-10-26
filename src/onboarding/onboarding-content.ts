@@ -1,5 +1,5 @@
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
-import * as SETTINGS from '../domain/settings';
+import * as SETTINGS from '../domain/settings/locale';
 import { readRemixIconName, type RemixIconName } from '../shared/ui/remix-icon';
 
 // The copy one language reads; every written locale has all of it.

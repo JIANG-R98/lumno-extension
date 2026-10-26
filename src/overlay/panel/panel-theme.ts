@@ -2,7 +2,7 @@
 // watching the page for theme changes, the font family, and the CSS
 // variables the panel draws with.
 import type * as Settings from '../../domain/settings';
-import type { ThemeMode } from '../../domain/settings';
+import type { ThemeMode } from '../../domain/settings/appearance';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import * as LumnoOverlayPageTheme from '../page-theme';

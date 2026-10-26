@@ -10,6 +10,7 @@ import type { SectionView } from './options-section-view';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { GetMessage } from './options-types';
 import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
+import { searchResultSourceTypes } from '../domain/settings/search';
 
 interface GeneralSearchSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
@@ -19,11 +20,11 @@ interface GeneralSearchSectionDeps {
     set(items: StorageItems): unknown;
   } | null;
   SETTINGS: Pick<typeof Settings,
-    'SEARCH_RESULT_TAB_POSITION_STORAGE_KEY' | 'SEARCH_RESULT_PRIORITY_STORAGE_KEY' |
-    'SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY' | 'SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY' |
-    'OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY' | 'SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY' |
-    'normalizeSearchResultTabPosition' | 'normalizeSearchResultPriority' | 'normalizeSearchResultSourceTypes' |
-    'normalizeSearchResultDisplayLimit' | 'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeSearchFuzzyPinyinEnabled'>;
+    'searchResultTabPosition' | 'searchResultPriority' |
+    'searchResultSourceTypes' | 'searchResultDisplayLimit' |
+    'overlayOpenTabsDefaultVisible' | 'searchFuzzyPinyinEnabled' |
+    'searchResultTabPosition' | 'searchResultPriority' | 'searchResultSourceTypes' |
+    'searchResultDisplayLimit' | 'overlayOpenTabsDefaultVisible' | 'searchFuzzyPinyinEnabled'>;
   orderController: Pick<ReturnType<typeof createSearchSourceOrderController>,
     'sortLocalSourceTypes' | 'moveLocal' | 'resetLocal' | 'isLocalDefault' | 'attachLocalDrag'>;
   getMessage: GetMessage;
@@ -49,42 +50,41 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     getViewportTopInset,
     hideTooltip
   } = deps;
-  const SOURCE_TYPES_KEY = SETTINGS.SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY;
 
   const render = (): void => controller.render({ rows: getRows() });
   const tabPosition = createSectionSetting({
-    storageKey: SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSearchResultTabPosition,
+    storageKey: SETTINGS.searchResultTabPosition.key,
+    normalize: SETTINGS.searchResultTabPosition.parse,
     refreshSelects: true,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, () => render());
   const priority = createSectionSetting({
-    storageKey: SETTINGS.SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSearchResultPriority,
+    storageKey: SETTINGS.searchResultPriority.key,
+    normalize: SETTINGS.searchResultPriority.parse,
     refreshSelects: true,
     repairOnChange: false
   }, storageArea, () => render());
   const displayLimit = createSectionSetting({
-    storageKey: SETTINGS.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSearchResultDisplayLimit
+    storageKey: SETTINGS.searchResultDisplayLimit.key,
+    normalize: SETTINGS.searchResultDisplayLimit.parse
   }, storageArea, () => render());
   const openTabsDefault = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayOpenTabsDefaultVisible
+    storageKey: SETTINGS.overlayOpenTabsDefaultVisible.key,
+    normalize: SETTINGS.overlayOpenTabsDefaultVisible.parse
   }, storageArea, () => render());
   const fuzzyPinyin = createSectionSetting({
-    storageKey: SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSearchFuzzyPinyinEnabled
+    storageKey: SETTINGS.searchFuzzyPinyinEnabled.key,
+    normalize: SETTINGS.searchFuzzyPinyinEnabled.parse
   }, storageArea, () => render());
   const toggles = [openTabsDefault, fuzzyPinyin];
-  let sourceTypes: SearchSourceType[] = SETTINGS.normalizeSearchResultSourceTypes(undefined);
+  let sourceTypes: SearchSourceType[] = SETTINGS.searchResultSourceTypes.parse(undefined);
 
   function saveSourceTypes(value: unknown): void {
-    sourceTypes = SETTINGS.normalizeSearchResultSourceTypes(value);
+    sourceTypes = SETTINGS.searchResultSourceTypes.parse(value);
     render();
     if (storageArea) {
-      storageArea.set({ [SOURCE_TYPES_KEY]: sourceTypes });
+      storageArea.set({ [SETTINGS.searchResultSourceTypes.key]: sourceTypes });
     }
   }
 
@@ -99,36 +99,36 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     },
     onSelect(key, value) {
       if (key === tabPosition.storageKey) {
-        tabPosition.change(SETTINGS.normalizeSearchResultTabPosition(value));
+        tabPosition.change(SETTINGS.searchResultTabPosition.parse(value));
       } else if (key === priority.storageKey) {
-        priority.change(SETTINGS.normalizeSearchResultPriority(value));
+        priority.change(SETTINGS.searchResultPriority.parse(value));
       }
     },
     onSlide(key, value) {
       if (key === displayLimit.storageKey) {
-        displayLimit.change(SETTINGS.normalizeSearchResultDisplayLimit(value));
+        displayLimit.change(SETTINGS.searchResultDisplayLimit.parse(value));
       }
     },
     onCheck(key, values) {
-      if (key === SOURCE_TYPES_KEY) {
+      if (key === SETTINGS.searchResultSourceTypes.key) {
         saveSourceTypes(values);
       }
     },
     onMove(key, fromIndex, toIndex) {
-      if (key === SOURCE_TYPES_KEY) {
+      if (key === SETTINGS.searchResultSourceTypes.key) {
         orderController.moveLocal(getOrderedSourceTypes(), fromIndex, toIndex);
       }
     },
     // Every type back on and in its usual order; the order step can be undone.
     onReset(key) {
-      if (key !== SOURCE_TYPES_KEY) {
+      if (key !== SETTINGS.searchResultSourceTypes.key) {
         return;
       }
       orderController.resetLocal();
       saveSourceTypes(SOURCE_TYPES.map((item) => item.value));
       hideTooltip();
     },
-    attachDrag: (key, dragHost) => (key === SOURCE_TYPES_KEY ? orderController.attachLocalDrag(dragHost) : () => {}),
+    attachDrag: (key, dragHost) => (key === SETTINGS.searchResultSourceTypes.key ? orderController.attachLocalDrag(dragHost) : () => {}),
     getViewportTopInset
   });
 
@@ -198,9 +198,9 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
       },
       {
         type: 'checkbox-group',
-        key: SOURCE_TYPES_KEY,
+        key: SETTINGS.searchResultSourceTypes.key,
         title: { text: getMessage('settings_search_result_sources_title', '显示结果类型') },
-        groupId: '_x_extension_search_result_source_types_2026_unique_',
+        groupId: searchResultSourceTypes.key,
         ariaLabel: getMessage('settings_search_result_sources_title', '显示结果类型'),
         checkboxes: {
           sortable: true,
@@ -267,8 +267,8 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   function bindSettings(settingBinder: SectionSettingBinder): void {
     [tabPosition, priority, displayLimit, ...toggles].forEach((entry) => entry.bind(settingBinder));
     settingBinder.bindSetting({
-      key: SOURCE_TYPES_KEY,
-      normalize: SETTINGS.normalizeSearchResultSourceTypes,
+      key: SETTINGS.searchResultSourceTypes.key,
+      normalize: SETTINGS.searchResultSourceTypes.parse,
       apply(value) {
         sourceTypes = value;
         render();
@@ -279,12 +279,12 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     if (!storageArea) {
       return;
     }
-    storageArea.get([SOURCE_TYPES_KEY], (items) => {
-      const stored = items ? items[SOURCE_TYPES_KEY] : undefined;
-      sourceTypes = SETTINGS.normalizeSearchResultSourceTypes(stored);
+    storageArea.get([SETTINGS.searchResultSourceTypes.key], (items) => {
+      const stored = items ? items[SETTINGS.searchResultSourceTypes.key] : undefined;
+      sourceTypes = SETTINGS.searchResultSourceTypes.parse(stored);
       render();
       if (!Array.isArray(stored) || JSON.stringify(stored) !== JSON.stringify(sourceTypes)) {
-        storageArea.set({ [SOURCE_TYPES_KEY]: sourceTypes });
+        storageArea.set({ [SETTINGS.searchResultSourceTypes.key]: sourceTypes });
       }
     });
   }

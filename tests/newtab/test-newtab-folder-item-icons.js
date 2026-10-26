@@ -3,6 +3,7 @@ const icons = require('../../src/newtab/bookmarks/folder-item-icons');
 require('../../src/domain/shortcuts-store');
 require('../../src/domain/favicon/shortcut-favicon');
 const { createNewtabPage } = require('../helpers/newtab-page');
+const { shortcutFolderItemIcons } = require('../../src/domain/settings/newtab-shortcuts.ts');
 const png = (text) => `data:image/png;base64,${Buffer.from(text).toString('base64')}`;
 
 // On New Tab: a website inside a bookmark folder opened from a shortcut can
@@ -15,7 +16,7 @@ async function openFolderPage(savedIcons) {
       { id: '11', title: 'MDN', url: 'https://developer.mozilla.org/' },
       { id: '12', title: 'Sub', children: [] }
     ] }],
-    local: { [icons.DEFAULT_STORAGE_KEY]: savedIcons }
+    local: { [shortcutFolderItemIcons.key]: savedIcons }
   });
   await page.settle(400);
   const click = (element) => element.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
@@ -35,7 +36,7 @@ async function openFolderPage(savedIcons) {
     page,
     openFolder,
     dialog,
-    saved: () => page.storage.local.data[icons.DEFAULT_STORAGE_KEY] || {},
+    saved: () => page.storage.local.data[shortcutFolderItemIcons.key] || {},
     async edit(index) {
       const [item] = (await openFolder()).slice(index, index + 1);
       item.dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20, button: 2 }));
@@ -113,15 +114,15 @@ async function testOnNewTab() {
     get(keys, callback) { callback({ [keys[0]]: this.data[keys[0]] }); },
     set(values, callback) { this.writes += 1; Object.assign(this.data, JSON.parse(JSON.stringify(values))); callback(); }
   };
-  area.data[icons.DEFAULT_STORAGE_KEY] = { a: { iconSource: 'custom', dataUrl: png('a') }, bad: { iconSource: 'service' } };
+  area.data[shortcutFolderItemIcons.key] = { a: { iconSource: 'custom', dataUrl: png('a') }, bad: { iconSource: 'service' } };
   const runtime = icons.createStore({ storageArea: area, chrome: {} });
   await runtime.ready;
   assert.deepStrictEqual(runtime.get('a'), { iconSource: 'custom', dataUrl: png('a') });
   assert.strictEqual(runtime.get('bad'), null);
   await runtime.update({ b: { iconSource: 'builtin' }, a: null });
-  assert.deepStrictEqual(area.data[icons.DEFAULT_STORAGE_KEY], { b: { iconSource: 'builtin' } });
+  assert.deepStrictEqual(area.data[shortcutFolderItemIcons.key], { b: { iconSource: 'builtin' } });
   await runtime.update({ c: { iconSource: 'favicon-is', dataUrl: png('c') } }, (id) => id !== 'b');
-  assert.deepStrictEqual(Object.keys(area.data[icons.DEFAULT_STORAGE_KEY]), ['c'], 'removed bookmarks lose their icons');
+  assert.deepStrictEqual(Object.keys(area.data[shortcutFolderItemIcons.key]), ['c'], 'removed bookmarks lose their icons');
   const writes = area.writes;
   await runtime.update({ c: { iconSource: 'favicon-is', dataUrl: png('c') } });
   assert.strictEqual(area.writes, writes, 'unchanged icons are not rewritten');

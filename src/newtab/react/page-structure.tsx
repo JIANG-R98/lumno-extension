@@ -6,13 +6,14 @@ import { createRenderStore, type RenderStore } from '../../shared/react/render-s
 import { BookmarkHeader, type BookmarkHeaderElements, type BookmarkHeaderModel, type BookmarkHeaderStore } from './bookmark-header';
 import { RecentModeSwitch, type RecentModeSwitchModel } from './recent-mode-switch';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { newtabShortcutsLegacy } from '../../domain/settings/newtab-shortcuts';
 
 export const PAGE_STRUCTURE_IDS = Object.freeze({
   suggestionsContainer:
     '_x_extension_newtab_suggestions_container_2024_unique_',
   suggestionsSurface: '_x_extension_newtab_suggestions_surface_2026_unique_',
   suggestionsOutline: '_x_extension_newtab_suggestions_outline_2026_unique_',
-  shortcutSection: '_x_extension_newtab_shortcuts_2026_unique_',
+  shortcutSection: newtabShortcutsLegacy.key,
   bookmarkSection: '_x_extension_newtab_bookmarks_2024_unique_',
   bookmarkGrid: '_x_extension_newtab_bookmarks_grid_2024_unique_',
   recentSection: '_x_extension_newtab_recent_sites_2024_unique_',

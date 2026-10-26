@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // The overlay font rows in Settings: listing the installed fonts, saving a
@@ -7,9 +7,9 @@ const { createOptionsPage } = require('../helpers/options-page');
 
 const FONT_SELECT = '_x_extension_overlay_font_select_2026_unique_';
 const FALLBACK_SELECT = '_x_extension_overlay_font_fallback_select_2026_unique_';
-const FAMILY_KEY = settings.OVERLAY_FONT_FAMILY_STORAGE_KEY;
-const FALLBACK_KEY = settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY;
-const LABELS_KEY = settings.OVERLAY_FONT_LABELS_STORAGE_KEY;
+const FAMILY_KEY = settings.overlayFontFamily.key;
+const FALLBACK_KEY = settings.overlayFontFallback.key;
+const LABELS_KEY = settings.overlayFontLabels.key;
 const FONTS = [{ fontId: 'Inter', displayName: 'Inter' }, { fontId: 'PingFangSC', displayName: '苹方-简' }];
 
 const fontWrites = (area) => area.writes.filter((write) => Object.keys(write).some((key) => key.includes('overlay_font')));

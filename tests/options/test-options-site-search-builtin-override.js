@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // Editing a built-in site search under a new trigger stores a custom copy
@@ -15,16 +15,16 @@ const OVERRIDE = {
   category: 'searchEngine'
 };
 const SEED = {
-  [settings.SITE_SEARCH_STORAGE_KEY]: [OVERRIDE],
-  [settings.SITE_SEARCH_DISABLED_STORAGE_KEY]: ['yt']
+  [settings.siteSearchCustom.key]: [OVERRIDE],
+  [settings.siteSearchDisabled.key]: ['yt']
 };
 
 async function openPage() {
   const page = await createOptionsPage({ sync: JSON.parse(JSON.stringify(SEED)) });
   await page.settle(300);
   page.saved = () => ({
-    custom: (page.storage.sync.data[settings.SITE_SEARCH_STORAGE_KEY] || []).map((item) => item.key),
-    disabled: page.storage.sync.data[settings.SITE_SEARCH_DISABLED_STORAGE_KEY] || []
+    custom: (page.storage.sync.data[settings.siteSearchCustom.key] || []).map((item) => item.key),
+    disabled: page.storage.sync.data[settings.siteSearchDisabled.key] || []
   });
   // Clicks the confirm button of the open confirmation, if one asks.
   page.confirm = async () => {
@@ -65,8 +65,8 @@ async function testClearingCustomProvidersRestoresBuiltIns() {
   await page.click(page.byId('_x_extension_custom_clear_2024_unique_'));
   await page.confirm();
   assert.deepStrictEqual(page.saved(), { custom: [], disabled: [] }, 'clearing custom providers should restore built-ins hidden by overrides');
-  const clearing = page.storage.sync.writes.slice(writes).filter((write) => Object.hasOwn(write, settings.SITE_SEARCH_STORAGE_KEY));
-  assert.ok(clearing.length === 1 && Object.hasOwn(clearing[0], settings.SITE_SEARCH_DISABLED_STORAGE_KEY),
+  const clearing = page.storage.sync.writes.slice(writes).filter((write) => Object.hasOwn(write, settings.siteSearchCustom.key));
+  assert.ok(clearing.length === 1 && Object.hasOwn(clearing[0], settings.siteSearchDisabled.key),
     'in the same storage write');
   page.close();
 }

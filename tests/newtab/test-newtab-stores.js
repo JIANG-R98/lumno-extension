@@ -3,6 +3,7 @@ const path = require('path');
 const recentStore = require('../../src/domain/recent-sites-store.ts');
 const recentSitesStorage = require('../../src/platform/recent-sites-storage.ts');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
+const { pinnedRecentSites } = require('../../src/domain/settings/recent-sites.ts');
 
 path.resolve(__dirname, '..', '..');
 
@@ -145,7 +146,7 @@ async function testRecentStore() {
   );
 
   const storage = createMemoryStorage({
-    [recentStore.DEFAULT_PINNED_KEY]: [
+    [pinnedRecentSites.key]: [
       { title: 'A', url: 'https://a.example/' },
       { title: 'A duplicate', url: 'https://a.example/' },
       { title: 'B', url: 'https://b.example/' },

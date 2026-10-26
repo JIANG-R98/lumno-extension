@@ -1,10 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
-const settingsMigrations = require('../../src/domain/settings-migrations.ts');
+const settingsMigrations = { ...require('../../src/domain/settings/migrations.ts'), ...require('../../src/domain/settings/removed.ts'), settingsSchemaVersion: require('../../src/domain/settings/sync-state.ts').settingsSchemaVersion };
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // The worker warms icons for the user's own site-search providers as it
 // starts: bundled providers keep their packaged tiles, cached icons are
@@ -35,7 +35,7 @@ async function run() {
     }
   };
   const local = await siteSearchIconCacheStorage([{ provider: CUSTOM[1], dataUrl: ICON }]);
-  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.forEach((key) => {
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_KEYS.forEach((key) => {
     local[key] = { stale: true };
   });
   const harness = loadBackground({
@@ -78,11 +78,11 @@ async function run() {
     const pageHost = new URL(provider.template.replace('{query}', 'x')).hostname;
     assert.ok(!warmedHosts.has(pageHost), `the bundled ${provider.key} provider should keep its packaged tile`);
   });
-  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.forEach((key) => {
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_KEYS.forEach((key) => {
     assert.ok(!(key in harness.storage.local.data), `${key} from an earlier cache layout should be removed`);
   });
   const reads = harness.storage.local.reads.flatMap((keys) => (Array.isArray(keys) ? keys : [keys]));
-  assert.ok(reads.includes(shortcutFavicon.SITE_SEARCH_STORAGE_KEY), 'warming should start from the canonical icon cache');
+  assert.ok(reads.includes(siteSearchIconCache.key), 'warming should start from the canonical icon cache');
 }
 
 run().then(() => {

@@ -3,15 +3,12 @@
 // prefetch, the area provider-scoped settings live in (local-primary mode),
 // copying local settings into sync, writing back repaired values, and the
 // copies pages keep in localStorage for their next load.
-import {
-  LOCAL_PRIMARY_STORAGE_KEY,
-  NEWTAB_INPUT_AUTO_FOCUS_CACHE_KEY,
-  NEWTAB_LOCALE_CACHE_KEY,
-  NEWTAB_SHORTCUTS_V2_STORAGE_KEYS,
-  normalizeLocale,
-  normalizeMotionEffectsEnabled,
-  normalizeNewtabInputAutoFocusEnabled
-} from '../domain/settings';
+import { motionEffectsEnabled } from '../domain/settings/appearance';
+import { normalizeLocale } from '../domain/settings/locale';
+import { newtabInputAutoFocusEnabled } from '../domain/settings/newtab-page';
+import { NEWTAB_SHORTCUTS_GROUP_KEYS } from '../domain/settings/newtab-shortcuts';
+import { newtabInputAutoFocusCache, newtabLocaleCache } from '../domain/settings/page-cache';
+import { localPrimary } from '../domain/settings/sync-state';
 import type {
   StorageAreaLike,
   StorageChangeEventLike,
@@ -130,8 +127,8 @@ function toError(error: unknown, fallbackMessage: string): Error {
 // save keyed off their head: all of them while sync lacks a head (replacing
 // any stray chunk there), none once it has one. Nothing is ever removed.
 function migrateLocalSettingsToSync(localArea: StorageAreaLike, syncArea: StorageAreaLike, keys: string[]): void {
-  const [groupHeadKey] = NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
-  const isGroupKey = (key: string) => NEWTAB_SHORTCUTS_V2_STORAGE_KEYS.includes(key);
+  const [groupHeadKey] = NEWTAB_SHORTCUTS_GROUP_KEYS;
+  const isGroupKey = (key: string) => NEWTAB_SHORTCUTS_GROUP_KEYS.includes(key);
   localArea.get(keys, (localItems) => {
     // A failed read has no items: nothing to copy then.
     const localResult = localItems || {};
@@ -229,9 +226,9 @@ function writeSettingRepairs(
 function cacheNewtabInputAutoFocusEnabled(value: unknown): void {
   try {
     const localStorageObj = globalThis.localStorage;
-    const next = normalizeNewtabInputAutoFocusEnabled(value) ? 'true' : 'false';
-    if (localStorageObj && localStorageObj.getItem(NEWTAB_INPUT_AUTO_FOCUS_CACHE_KEY) !== next) {
-      localStorageObj.setItem(NEWTAB_INPUT_AUTO_FOCUS_CACHE_KEY, next);
+    const next = newtabInputAutoFocusEnabled.parse(value) ? 'true' : 'false';
+    if (localStorageObj && localStorageObj.getItem(newtabInputAutoFocusCache.key) !== next) {
+      localStorageObj.setItem(newtabInputAutoFocusCache.key, next);
     }
   } catch (_error) {
     // The copy is only a fast path; the focus entry falls back to reading storage.
@@ -243,16 +240,16 @@ function cacheNewtabLocale(locale: unknown): void {
   try {
     const localStorageObj = globalThis.localStorage;
     const next = normalizeLocale(locale);
-    if (localStorageObj && localStorageObj.getItem(NEWTAB_LOCALE_CACHE_KEY) !== next) {
-      localStorageObj.setItem(NEWTAB_LOCALE_CACHE_KEY, next);
+    if (localStorageObj && localStorageObj.getItem(newtabLocaleCache.key) !== next) {
+      localStorageObj.setItem(newtabLocaleCache.key, next);
     }
   } catch (_error) {
     // The copy is only a fast path; newtab.js fetches the messages itself without it.
   }
 }
 
-function shouldSkipEntryMotion(windowRef: MotionWindow | null | undefined, motionEffectsEnabled: unknown): boolean {
-  if (!normalizeMotionEffectsEnabled(motionEffectsEnabled)) {
+function shouldSkipEntryMotion(windowRef: MotionWindow | null | undefined, motionEffectsValue: unknown): boolean {
+  if (!motionEffectsEnabled.parse(motionEffectsValue)) {
     return true;
   }
   return Boolean(
@@ -693,11 +690,11 @@ function createProviderStorageRuntime(
           modeKnown = false;
           try { console.warn('[Lumno] Could not read the settings storage mode.', lastError); } catch (_error) { /* ignore */ }
         }
-        if (!lastError && !observedModeChange && result && result[LOCAL_PRIMARY_STORAGE_KEY] === true) activeAreaName = 'local';
+        if (!lastError && !observedModeChange && result && result[localPrimary.key] === true) activeAreaName = 'local';
         resolve(activeAreaName);
       };
       try {
-        const pending = modeArea.get([LOCAL_PRIMARY_STORAGE_KEY], (result) => finish(result));
+        const pending = modeArea.get([localPrimary.key], (result) => finish(result));
         if (pending && typeof pending.then === 'function') {
           pending.then((result) => finish(result)).catch((error: unknown) => finish(null, error || new Error('storage-read-failed')));
         }
@@ -708,10 +705,10 @@ function createProviderStorageRuntime(
   const onChanged = storage && storage.onChanged;
   if (onChanged && typeof onChanged.addListener === 'function') {
     onChanged.addListener((changes: StorageChanges, areaName: string) => {
-      if (areaName === 'local' && changes[LOCAL_PRIMARY_STORAGE_KEY]) {
+      if (areaName === 'local' && changes[localPrimary.key]) {
         observedModeChange = true;
         modeKnown = true;
-        activeAreaName = changes[LOCAL_PRIMARY_STORAGE_KEY].newValue === true
+        activeAreaName = changes[localPrimary.key].newValue === true
           ? 'local' : (syncArea ? 'sync' : 'local');
       }
     });

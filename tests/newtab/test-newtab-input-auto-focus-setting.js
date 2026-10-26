@@ -1,12 +1,12 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // Whether New Tab puts the cursor in its search box when it opens. Off by
 // default, so the browser's address bar keeps focus.
 
-const KEY = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY;
+const KEY = settings.newtabInputAutoFocusEnabled.key;
 
 async function testSettingsMarkup() {
   const page = await createOptionsPage();
@@ -21,7 +21,7 @@ async function testSettingsMarkup() {
   assert.ok(doc.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_'),
     'Settings should keep a second entry for the shared New Tab shortcuts switch');
   assert.strictEqual(KEY, '_x_extension_newtab_input_auto_focus_enabled_2026_unique_');
-  assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(KEY), 'the preference should sync');
+  assert.ok(settings.BROWSER_SYNC_KEYS.includes(KEY), 'the preference should sync');
   page.close();
 }
 

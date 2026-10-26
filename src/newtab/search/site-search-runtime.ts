@@ -46,7 +46,7 @@ interface SiteSearchRuntimeDeps {
   focusSearchInputPreservingScroll(): boolean;
   requestSuggestions: RequestSuggestions;
   storageChanges: Pick<StorageChangeRegistry, 'on'>;
-  SETTINGS: { SEARCH_SOURCE_ORDER_STORAGE_KEY: string };
+  SETTINGS: { searchSourceOrder: { key: string } };
   SITE_SEARCH_STORAGE_KEY: string;
   SITE_SEARCH_DISABLED_STORAGE_KEY: string;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'normalizeAggregateSearches'>;
@@ -134,7 +134,7 @@ function createSiteSearchRuntime(deps: SiteSearchRuntimeDeps): void {
 
   // A new order from Settings or another tab reaches an open scope panel now;
   // a closed one reads it when it opens.
-  storageChanges.on(SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY, () => {
+  storageChanges.on(SETTINGS.searchSourceOrder.key, () => {
     if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenu();
     }

@@ -1,9 +1,10 @@
 // The "updated to vX" notice's data: the record the worker publishes after an
 // update (with the release title from GitHub), the person's setting, and how
 // many times each version's notice was shown. shared/update-notice.ts shows it.
-import * as SETTINGS from '../domain/settings';
+import * as SETTINGS from '../domain/settings/features';
 import * as LumnoSettingsStorage from './settings-storage';
 import type { StorageChromeApi } from './settings-storage';
+import { updateNoticeState } from '../domain/settings/features';
 
 // The extension API the notice reads: the manifest version and storage.
 type UpdateNoticeChromeApi = StorageChromeApi & {
@@ -39,8 +40,6 @@ interface PublishOptions {
   reason?: string;
 }
 
-const UPDATE_NOTICE_STORAGE_KEY = '_x_lumno_update_notice_2026_unique_';
-const UPDATE_NOTICE_ENABLED_STORAGE_KEY = SETTINGS.UPDATE_NOTICE_ENABLED_STORAGE_KEY;
 const UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX =
   '_x_lumno_update_notice_display_count_2026_';
 const UPDATE_NOTICE_MAX_DISPLAY_COUNT = 3;
@@ -167,7 +166,7 @@ function shouldShowUpdateNotice(payload: unknown, currentVersion: unknown): bool
 }
 
 function normalizeUpdateNoticeEnabled(value: unknown): boolean {
-  return SETTINGS.normalizeUpdateNoticeEnabled(value);
+  return SETTINGS.updateNoticeEnabled.parse(value);
 }
 
 function getStorageRuntime(chromeApi: UpdateNoticeChromeApi | null | undefined): LumnoSettingsStorage.ProviderStorageRuntime {
@@ -218,11 +217,11 @@ function readStoredValue<T>(chromeApi: UpdateNoticeChromeApi | null | undefined,
 }
 
 function getStoredUpdateNotice(chromeApi?: UpdateNoticeChromeApi | null): Promise<UpdateNotice | null> {
-  return readStoredValue(chromeApi, UPDATE_NOTICE_STORAGE_KEY, normalizeUpdateNoticePayload, null);
+  return readStoredValue(chromeApi, updateNoticeState.key, normalizeUpdateNoticePayload, null);
 }
 
 function getStoredUpdateNoticeEnabled(chromeApi?: UpdateNoticeChromeApi | null): Promise<boolean> {
-  return readStoredValue(chromeApi, UPDATE_NOTICE_ENABLED_STORAGE_KEY, normalizeUpdateNoticeEnabled,
+  return readStoredValue(chromeApi, SETTINGS.updateNoticeEnabled.key, normalizeUpdateNoticeEnabled,
     normalizeUpdateNoticeEnabled(undefined));
 }
 
@@ -240,7 +239,7 @@ function setStoredUpdateNotice(chromeApi: UpdateNoticeChromeApi | null | undefin
     return;
   }
   try {
-    void storageRuntime.area.set({ [UPDATE_NOTICE_STORAGE_KEY]: notice }, () => {
+    void storageRuntime.area.set({ [updateNoticeState.key]: notice }, () => {
       if (typeof callback === 'function') {
         callback(!readLastError(chromeApi));
       }
@@ -345,8 +344,6 @@ function publishUpdateNotice(options?: PublishOptions | null, callback?: (saved:
 
 export type { PublishOptions, ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi };
 export {
-  UPDATE_NOTICE_STORAGE_KEY,
-  UPDATE_NOTICE_ENABLED_STORAGE_KEY,
   UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX,
   UPDATE_NOTICE_MAX_DISPLAY_COUNT,
   RELEASE_DETAILS_URL,

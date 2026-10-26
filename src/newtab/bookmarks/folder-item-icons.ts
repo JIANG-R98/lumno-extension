@@ -2,6 +2,7 @@
 // of their own, so these stay on this device, keyed by local bookmark id,
 // and only show where the folder is opened from a shortcut.
 import type { StorageAreaLike } from '../../domain/storage-port';
+import { shortcutFolderItemIcons } from '../../domain/settings/newtab-shortcuts';
 
 type FolderItemImageSource = 'service' | 'favicon-is' | 'cache' | 'custom';
 type FolderItemShortcutSource = 'service' | 'favicon-is' | 'cache' | 'builtin';
@@ -29,7 +30,6 @@ interface FolderItemIconStoreOptions {
   chrome?: { runtime?: { lastError?: { message?: string } | null } };
 }
 
-const DEFAULT_STORAGE_KEY = '_x_extension_shortcut_folder_item_icons_2026_unique_';
 const MAX_DATA_URL_LENGTH = 192 * 1024;
 const DATA_URL_PATTERN = /^data:image\/(?:png|webp|avif|svg\+xml|x-icon|vnd\.microsoft\.icon|jpeg|jpg|gif);base64,[a-z0-9+/=]+$/i;
 const PLATE_COLOR_PATTERN = /^#[\dA-F]{6}$/;
@@ -103,7 +103,7 @@ function normalizeMap(value: unknown): FolderItemIconMap {
 function createStore(options?: FolderItemIconStoreOptions) {
   const opts = options || {};
   const storageArea = opts.storageArea || null;
-  const storageKey = String(opts.storageKey || DEFAULT_STORAGE_KEY);
+  const storageKey = String(opts.storageKey || shortcutFolderItemIcons.key);
   const getLastError = () => {
     const chromeApi = opts.chrome || globalThis.chrome;
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
@@ -174,5 +174,5 @@ function createStore(options?: FolderItemIconStoreOptions) {
 
 type FolderItemIconStore = ReturnType<typeof createStore>;
 
-export { DEFAULT_STORAGE_KEY, normalizeEntry, normalizeMap, createStore };
+export { normalizeEntry, normalizeMap, createStore };
 export type { FolderItemIcon, FolderItemIconMap, FolderItemIconStore, FolderItemShortcutSettings };

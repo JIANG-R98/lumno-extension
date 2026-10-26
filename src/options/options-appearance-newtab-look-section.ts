@@ -3,7 +3,8 @@
 // clock's face, weight, size, opacity, color and format. One React view
 // draws it; this keeps it in step with storage.
 import type * as Settings from '../domain/settings';
-import type { NewtabGlassStyle, NewtabGlassTheme, NewtabTimeInk, NewtabTopContentMode, NewtabWidthMode } from '../domain/settings';
+import type { NewtabGlassStyle, NewtabGlassTheme, NewtabWidthMode } from '../domain/settings/newtab-page';
+import type { NewtabTimeInk, NewtabTopContentMode } from '../domain/settings/newtab-time';
 import type { StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
@@ -16,16 +17,16 @@ interface AppearanceNewtabLookSectionDeps {
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'NEWTAB_GLASS_STYLE_STORAGE_KEY' | 'NEWTAB_GLASS_THEME_STORAGE_KEY' | 'NEWTAB_WIDTH_MODE_STORAGE_KEY' |
-    'NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY' | 'NEWTAB_TIME_FONT_STORAGE_KEY' | 'NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY' |
-    'NEWTAB_TIME_FONT_SIZE_STORAGE_KEY' | 'NEWTAB_TIME_OPACITY_STORAGE_KEY' | 'NEWTAB_TIME_INK_STORAGE_KEY' |
-    'NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY' | 'NEWTAB_TIME_12_HOUR_STORAGE_KEY' |
+    'newtabGlassStyle' | 'newtabGlassTheme' | 'newtabWidthMode' |
+    'newtabTopContentMode' | 'newtabTimeFont' | 'newtabTimeFontWeight' |
+    'newtabTimeFontSize' | 'newtabTimeOpacity' | 'newtabTimeInk' |
+    'newtabTimeSecondsVisible' | 'newtabTime12Hour' |
     'NEWTAB_TIME_FONTS' | 'NEWTAB_TIME_FONT_SIZE_MIN' | 'NEWTAB_TIME_FONT_SIZE_MAX' | 'NEWTAB_TIME_FONT_SIZE_DEFAULT' |
     'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_MAX' | 'NEWTAB_TIME_OPACITY_DEFAULT' |
-    'normalizeNewtabGlassStyle' | 'normalizeNewtabGlassTheme' | 'normalizeNewtabWidthMode' |
-    'normalizeNewtabTopContentMode' | 'normalizeNewtabTimeFont' | 'normalizeNewtabTimeFontWeight' |
-    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'normalizeNewtabTimeInk' |
-    'normalizeNewtabTimeSecondsVisible' | 'normalizeNewtabTime12Hour' |
+    'newtabGlassStyle' | 'newtabGlassTheme' | 'newtabWidthMode' |
+    'newtabTopContentMode' | 'newtabTimeFont' | 'newtabTimeFontWeight' |
+    'newtabTimeFontSize' | 'newtabTimeOpacity' | 'newtabTimeInk' |
+    'newtabTimeSecondsVisible' | 'newtabTime12Hour' |
     'getNewtabTimeFont' | 'resolveNewtabTimeFontWeight'>;
   getMessage: GetMessage;
   // Asks open New Tab pages to redraw a part of themselves.
@@ -40,73 +41,73 @@ function createAppearanceNewtabLookSection(deps: AppearanceNewtabLookSectionDeps
   const onChange = (): void => render();
   // Unset values stay unset, so opening Options does not write the defaults.
   const glassStyle = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabGlassStyle,
+    storageKey: SETTINGS.newtabGlassStyle.key,
+    normalize: SETTINGS.newtabGlassStyle.parse,
     repairOnLoad: false,
     repairOnChange: false,
     refreshSelects: true
   }, storageArea, onChange);
   const glassTheme = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabGlassTheme,
+    storageKey: SETTINGS.newtabGlassTheme.key,
+    normalize: SETTINGS.newtabGlassTheme.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, onChange);
   const widthMode = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabWidthMode,
+    storageKey: SETTINGS.newtabWidthMode.key,
+    normalize: SETTINGS.newtabWidthMode.parse,
     repairOnChange: false,
     refreshSelects: true
   }, storageArea, onChange);
   const topContent = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTopContentMode,
+    storageKey: SETTINGS.newtabTopContentMode.key,
+    normalize: SETTINGS.newtabTopContentMode.parse,
     refreshSelects: true
   }, storageArea, onChange);
   const timeFont = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeFont,
+    storageKey: SETTINGS.newtabTimeFont.key,
+    normalize: SETTINGS.newtabTimeFont.parse,
     repairOnLoad: false,
     repairOnChange: false,
     refreshSelects: true
   }, storageArea, onChange);
   const timeFontWeight = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeFontWeight
+    storageKey: SETTINGS.newtabTimeFontWeight.key,
+    normalize: SETTINGS.newtabTimeFontWeight.parse
   }, storageArea, onChange);
   const timeFontSize = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeFontSize,
+    storageKey: SETTINGS.newtabTimeFontSize.key,
+    normalize: SETTINGS.newtabTimeFontSize.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, onChange);
   const timeOpacity = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeOpacity,
+    storageKey: SETTINGS.newtabTimeOpacity.key,
+    normalize: SETTINGS.newtabTimeOpacity.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, onChange);
   const timeInk = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeInk,
+    storageKey: SETTINGS.newtabTimeInk.key,
+    normalize: SETTINGS.newtabTimeInk.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, onChange);
   const timeSeconds = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeSecondsVisible,
+    storageKey: SETTINGS.newtabTimeSecondsVisible.key,
+    normalize: SETTINGS.newtabTimeSecondsVisible.parse,
     refreshSelects: true
   }, storageArea, onChange);
   const time12Hour = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTime12Hour,
+    storageKey: SETTINGS.newtabTime12Hour.key,
+    normalize: SETTINGS.newtabTime12Hour.parse,
     refreshSelects: true
   }, storageArea, onChange);
   const toggles = [timeSeconds, time12Hour];
 
   // Each face opens at its own default weight, as in New Tab's panel.
   function changeTimeFont(value: string): void {
-    const font = SETTINGS.normalizeNewtabTimeFont(value);
+    const font = SETTINGS.newtabTimeFont.parse(value);
     const weight = SETTINGS.getNewtabTimeFont(font).defaultWeight;
     timeFont.show(font);
     timeFontWeight.show(weight);
@@ -122,36 +123,36 @@ function createAppearanceNewtabLookSection(deps: AppearanceNewtabLookSectionDeps
     onSelect(key, value) {
       switch (key) {
         case glassStyle.storageKey:
-          glassStyle.change(SETTINGS.normalizeNewtabGlassStyle(value));
+          glassStyle.change(SETTINGS.newtabGlassStyle.parse(value));
           break;
         case glassTheme.storageKey:
-          glassTheme.change(SETTINGS.normalizeNewtabGlassTheme(value));
+          glassTheme.change(SETTINGS.newtabGlassTheme.parse(value));
           break;
         case widthMode.storageKey:
-          widthMode.change(SETTINGS.normalizeNewtabWidthMode(value));
+          widthMode.change(SETTINGS.newtabWidthMode.parse(value));
           notifyNewtabSectionsRefresh('all');
           break;
         case topContent.storageKey:
-          topContent.change(SETTINGS.normalizeNewtabTopContentMode(value));
+          topContent.change(SETTINGS.newtabTopContentMode.parse(value));
           break;
         case timeFont.storageKey:
           changeTimeFont(value);
           break;
         case timeInk.storageKey:
-          timeInk.change(SETTINGS.normalizeNewtabTimeInk(value));
+          timeInk.change(SETTINGS.newtabTimeInk.parse(value));
           break;
       }
     },
     onSlide(key, value) {
       switch (key) {
         case timeFontWeight.storageKey:
-          timeFontWeight.change(SETTINGS.normalizeNewtabTimeFontWeight(value));
+          timeFontWeight.change(SETTINGS.newtabTimeFontWeight.parse(value));
           break;
         case timeFontSize.storageKey:
-          timeFontSize.change(SETTINGS.normalizeNewtabTimeFontSize(value));
+          timeFontSize.change(SETTINGS.newtabTimeFontSize.parse(value));
           break;
         case timeOpacity.storageKey:
-          timeOpacity.change(SETTINGS.normalizeNewtabTimeOpacity(value));
+          timeOpacity.change(SETTINGS.newtabTimeOpacity.parse(value));
           break;
       }
     },

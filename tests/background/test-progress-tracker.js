@@ -2,9 +2,10 @@ const assert = require('assert');
 const progressMatch = require('../../src/domain/progress-match.ts');
 const progressHistory = require('../../src/domain/progress-history.ts');
 const { createProgressTracker } = require('../../src/background/progress-tracker.ts');
+const recentSiteSettings = require('../../src/domain/settings/recent-sites.ts');
 
 const PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
-const HISTORY_KEY = progressHistory.STORAGE_KEY;
+const HISTORY_KEY = recentSiteSettings.progressHistory.key;
 
 function createArea(initial) {
   const data = { ...initial };

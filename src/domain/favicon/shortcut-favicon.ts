@@ -82,8 +82,6 @@ interface SiteSearchIconOptions extends Partial<IconCacheOptions> {
   resolveAssetUrl?: (assetPath: string) => string;
 }
 
-const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_favicon_cache_2026_unique_';
-const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_icon_cache_canonical_2026_unique_';
 const GOOGLE_BRAND_ICON_URL =
   'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
 const SITE_SEARCH_PINNED_ICON_ASSETS: Readonly<Record<string, string>> = Object.freeze({
@@ -1077,8 +1075,6 @@ function getCachedIconDataUrl(cacheMap: unknown, pageUrl: unknown, nowValue?: un
 }
 
 export {
-  DEFAULT_STORAGE_KEY,
-  SITE_SEARCH_STORAGE_KEY,
   GOOGLE_BRAND_ICON_URL,
   SITE_SEARCH_PINNED_ICON_ASSETS,
   SHORTCUT_PINNED_ICON_ASSETS,

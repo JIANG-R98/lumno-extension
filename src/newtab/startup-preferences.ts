@@ -19,6 +19,7 @@ import type { SectionHeaders } from './section-headers';
 import type { SectionLoaders } from './section-loaders';
 import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
+import { progressHistory } from '../domain/settings/recent-sites';
 
 interface StartupPreferencesState {
   progressTrackingEnabled: boolean;
@@ -65,8 +66,8 @@ interface StartupPreferencesDeps extends
   storageArea: StorageAreaLike | null;
   localStorageArea: StorageAreaLike | null;
   settingsRuntimeApi: Pick<typeof LumnoSettings,
-    'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'normalizeProgressTrackingEnabled'>;
-  PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
+    'progressTrackingEnabled' | 'progressTrackingEnabled'>;
+  PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'normalizeHistoryMap'>;
   renderRecentSites: SectionLoaders['renderRecentSites'];
   markRecentDataDirty: SectionLoaders['markRecentDataDirty'];
   loadRecentSites: SectionLoaders['loadRecentSites'];
@@ -180,9 +181,9 @@ function createStartupPreferences(deps: StartupPreferencesDeps) {
 
   if (storageArea) {
     void bootstrapInitialLanguageMode();
-    void storageArea.get([settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
-      pageState.progressTrackingEnabled = settingsRuntimeApi.normalizeProgressTrackingEnabled(
-        result && result[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
+    void storageArea.get([settingsRuntimeApi.progressTrackingEnabled.key], (result) => {
+      pageState.progressTrackingEnabled = settingsRuntimeApi.progressTrackingEnabled.parse(
+        result && result[settingsRuntimeApi.progressTrackingEnabled.key]
       );
       if (pageState.progressTrackingEnabled && pageState.recentSourceItems.length > 0) {
         pageState.recentRenderSignature = '';
@@ -190,8 +191,8 @@ function createStartupPreferences(deps: StartupPreferencesDeps) {
       }
     });
     if (localStorageArea) {
-      void localStorageArea.get([PROGRESS_HISTORY.STORAGE_KEY], (result) => {
-        pageState.progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(result && result[PROGRESS_HISTORY.STORAGE_KEY]);
+      void localStorageArea.get([progressHistory.key], (result) => {
+        pageState.progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(result && result[progressHistory.key]);
       });
     }
     pageState.initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {

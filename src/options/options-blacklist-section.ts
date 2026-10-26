@@ -25,8 +25,8 @@ interface BlacklistSectionDeps {
   blacklistTabApi: Pick<ReturnType<typeof createBlacklistTabApi>, 'createBlacklistTabController'>;
   storageArea: BlacklistStorageArea | null;
   SETTINGS: Pick<typeof Settings,
-    'SEARCH_BLACKLIST_STORAGE_KEY' | 'FAVICON_REQUEST_BLACKLIST_STORAGE_KEY' |
-    'FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY' | 'normalizeFaviconEnhancedFetchEnabled'>;
+    'searchBlacklist' | 'faviconRequestBlacklist' |
+    'faviconEnhancedFetchEnabled' | 'faviconEnhancedFetchEnabled'>;
   blacklistModel: BlacklistModel;
   getMessage: GetMessage;
   showToast(message: string, isError?: boolean): void;
@@ -70,16 +70,16 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
   } = deps;
 
   const search: RuleListState = {
-    storageKey: SETTINGS.SEARCH_BLACKLIST_STORAGE_KEY,
+    storageKey: SETTINGS.searchBlacklist.key,
     items: [],
     formResetVersion: 0
   };
   const favicon: RuleListState = {
-    storageKey: SETTINGS.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
+    storageKey: SETTINGS.faviconRequestBlacklist.key,
     items: [],
     formResetVersion: 0
   };
-  let enhancedFetchEnabled = SETTINGS.normalizeFaviconEnhancedFetchEnabled(undefined);
+  let enhancedFetchEnabled = SETTINGS.faviconEnhancedFetchEnabled.parse(undefined);
 
   const getErrorMessage = (): string => getMessage('toast_error', '操作失败，请重试。');
 
@@ -253,7 +253,7 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
     onEnhancedFetchChange(checked) {
       applyEnhancedFetch(checked);
       if (storageArea) {
-        storageArea.set({ [SETTINGS.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]: checked });
+        storageArea.set({ [SETTINGS.faviconEnhancedFetchEnabled.key]: checked });
       }
     }
   });
@@ -404,8 +404,8 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
       });
     });
     settingBinder.bindSetting({
-      key: SETTINGS.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-      normalize: SETTINGS.normalizeFaviconEnhancedFetchEnabled,
+      key: SETTINGS.faviconEnhancedFetchEnabled.key,
+      normalize: SETTINGS.faviconEnhancedFetchEnabled.parse,
       apply: applyEnhancedFetch
     });
   }

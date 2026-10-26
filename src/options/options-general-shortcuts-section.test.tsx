@@ -51,8 +51,8 @@ describe('Options General shortcuts section', () => {
   it('binds the restricted page action and quick switching', () => {
     const { changes } = setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
-      Settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
-      Settings.RESTRICTED_ACTION_STORAGE_KEY
+      Settings.overlayTabPriority.key,
+      Settings.restrictedAction.key
     ].sort());
   });
 
@@ -80,13 +80,13 @@ describe('Options General shortcuts section', () => {
 
   it('saves the restricted page action together with the one-time setting step', () => {
     const { host, writes, store } = setUp();
-    store(Settings.RESTRICTED_ACTION_STORAGE_KEY, 'lumno');
+    store(Settings.restrictedAction.key, 'lumno');
     const buttons = getTags(host, '#_x_extension_restricted_action_tabs_wrap_2024_unique_ button', 'button');
     expect(buttons.map((button) => button.dataset.active)).toEqual(['true', 'false']);
     act(() => buttons[1]?.click());
     expect(writes).toEqual([{
-      [Settings.RESTRICTED_ACTION_STORAGE_KEY]: 'none',
-      [Settings.RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
+      [Settings.restrictedAction.key]: 'none',
+      [Settings.restrictedActionAutoBrowserSettingDone.key]: true
     }]);
     expect(getTag(host, '#_x_extension_restricted_action_select_2024_unique_', 'select').value).toBe('none');
     expect(getElement(host, '#_x_extension_restricted_action_info_2026_unique_ ._x_extension_info_button_2026_unique_').dataset.tooltip)
@@ -119,7 +119,7 @@ describe('Options General shortcuts section', () => {
     const { host, store } = setUp();
     const toggle = () => getTag(host, '#_x_extension_overlay_tab_quick_switch_2024_unique_', 'input');
     expect(toggle().checked).toBe(true);
-    store(Settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY, false);
+    store(Settings.overlayTabPriority.key, false);
     expect(toggle().checked).toBe(true);
   });
 });

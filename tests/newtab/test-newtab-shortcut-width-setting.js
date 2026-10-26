@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -14,24 +14,24 @@ const locales = ['en', 'ja', 'zh_CN', 'zh_TW'];
 // Keep the old width key readable and exportable so existing sync/import data
 // can seed the new discrete column setting once.
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+  settings.newtabShortcutWidth.key,
   '_x_extension_newtab_shortcut_width_2026_unique_'
 );
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY));
-assert.strictEqual(settings.normalizeNewtabShortcutWidth(undefined), 920);
+assert(settings.BROWSER_SYNC_KEYS.includes(settings.newtabShortcutWidth.key));
+assert.strictEqual(settings.newtabShortcutWidth.parse(undefined), 920);
 
 assert.strictEqual(
-  settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+  settings.newtabShortcutColumns.key,
   '_x_extension_newtab_shortcut_columns_2026_unique_'
 );
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY));
+assert(settings.BROWSER_SYNC_KEYS.includes(settings.newtabShortcutColumns.key));
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MIN, 4);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MAX, 16);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_DEFAULT, 10);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(undefined), 10);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(3), 4);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(10.6), 11);
-assert.strictEqual(settings.normalizeNewtabShortcutColumns(17), 16);
+assert.strictEqual(settings.newtabShortcutColumns.parse(undefined), 10);
+assert.strictEqual(settings.newtabShortcutColumns.parse(3), 4);
+assert.strictEqual(settings.newtabShortcutColumns.parse(10.6), 11);
+assert.strictEqual(settings.newtabShortcutColumns.parse(17), 16);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(360), 4);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(920), 10);
 assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(1440), 16);
@@ -43,9 +43,9 @@ assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MAX, 24);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_DEFAULT, 4);
 
 
-const COLUMNS = settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY;
-const WIDTH = settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY;
-const SIZE = settings.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY;
+const COLUMNS = settings.newtabShortcutColumns.key;
+const WIDTH = settings.newtabShortcutWidth.key;
+const SIZE = settings.newtabShortcutSize.key;
 
 function layout(page) {
   const style = page.document.documentElement.style;

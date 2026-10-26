@@ -1,15 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // The Settings row is covered by src/options/options-appearance-global-section.test.tsx.
 
-assert.strictEqual(settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, '_x_extension_simple_mode_enabled_2026_unique_');
-assert.strictEqual(settings.normalizeSimpleModeEnabled(undefined), false);
-assert.strictEqual(settings.normalizeSimpleModeEnabled(false), false);
-assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);
+assert.strictEqual(settings.simpleModeEnabled.key, '_x_extension_simple_mode_enabled_2026_unique_');
+assert.strictEqual(settings.simpleModeEnabled.parse(undefined), false);
+assert.strictEqual(settings.simpleModeEnabled.parse(false), false);
+assert.strictEqual(settings.simpleModeEnabled.parse(true), true);
 
 // The URL line takes the room the title leaves on both surfaces.
 [
@@ -26,7 +26,7 @@ assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);
 // first results show, and followed when it changes. (What simple mode
 // removes from a row is covered by src/shared/react/search/suggestions.test.tsx.)
 async function testSurface(name) {
-  const stored = { [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true };
+  const stored = { [settings.simpleModeEnabled.key]: true };
   const surface = await openSearchSurface(name, name === 'overlay' ? { settings: stored } : { sync: stored });
   await surface.settle(150);
   await surface.type('cats');
@@ -39,9 +39,9 @@ async function testSurface(name) {
       'New Tab should show the plain query as the search row in simple mode');
   }
   if (name === 'overlay') {
-    surface.page.changeSetting(settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, false);
+    surface.page.changeSetting(settings.simpleModeEnabled.key, false);
   } else {
-    surface.page.changeStorage('sync', settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, false);
+    surface.page.changeStorage('sync', settings.simpleModeEnabled.key, false);
   }
   await surface.settle(100);
   await surface.type('cats!');

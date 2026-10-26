@@ -3,7 +3,12 @@
 // this script owns the browser APIs and the settings it reads and writes.
 import * as LumnoPipMainWorld from '../shared/pip-main-world';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
-import * as LumnoSettings from '../domain/settings';
+import * as AppearanceSettings from '../domain/settings/appearance';
+import * as FeatureSettings from '../domain/settings/features';
+import * as LocaleSettings from '../domain/settings/locale';
+import * as OverlayPanelSettings from '../domain/settings/overlay-panel';
+import * as PageCacheSettings from '../domain/settings/page-cache';
+import * as SyncStateSettings from '../domain/settings/sync-state';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
@@ -12,7 +17,8 @@ import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoUrlGuards from '../platform/url-guards';
 import { readLocaleMessages } from '../domain/locale-messages';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, LocaleMessage } from '../domain/messages';
-import type { OverlaySizeMode, ThemeMode } from '../domain/settings';
+import type { ThemeMode } from '../domain/settings/appearance';
+import type { OverlaySizeMode } from '../domain/settings/overlay-panel';
 import type { StorageChanges } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import { isHtmlElement } from '../shared/dom-guards';
@@ -26,6 +32,7 @@ import type {
 } from './react/popup-view';
 import { getPopupApi } from './react/popup-view';
 import type { RemixIconName } from '../shared/ui/remix-icon';
+import { popupSettingsExpanded } from '../domain/settings/page-cache';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -108,7 +115,6 @@ const SYNC_ATTENTION_STATES: readonly string[] = Object.freeze(['conflict', 'cho
 const SYNC_BUSY_STATES: readonly string[] = Object.freeze(['syncing', 'pending']);
 // Rate limits the background waits out for minutes to hours before retrying.
 const SYNC_THROTTLE_ERRORS: readonly string[] = Object.freeze(['http-429', 'http-503']);
-const SETTINGS_EXPANDED_CACHE_KEY = 'lumno-popup-settings-expanded';
 const OVERFLOW_TOLERANCE_PX = 2;
 const VIDEO_PROBE_TIMEOUT_MS = 250;
 
@@ -409,7 +415,6 @@ type SettingSpecs = { [K in PopupSettingId]: { key: string; normalize(value: unk
 
 function start(): void {
   const chromeApi = globalThis.chrome;
-  const settings = LumnoSettings;
   const urlGuards = LumnoUrlGuards;
   const shortcutDisplay = LumnoShortcutDisplay;
   const reactApi = getPopupApi();
@@ -425,27 +430,27 @@ function start(): void {
   // stored value reads.
   const SETTING_SPECS: Readonly<SettingSpecs> = Object.freeze({
     selectionQuickActions: {
-      key: settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-      normalize: settings.normalizeSelectionQuickActionsEnabled
+      key: FeatureSettings.selectionQuickActionsEnabled.key,
+      normalize: FeatureSettings.selectionQuickActionsEnabled.parse
     },
     overlaySize: {
-      key: settings.OVERLAY_SIZE_MODE_STORAGE_KEY,
-      normalize: settings.normalizeOverlaySizeMode
+      key: OverlayPanelSettings.overlaySizeMode.key,
+      normalize: OverlayPanelSettings.overlaySizeMode.parse
     },
     overlayPageTheme: {
-      key: settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-      normalize: settings.normalizeOverlayPageThemeAdaptationEnabled
+      key: OverlayPanelSettings.overlayPageThemeAdaptationEnabled.key,
+      normalize: OverlayPanelSettings.overlayPageThemeAdaptationEnabled.parse
     },
     overlayOpenTabs: {
-      key: settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-      normalize: settings.normalizeOverlayOpenTabsDefaultVisible
+      key: OverlayPanelSettings.overlayOpenTabsDefaultVisible.key,
+      normalize: OverlayPanelSettings.overlayOpenTabsDefaultVisible.parse
     },
     theme: {
-      key: settings.THEME_STORAGE_KEY,
-      normalize: settings.normalizeThemeMode
+      key: AppearanceSettings.themeMode.key,
+      normalize: AppearanceSettings.themeMode.parse
     },
     autoPip: {
-      key: settings.AUTO_PIP_ENABLED_STORAGE_KEY,
+      key: FeatureSettings.autoPipEnabled.key,
       normalize: (value: unknown) => value !== false
     }
   });
@@ -517,7 +522,7 @@ function start(): void {
   // Whether the settings were left open is this browser's own convenience.
   function readSettingsExpanded(): boolean {
     try {
-      return globalThis.localStorage.getItem(SETTINGS_EXPANDED_CACHE_KEY) === 'true';
+      return globalThis.localStorage.getItem(popupSettingsExpanded.key) === 'true';
     } catch (error) {
       return false;
     }
@@ -525,7 +530,7 @@ function start(): void {
 
   function writeSettingsExpanded(expanded: boolean): void {
     try {
-      globalThis.localStorage.setItem(SETTINGS_EXPANDED_CACHE_KEY, expanded ? 'true' : 'false');
+      globalThis.localStorage.setItem(popupSettingsExpanded.key, expanded ? 'true' : 'false');
     } catch (error) {
       // The popup opens with the settings folded next time.
     }
@@ -636,7 +641,7 @@ function start(): void {
 
   function cacheThemeMode(mode: ThemeMode): void {
     try {
-      globalThis.localStorage.setItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY, mode);
+      globalThis.localStorage.setItem(PageCacheSettings.optionsThemePreload.key, mode);
     } catch (error) {
       // The next popup paints the system theme first instead.
     }
@@ -648,7 +653,7 @@ function start(): void {
     if (!isSettingId(id)) return;
     const spec = SETTING_SPECS[id];
     const updates: Record<string, unknown> = id === 'theme'
-      ? settings.createGlobalThemeModeStorageUpdate(rawValue)
+      ? AppearanceSettings.createGlobalThemeModeStorageUpdate(rawValue)
       : { [spec.key]: spec.normalize(rawValue) };
     setSetting(id, updates[spec.key]);
     if (id === 'theme') {
@@ -873,8 +878,8 @@ function start(): void {
   }
 
   function onStorageChanged(changes: StorageChanges, areaName: string): void {
-    if (areaName === 'local' && changes[settings.WEBDAV_STATUS_STORAGE_KEY]) {
-      state.syncStatus = readSyncStatus(changes[settings.WEBDAV_STATUS_STORAGE_KEY].newValue);
+    if (areaName === 'local' && changes[SyncStateSettings.webdavStatus.key]) {
+      state.syncStatus = readSyncStatus(changes[SyncStateSettings.webdavStatus.key].newValue);
       render();
     }
     if (!provider.isActiveAreaName(areaName)) return;
@@ -885,9 +890,9 @@ function start(): void {
       setSetting(id, change.newValue);
       changed = true;
     });
-    if (changes[settings.THEME_STORAGE_KEY]) applyTheme();
-    if (changes[settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY]) {
-      state.documentPipEnabled = changes[settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY].newValue === true;
+    if (changes[AppearanceSettings.themeMode.key]) applyTheme();
+    if (changes[FeatureSettings.documentPipEnabled.key]) {
+      state.documentPipEnabled = changes[FeatureSettings.documentPipEnabled.key].newValue === true;
       changed = true;
     }
     if (changed) render();
@@ -897,19 +902,19 @@ function start(): void {
     const [activeTab, stored, local, shortcuts] = await Promise.all([
       queryActiveTab(),
       provider.ready.then(() => provider.area.get([
-        settings.LANGUAGE_STORAGE_KEY,
-        settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
+        LocaleSettings.language.key,
+        FeatureSettings.documentPipEnabled.key,
         ...settingIds.map((id) => SETTING_SPECS[id].key)
       ])).catch(() => ({})),
-      readLocalValues([settings.WEBDAV_STATUS_STORAGE_KEY]),
+      readLocalValues([SyncStateSettings.webdavStatus.key]),
       readShortcuts()
     ]);
     const values: Record<string, unknown> = stored || {};
-    const storedLanguage = values[settings.LANGUAGE_STORAGE_KEY];
+    const storedLanguage = values[LocaleSettings.language.key];
     languageMode = typeof storedLanguage === 'string' && storedLanguage ? storedLanguage : 'system';
     const uiLanguage = chromeApi.i18n && chromeApi.i18n.getUILanguage ? chromeApi.i18n.getUILanguage() : 'en';
-    const locale = settings.normalizeLocale(languageMode === 'system' ? uiLanguage : languageMode);
-    state.lang = settings.localeToHtmlLang(locale);
+    const locale = LocaleSettings.normalizeLocale(languageMode === 'system' ? uiLanguage : languageMode);
+    state.lang = LocaleSettings.localeToHtmlLang(locale);
     documentObj.documentElement.lang = state.lang;
     if (activeTab && typeof activeTab.id === 'number') {
       const url = String(activeTab.url || activeTab.pendingUrl || '');
@@ -942,8 +947,8 @@ function start(): void {
     }
     state.settings = readSettings(values);
     cacheThemeMode(state.settings.theme);
-    state.documentPipEnabled = values[settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY] === true;
-    state.syncStatus = readSyncStatus(local[settings.WEBDAV_STATUS_STORAGE_KEY]);
+    state.documentPipEnabled = values[FeatureSettings.documentPipEnabled.key] === true;
+    state.syncStatus = readSyncStatus(local[SyncStateSettings.webdavStatus.key]);
     state.shortcuts = shortcuts;
     state.version = chromeApi.runtime.getManifest().version || '';
     applyTheme();

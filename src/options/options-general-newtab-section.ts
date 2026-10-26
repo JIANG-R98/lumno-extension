@@ -2,7 +2,7 @@
 // and which New Tab surfaces open their links in a new tab. One React view
 // draws the rows; this keeps their values in step with storage.
 import type * as Settings from '../domain/settings';
-import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
+import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings/newtab-page';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
@@ -13,8 +13,8 @@ interface GeneralNewtabSectionDeps {
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: SectionSettingStorage | null;
   SETTINGS: Pick<typeof Settings,
-    'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY' |
-    'normalizeProgressTrackingEnabled' | 'normalizeNewtabOpenInNewTab'>;
+    'progressTrackingEnabled' | 'newtabOpenInNewTab' |
+    'progressTrackingEnabled' | 'newtabOpenInNewTab'>;
   getMessage: GetMessage;
 }
 
@@ -32,14 +32,14 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
   const render = (): void => controller.render({ rows: getRows() });
   // Both are shown as stored; Options never rewrites them on its own.
   const progressTracking = createSectionSetting({
-    storageKey: SETTINGS.PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
-    normalize: SETTINGS.normalizeProgressTrackingEnabled,
+    storageKey: SETTINGS.progressTrackingEnabled.key,
+    normalize: SETTINGS.progressTrackingEnabled.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, () => render());
   const openInNewTab = createSectionSetting({
-    storageKey: SETTINGS.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabOpenInNewTab,
+    storageKey: SETTINGS.newtabOpenInNewTab.key,
+    normalize: SETTINGS.newtabOpenInNewTab.parse,
     repairOnLoad: false,
     repairOnChange: false
   }, storageArea, () => render());
@@ -53,7 +53,7 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
       const target = OPEN_IN_NEW_TAB_SURFACES.find((entry) => entry.id === key);
       if (target) {
         const next: NewtabOpenInNewTab = { ...openInNewTab.get(), [target.surface]: checked };
-        openInNewTab.change(SETTINGS.normalizeNewtabOpenInNewTab(next));
+        openInNewTab.change(SETTINGS.newtabOpenInNewTab.parse(next));
       }
     },
     onSelect() {}

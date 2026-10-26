@@ -7,9 +7,11 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 require('../../src/newtab/dismiss-stack.ts');
 const LumnoNewtabRecentSitesController = require('../../src/newtab/recent/recent-sites-controller.ts');
+const recentSiteSettings = require('../../src/domain/settings/recent-sites.ts');
+const { pinnedRecentSites } = recentSiteSettings;
 
-const PINNED_KEY = store.DEFAULT_PINNED_KEY;
-const HISTORY_KEY = progressHistory.STORAGE_KEY;
+const PINNED_KEY = pinnedRecentSites.key;
+const HISTORY_KEY = recentSiteSettings.progressHistory.key;
 
 // Pinned cards keep their tracking fields; other cards never gain them.
 {
@@ -297,8 +299,8 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
   // The worker answers New Tab's "is this an episode?" probe only while the
   // setting is on, and follows the setting when it changes.
   {
-    const settings = require('../../src/domain/settings.ts');
-    const key = settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
+    const settings = require('../../src/domain/settings/index.ts');
+    const key = settings.progressTrackingEnabled.key;
     const episode = { id: 5, index: 0, windowId: 1, url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集' };
     const worker = loadBackground({ tabs: [episode], sync: { [key]: true } });
     await wait(50);
@@ -326,9 +328,9 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert(heading && general.contains(toggle) && (heading.compareDocumentPosition(toggle) & 4),
       'the switch sits in the New Tab section of General settings');
     options.close();
-    const settings = require('../../src/domain/settings.ts');
-    assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);
-    assert.strictEqual(settings.normalizeProgressTrackingEnabled(false), false);
+    const settings = require('../../src/domain/settings/index.ts');
+    assert.strictEqual(settings.progressTrackingEnabled.parse(undefined), true);
+    assert.strictEqual(settings.progressTrackingEnabled.parse(false), false);
   }
 
   console.log('newtab progress tracking tests passed');

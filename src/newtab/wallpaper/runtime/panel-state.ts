@@ -77,9 +77,9 @@ interface PanelStateDeps extends
   SETTINGS: Pick<typeof LumnoSettings,
     'NEWTAB_QUOTE_FONT_SIZE_MIN' | 'NEWTAB_QUOTE_FONT_SIZE_MAX' | 'NEWTAB_QUOTE_FONT_SIZE_DEFAULT' |
     'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MIN' | 'NEWTAB_TIME_FONT_SIZE_MAX' |
-    'normalizeNewtabTimeFont' | 'getNewtabTimeFont' | 'resolveNewtabTimeFontWeight' | 'normalizeNewtabTimeFontSize' |
-    'normalizeNewtabTimeOpacity' | 'NEWTAB_TIME_FONTS' | 'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_MAX' |
-    'NEWTAB_TIME_OPACITY_DEFAULT' | 'normalizeNewtabTimeInk' | 'normalizeNewtabTime12Hour' | 'normalizeNewtabGlassTheme'>;
+    'newtabTimeFont' | 'getNewtabTimeFont' | 'resolveNewtabTimeFontWeight' | 'newtabTimeFontSize' |
+    'newtabTimeOpacity' | 'NEWTAB_TIME_FONTS' | 'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_MAX' |
+    'NEWTAB_TIME_OPACITY_DEFAULT' | 'newtabTimeInk' | 'newtabTime12Hour' | 'newtabGlassTheme'>;
   shortcutSizeConfig: SliderConfig;
   shortcutGapConfig: SliderConfig;
   // The page's theme settings: its scope, mode and the global mode.
@@ -431,7 +431,7 @@ function createPanelState(deps: PanelStateDeps) {
       wallpaperState.currentTimeFontWeight = normalizeNewtabTimeFontWeight(getTimeFontWeight());
     }
     if (hasTimeFontGetter) {
-      wallpaperState.currentTimeFont = SETTINGS.normalizeNewtabTimeFont(getTimeFont());
+      wallpaperState.currentTimeFont = SETTINGS.newtabTimeFont.parse(getTimeFont());
     }
     if (hasTimeSecondsVisibleGetter) {
       wallpaperState.currentTimeSecondsVisible = normalizeNewtabTimeSecondsVisible(getTimeSecondsVisible());
@@ -439,8 +439,8 @@ function createPanelState(deps: PanelStateDeps) {
     const timeFont = SETTINGS.getNewtabTimeFont(wallpaperState.currentTimeFont);
     const timeFontWeight = SETTINGS.resolveNewtabTimeFontWeight(timeFont.id, wallpaperState.currentTimeFontWeight);
     const timeFontTitle = t('newtab_time_font_title', 'Time font');
-    const timeFontSize = SETTINGS.normalizeNewtabTimeFontSize(getTimeFontSize());
-    const timeOpacity = SETTINGS.normalizeNewtabTimeOpacity(getTimeOpacity());
+    const timeFontSize = SETTINGS.newtabTimeFontSize.parse(getTimeFontSize());
+    const timeOpacity = SETTINGS.newtabTimeOpacity.parse(getTimeOpacity());
     const timeInkTitle = t('newtab_time_ink_title', 'Time color');
     const width = normalizeSearchWidthValue(getSearchWidth());
     const timeVisible = wallpaperState.currentTopContentMode === 'time';
@@ -521,7 +521,7 @@ function createPanelState(deps: PanelStateDeps) {
         visible: timeVisible,
         title: timeInkTitle,
         tabs: {
-          active: SETTINGS.normalizeNewtabTimeInk(getTimeInk()),
+          active: SETTINGS.newtabTimeInk.parse(getTimeInk()),
           label: timeInkTitle,
           options: withAriaLabels<TimeInk>([
             { value: 'auto', label: t('newtab_time_ink_auto', 'Auto') },
@@ -538,7 +538,7 @@ function createPanelState(deps: PanelStateDeps) {
       twelveHour: {
         visible: timeVisible,
         title: twelveHourTitle,
-        toggle: buildPanelToggle(SETTINGS.normalizeNewtabTime12Hour(getTime12Hour()), twelveHourTitle)
+        toggle: buildPanelToggle(SETTINGS.newtabTime12Hour.parse(getTime12Hour()), twelveHourTitle)
       }
     };
   }
@@ -1048,7 +1048,7 @@ function createPanelState(deps: PanelStateDeps) {
           title: glassThemeTitle,
           infoTooltip: t('settings_newtab_glass_theme_desc', 'Auto: follows Theme mode, but switches to dark material over darker wallpapers to keep text legible.\nLight / Dark: fix the material and set New Tab to the same theme.'),
           tabs: {
-            active: SETTINGS.normalizeNewtabGlassTheme(getGlassTheme()),
+            active: SETTINGS.newtabGlassTheme.parse(getGlassTheme()),
             label: glassThemeTitle,
             options: withAriaLabels<GlassTheme>([
               { value: 'follow', label: t('settings_newtab_glass_theme_follow', 'Auto') },

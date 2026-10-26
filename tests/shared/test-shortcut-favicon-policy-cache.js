@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { loadBackground } = require('../helpers/background-harness');
 
 // The background worker caches shortcut icons by page. A miss is not
@@ -25,7 +25,7 @@ function openWorker() {
   const worker = { answer: () => png(64, 1) };
   const background = loadBackground({
     extensionUrls: true,
-    sync: { [settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]: true },
+    sync: { [settings.faviconEnhancedFetchEnabled.key]: true },
     fetch: async (url) => {
       const resource = String(url);
       requests.push(resource);
@@ -65,10 +65,10 @@ async function testMissesHitsAndPolicyChanges() {
   assert.strictEqual(worker.requests.length, afterHit, 'a found icon should be answered from the cache');
 
   worker.answer = () => png(64, 3);
-  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  worker.change(settings.faviconRequestBlacklist.key, []);
   assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 3, 'favicon blacklist changes should invalidate shortcut favicon results');
   worker.answer = () => png(64, 4);
-  worker.change(settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY, false);
+  worker.change(settings.faviconEnhancedFetchEnabled.key, false);
   assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 4, 'enhanced-fetch setting changes should invalidate shortcut favicon results');
 }
 
@@ -78,7 +78,7 @@ async function testOldAnswersDoNotReturn() {
   worker.answer = () => old.promise;
   const staleRequest = worker.icon('https://stale.example/');
   await new Promise((resolve) => setTimeout(resolve, 50));
-  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  worker.change(settings.faviconRequestBlacklist.key, []);
   worker.answer = () => png(64, 5);
   assert.strictEqual(await worker.icon('https://stale.example/'), 5);
   old.resolve(png(64, 6));
@@ -91,7 +91,7 @@ async function testOldAnswersDoNotReturn() {
   worker.answer = () => lone.promise;
   const loneRequest = worker.icon('https://lone.example/');
   await new Promise((resolve) => setTimeout(resolve, 50));
-  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  worker.change(settings.faviconRequestBlacklist.key, []);
   lone.resolve(png(64, 9));
   await loneRequest;
   worker.answer = () => png(64, 10);

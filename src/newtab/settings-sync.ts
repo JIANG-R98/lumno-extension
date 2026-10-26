@@ -1,7 +1,6 @@
 // Keeps an open New Tab in step with settings changed elsewhere (Settings,
 // another tab, sync): one listener per storage key on the shared change
 // registry, and the runtime messages that ask the page to refresh a section.
-import type * as FolderReferences from '../domain/bookmark-folder-reference';
 import type * as ShortcutFavicon from '../domain/favicon/shortcut-favicon';
 import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
 import type { SiteSearchIconCache } from '../shared/search/site-search-icon-cache';
@@ -29,7 +28,6 @@ import type { PagePreferences } from './page-preferences';
 import type { BookmarksViewController } from './react/bookmarks';
 import type { RecentHistoryDialogController } from './react/recent-history-dialog';
 import type { RecentSitesController } from './recent/recent-sites-controller';
-import * as LumnoNewtabRemoteContent from './remote-content';
 import type { SearchBoxControls } from './search/search-box-controls';
 import type { SearchModeController } from './search/search-mode-controller';
 import type { SuggestionsController } from './search/suggestions-controller';
@@ -45,6 +43,9 @@ import type { SiteThemeResolver } from './theme/site-theme-resolver';
 import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 import type { WallpaperPage } from './wallpaper/wallpaper-page';
+import { shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
+import { bingDailyCache } from '../domain/settings/newtab-wallpaper';
+import { progressHistory } from '../domain/settings/recent-sites';
 
 interface SettingsSyncState {
   currentBookmarkCount: number;
@@ -129,20 +130,19 @@ interface SettingsSyncDeps extends
   Pick<SearchBoxControls, 'applyNewtabActionButtonVisibility'> {
   registerBookmarkDisplayStorageChanges: BookmarkDisplaySettings['registerStorageChangeHandlers'];
   SETTINGS: Pick<typeof LumnoSettings,
-    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'normalizeNewtabTimeInk' |
-    'normalizeNewtabTime12Hour'>;
+    'newtabTimeFontSize' | 'newtabTimeOpacity' | 'newtabTimeInk' |
+    'newtabTime12Hour'>;
   settingsRuntimeApi: Pick<typeof LumnoSettings,
-    'ASSET_REVISION_STORAGE_KEY' | 'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'normalizeProgressTrackingEnabled'>;
+    'assetRevision' | 'progressTrackingEnabled' | 'progressTrackingEnabled'>;
   storageArea: StorageAreaLike | null;
   // Whether changes in this storage area are this page's settings.
   isPrimaryStorageAreaName(areaName: string): boolean;
-  FOLDER_REFERENCES: Pick<typeof FolderReferences, 'BINDINGS_KEY'>;
   shortcutFolderRuntime: Pick<FolderBindingRuntime, 'accept'>;
   NEWTAB_BOOKMARK_FOLDER_ICON: Pick<typeof BookmarkFolderIcon, 'normalizeFolderColorRefs'>;
   NEWTAB_SHORTCUT_ICON_STORE: Pick<typeof ShortcutIconStore, 'normalizeIconMap'>;
   SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'normalizeCacheMap'>;
   defaultTheme: ThemeVariant;
-  PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
+  PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'normalizeHistoryMap'>;
   NEWTAB_SHORTCUTS_STORAGE_KEYS: readonly string[];
   FOLDER_COLOR_REFS_STORAGE_KEY: string;
   NEWTAB_SHORTCUT_ICONS_STORAGE_KEY: string;
@@ -211,7 +211,6 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     loadRecentSites,
     storageArea,
     isPrimaryStorageAreaName,
-    FOLDER_REFERENCES,
     shortcutFolderRuntime,
     renderShortcuts,
     FOLDER_COLOR_REFS_STORAGE_KEY,
@@ -400,8 +399,8 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   });
   addStorageChangeListener(storageChanges.dispatch);
 
-  storageChanges.on(FOLDER_REFERENCES.BINDINGS_KEY, (changes) => {
-    shortcutFolderRuntime.accept(changes[FOLDER_REFERENCES.BINDINGS_KEY].newValue);
+  storageChanges.on(shortcutFolderBindings.key, (changes) => {
+    shortcutFolderRuntime.accept(changes[shortcutFolderBindings.key].newValue);
     renderShortcuts();
   }, { area: 'local' });
   storageChanges.on(FOLDER_COLOR_REFS_STORAGE_KEY, (changes) => {
@@ -446,14 +445,14 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     }
   }, { area: 'local' });
   registerBookmarkDisplayStorageChanges(storageChanges);
-  storageChanges.on(PROGRESS_HISTORY.STORAGE_KEY, (changes) => {
-    pageState.progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(changes[PROGRESS_HISTORY.STORAGE_KEY].newValue);
+  storageChanges.on(progressHistory.key, (changes) => {
+    pageState.progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(changes[progressHistory.key].newValue);
   }, { area: 'local' });
   // With settings in sync, wallpaper files and caches still change in local.
   storageChanges.on([
     NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
-    settingsRuntimeApi.ASSET_REVISION_STORAGE_KEY,
-    LumnoNewtabRemoteContent.BING_DAILY_CACHE_KEY
+    settingsRuntimeApi.assetRevision.key,
+    bingDailyCache.key
   ], (changes) => {
     if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.handleStorageChange(changes);
@@ -545,7 +544,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   });
   storageChanges.on(NEWTAB_TIME_FONT_SIZE_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_TIME_FONT_SIZE_STORAGE_KEY].newValue;
-    const nextValue = SETTINGS.normalizeNewtabTimeFontSize(raw);
+    const nextValue = SETTINGS.newtabTimeFontSize.parse(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
       void storageArea.set({ [NEWTAB_TIME_FONT_SIZE_STORAGE_KEY]: nextValue });
     }
@@ -553,7 +552,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   });
   storageChanges.on(NEWTAB_TIME_OPACITY_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_TIME_OPACITY_STORAGE_KEY].newValue;
-    const nextValue = SETTINGS.normalizeNewtabTimeOpacity(raw);
+    const nextValue = SETTINGS.newtabTimeOpacity.parse(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
       void storageArea.set({ [NEWTAB_TIME_OPACITY_STORAGE_KEY]: nextValue });
     }
@@ -561,7 +560,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   });
   storageChanges.on(NEWTAB_TIME_INK_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_TIME_INK_STORAGE_KEY].newValue;
-    const nextValue = SETTINGS.normalizeNewtabTimeInk(raw);
+    const nextValue = SETTINGS.newtabTimeInk.parse(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
       void storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: nextValue });
     }
@@ -585,7 +584,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   });
   storageChanges.on(NEWTAB_TIME_12_HOUR_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_TIME_12_HOUR_STORAGE_KEY].newValue;
-    const nextValue = SETTINGS.normalizeNewtabTime12Hour(raw);
+    const nextValue = SETTINGS.newtabTime12Hour.parse(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
       void storageArea.set({ [NEWTAB_TIME_12_HOUR_STORAGE_KEY]: nextValue });
     }
@@ -748,9 +747,9 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     pageState.recentRenderSignature = '';
     renderRecentSites(pageState.recentSourceItems);
   });
-  storageChanges.on(settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY, (changes) => {
-    pageState.progressTrackingEnabled = settingsRuntimeApi.normalizeProgressTrackingEnabled(
-      changes[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
+  storageChanges.on(settingsRuntimeApi.progressTrackingEnabled.key, (changes) => {
+    pageState.progressTrackingEnabled = settingsRuntimeApi.progressTrackingEnabled.parse(
+      changes[settingsRuntimeApi.progressTrackingEnabled.key].newValue
     );
     if (!pageState.progressTrackingEnabled && pageState.recentHistoryDialogController) {
       pageState.recentHistoryDialogController.close({ restoreFocus: false });

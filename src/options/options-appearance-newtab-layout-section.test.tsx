@@ -58,50 +58,50 @@ describe('Options Appearance New Tab layout section', () => {
   it('binds every setting, reading the shortcut ones together', () => {
     const { specs } = setUp();
     const shortcutKeys = [
-      Settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
-      Settings.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-      Settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-      Settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
-      Settings.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
-      Settings.NEWTAB_SHORTCUT_GAP_STORAGE_KEY
+      Settings.newtabShortcutsVisible.key,
+      Settings.newtabShortcutAddVisible.key,
+      Settings.newtabShortcutDockMagnificationEnabled.key,
+      Settings.newtabShortcutColumns.key,
+      Settings.newtabShortcutSize.key,
+      Settings.newtabShortcutGap.key
     ];
     expect(Array.from(specs.keys()).sort()).toEqual([
       ...shortcutKeys,
-      Settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
-      Settings.BOOKMARK_COUNT_STORAGE_KEY,
-      Settings.BOOKMARK_COLUMNS_STORAGE_KEY,
-      Settings.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
-      Settings.RECENT_COUNT_STORAGE_KEY,
-      Settings.RECENT_MODE_STORAGE_KEY,
-      Settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
-      Settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY
+      Settings.newtabInputAutoFocusEnabled.key,
+      Settings.bookmarkCount.key,
+      Settings.bookmarkColumns.key,
+      Settings.bookmarkFolderIconsVisible.key,
+      Settings.recentCount.key,
+      Settings.recentMode.key,
+      Settings.newtabFeedbackButtonVisible.key,
+      Settings.newtabAppearanceButtonVisible.key
     ].sort());
     shortcutKeys.forEach((key) => expect(specs.get(key)?.load, key).toBe(false));
   });
 
   it('infers the shortcut columns from the older width and writes back what was missing', () => {
     const width = Settings.NEWTAB_SHORTCUT_WIDTH_MAX;
-    const { host, writes } = setUp({ [Settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: width });
+    const { host, writes } = setUp({ [Settings.newtabShortcutWidth.key]: width });
     const columns = Settings.inferNewtabShortcutColumnsFromWidth(width);
     expect(getTag(host, '#_x_extension_newtab_shortcut_columns_slider_2026_unique_', 'input').value).toBe(String(columns));
     expect(writes).toEqual([{
-      [Settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: Settings.normalizeNewtabShortcutsVisible(undefined),
-      [Settings.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: Settings.normalizeNewtabShortcutAddVisible(undefined),
-      [Settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: Settings.normalizeNewtabShortcutDockMagnificationEnabled(undefined),
-      [Settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: columns,
-      [Settings.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: Settings.NEWTAB_SHORTCUT_SIZE_DEFAULT,
-      [Settings.NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: Settings.NEWTAB_SHORTCUT_GAP_DEFAULT
+      [Settings.newtabShortcutsVisible.key]: Settings.newtabShortcutsVisible.parse(undefined),
+      [Settings.newtabShortcutAddVisible.key]: Settings.newtabShortcutAddVisible.parse(undefined),
+      [Settings.newtabShortcutDockMagnificationEnabled.key]: Settings.newtabShortcutDockMagnificationEnabled.parse(undefined),
+      [Settings.newtabShortcutColumns.key]: columns,
+      [Settings.newtabShortcutSize.key]: Settings.NEWTAB_SHORTCUT_SIZE_DEFAULT,
+      [Settings.newtabShortcutGap.key]: Settings.NEWTAB_SHORTCUT_GAP_DEFAULT
     }]);
   });
 
   it('dims the shortcut options while shortcuts are off', () => {
     const { host, writes } = setUp({
-      [Settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: true,
-      [Settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: 8
+      [Settings.newtabShortcutsVisible.key]: true,
+      [Settings.newtabShortcutColumns.key]: 8
     });
     expect(toggle(host, 'newtab_shortcut_add').disabled).toBe(false);
     act(() => toggle(host, 'newtab_shortcuts').click());
-    expect(writes.at(-1)).toEqual({ [Settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: false });
+    expect(writes.at(-1)).toEqual({ [Settings.newtabShortcutsVisible.key]: false });
     expect(toggle(host, 'newtab_shortcut_add').disabled).toBe(true);
     expect(getElement(host, '#_x_extension_newtab_shortcut_gap_setting_row_2026_unique_').dataset.disabled).toBe('true');
     expect(getTag(host, '#_x_extension_newtab_shortcut_size_slider_2026_unique_', 'input').disabled).toBe(true);
@@ -109,11 +109,11 @@ describe('Options Appearance New Tab layout section', () => {
 
   it('saves the bookmark rows in fours and folds the bookmark layout when there are none', () => {
     const { host, writes, notifyNewtabSectionsRefresh, store } = setUp();
-    store(Settings.BOOKMARK_COUNT_STORAGE_KEY, 8);
+    store(Settings.bookmarkCount.key, 8);
     const subrows = getElement(host, '#_x_extension_bookmark_subrows_2026_unique_');
     expect(subrows.dataset.expanded).toBe('true');
     slide(host, '_x_extension_bookmark_rows_slider_2026_unique_', 0);
-    expect(writes.at(-1)).toEqual({ [Settings.BOOKMARK_COUNT_STORAGE_KEY]: 0 });
+    expect(writes.at(-1)).toEqual({ [Settings.bookmarkCount.key]: 0 });
     expect(notifyNewtabSectionsRefresh).toHaveBeenCalledWith('bookmarks');
     expect(subrows.dataset.expanded).toBe('false');
     // The bookmark options come before the site cards.
@@ -126,18 +126,18 @@ describe('Options Appearance New Tab layout section', () => {
 
   it('offers the choice of recent sites only while there are cards', () => {
     const { host, writes, notifyNewtabSectionsRefresh, store } = setUp();
-    store(Settings.RECENT_COUNT_STORAGE_KEY, 4);
+    store(Settings.recentCount.key, 4);
     const modes = () => getTags(host, '#_x_extension_recent_mode_tabs_wrap_2024_unique_ button', 'button');
     // A later change to anything but "most" shows "latest".
-    store(Settings.RECENT_MODE_STORAGE_KEY, 'bogus');
+    store(Settings.recentMode.key, 'bogus');
     expect(modes().map((button) => button.dataset.active)).toEqual(['true', 'false']);
-    store(Settings.RECENT_MODE_STORAGE_KEY, 'most');
+    store(Settings.recentMode.key, 'most');
     expect(modes().map((button) => button.dataset.active)).toEqual(['false', 'true']);
     act(() => modes()[0]?.click());
-    expect(writes.at(-1)).toEqual({ [Settings.RECENT_MODE_STORAGE_KEY]: 'latest' });
+    expect(writes.at(-1)).toEqual({ [Settings.recentMode.key]: 'latest' });
     expect(notifyNewtabSectionsRefresh).toHaveBeenCalledWith('recent');
     slide(host, '_x_extension_recent_count_slider_2026_unique_', 0);
-    expect(writes.at(-1)).toEqual({ [Settings.RECENT_COUNT_STORAGE_KEY]: 0 });
+    expect(writes.at(-1)).toEqual({ [Settings.recentCount.key]: 0 });
     expect(host.querySelector('#_x_extension_recent_mode_tabs_wrap_2024_unique_')).toBeNull();
   });
 
@@ -146,8 +146,8 @@ describe('Options Appearance New Tab layout section', () => {
     act(() => toggle(host, 'newtab_feedback_button_visible').click());
     act(() => toggle(host, 'newtab_input_auto_focus').click());
     expect(writes.slice(-2)).toEqual([
-      { [Settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY]: !Settings.normalizeNewtabFeedbackButtonVisible(undefined) },
-      { [Settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY]: !Settings.normalizeNewtabInputAutoFocusEnabled(undefined) }
+      { [Settings.newtabFeedbackButtonVisible.key]: !Settings.newtabFeedbackButtonVisible.parse(undefined) },
+      { [Settings.newtabInputAutoFocusEnabled.key]: !Settings.newtabInputAutoFocusEnabled.parse(undefined) }
     ]);
   });
 });

@@ -51,7 +51,7 @@ import * as OVERLAY_STATE from './overlay-state';
 import { TAB_SWITCHER_HOST_ID } from '../shared/tab-switcher/host';
 import type { OverlaySizePreset } from './lifecycle';
 import type { StorageChangeListener } from './panel/types';
-import type { ThemeMode } from '../domain/settings';
+import type { ThemeMode } from '../domain/settings/appearance';
 import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
 import type { NumberShortcutOptions } from '../shared/search/suggestion-navigation';
 import * as LumnoOverlayRuntime from './runtime';
@@ -61,6 +61,7 @@ import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-reg
 import { getOverlayShellApi } from './react/shell';
 import { getSearchInputApi } from '../shared/react/search-input';
 import { themeColorCache, themeHostCache } from '../shared/favicon/theme-caches';
+import { searchSourceOrder } from '../domain/settings/search';
 
 // Favicon data and preloaded icons the overlay resolved, kept across its
 // openings in this page.
@@ -197,7 +198,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   });
 
   overlayState.overlayContextToken = getOrCreateOverlayContextToken();
-  const SEARCH_SOURCE_ORDER_STORAGE_KEY = SEARCH_SOURCE_ORDER.STORAGE_KEY;
+  const SEARCH_SOURCE_ORDER_STORAGE_KEY = searchSourceOrder.key;
 
 
   const {
@@ -779,7 +780,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   });
 
   function normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean {
-    return SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value);
+    return SETTINGS.overlayPageThemeAdaptationEnabled.parse(value);
   }
 
   function stopOverlayPageThemeObserver() {
@@ -967,7 +968,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   // and content scale.
   function getOverlaySizePreset(mode: unknown): OverlaySizePreset {
     const preset = SETTINGS.getOverlaySizePreset(mode);
-    const customWidth = SETTINGS.normalizeOverlayWidth(overlayState.overlayCustomWidth);
+    const customWidth = SETTINGS.overlayWidth.parse(overlayState.overlayCustomWidth);
     return customWidth ? { ...preset, width: customWidth } : preset;
   }
 

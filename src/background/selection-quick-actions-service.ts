@@ -11,18 +11,9 @@ import * as SELECTION_INTENT from '../domain/selection-intent';
 import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider';
 import * as SELECTION_TARGET from './selection-target';
 import * as SETTINGS from '../domain/settings';
-import {
-  SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-  SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-  SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY
-} from '../domain/settings';
+import { selectionQuickActionsEnabled, selectionQuickActionsGroupEnabled, selectionQuickActionsProvider } from '../domain/settings';
 import { storageArea, waitForTabComplete } from './worker-context';
-import {
-  getSiteSearchProviderEntryUrl,
-  isInteractiveSiteSearchProvider,
-  loadSiteSearchProviders,
-  sanitizeSiteSearchProviders
-} from './search-suggestions-service';
+import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, sanitizeSiteSearchProviders } from './search-suggestions-service';
 import type { SelectionAction } from '../domain/selection-intent';
 import type { SelectionQuickActionsProvider } from '../domain/settings';
 import type { SiteSearchProvider } from '../domain/search/types';
@@ -56,12 +47,12 @@ export function loadSelectionQuickActionsEnabled(): Promise<boolean> {
       resolve(false);
       return;
     }
-    storageArea.get([SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY], (result) => {
+    storageArea.get([selectionQuickActionsEnabled.key], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         resolve(false);
         return;
       }
-      resolve(Boolean(result && result[SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY] === true));
+      resolve(Boolean(result && result[selectionQuickActionsEnabled.key] === true));
     });
   });
 }
@@ -72,13 +63,13 @@ function loadSelectionQuickActionsProvider(): Promise<SelectionQuickActionsProvi
       resolve('gpt');
       return;
     }
-    storageArea.get([SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY], (result) => {
+    storageArea.get([selectionQuickActionsProvider.key], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         resolve('gpt');
         return;
       }
-      const rawValue = result && result[SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY];
-      const providerKey = SETTINGS.normalizeSelectionQuickActionsProvider(rawValue);
+      const rawValue = result && result[selectionQuickActionsProvider.key];
+      const providerKey = SETTINGS.selectionQuickActionsProvider.parse(rawValue);
       resolve(providerKey || 'gpt');
     });
   });
@@ -90,12 +81,12 @@ function loadSelectionQuickActionsGroupEnabled(): Promise<boolean> {
       resolve(false);
       return;
     }
-    storageArea.get([SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY], (result) => {
+    storageArea.get([selectionQuickActionsGroupEnabled.key], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         resolve(false);
         return;
       }
-      resolve(Boolean(result && result[SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY] === true));
+      resolve(Boolean(result && result[selectionQuickActionsGroupEnabled.key] === true));
     });
   });
 }

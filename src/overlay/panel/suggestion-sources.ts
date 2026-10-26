@@ -8,8 +8,8 @@ import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
-import { normalizeThemeMode } from '../../domain/settings';
-import type { ThemeMode } from '../../domain/settings';
+import { themeMode } from '../../domain/settings/appearance';
+import type { ThemeMode } from '../../domain/settings/appearance';
 import { readShortcutRules } from '../../domain/shortcut-rules-reader';
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import type * as CommunityLinks from '../../platform/community-links';
@@ -414,7 +414,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
     if (modeCommandActive) {
       if (overlayState.storageArea) {
         void overlayState.storageArea.get([THEME_STORAGE_KEY], (result) => {
-          const storedMode = normalizeThemeMode(result ? result[THEME_STORAGE_KEY] : undefined);
+          const storedMode = themeMode.parse(result ? result[THEME_STORAGE_KEY] : undefined);
           if (storedMode !== overlayState.overlayThemeMode && query === overlayState.latestOverlayQuery) {
             applyOverlayTheme(storedMode);
             updateSearchSuggestions([], query);

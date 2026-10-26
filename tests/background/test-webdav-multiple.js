@@ -1,13 +1,13 @@
 const assert = require('assert');
 const syncApi = require('../../src/background/webdav-sync.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createServer, createDevice, config, set } = require('./test-webdav-sync.js');
 
 async function run() {
   const first = createServer();
   const second = createServer();
   const router = { fetch: (url, options) => (new URL(url).hostname === 'second.test' ? second : first).fetch(url, options) };
-  const device = createDevice(router, { sync: { [settings.THEME_STORAGE_KEY]: 'light' } }, [], syncApi.createController);
+  const device = createDevice(router, { sync: { [settings.themeMode.key]: 'light' } }, [], syncApi.createController);
   const manager = device.controller;
   assert.deepStrictEqual((await manager.status()).connections, []);
   const a = await manager.handle({ operation: 'add', config });
@@ -19,7 +19,7 @@ async function run() {
   await Promise.all([a, b].map(({ id }) => manager.handle({ operation: 'enable', id })));
   assert((await manager.status()).connections.every((connection) => connection.enabled));
   assert.strictEqual(device.chrome.alarms.names.size, 2, 'each enabled connection has its own recurring alarm');
-  await set(device.chrome.storage.sync, { [settings.THEME_STORAGE_KEY]: 'dark' });
+  await set(device.chrome.storage.sync, { [settings.themeMode.key]: 'dark' });
   // Both servers must reach this barrier. A global sync queue would deadlock.
   let arrived = 0;
   let release;
@@ -39,12 +39,12 @@ async function run() {
   clearTimeout(timeout);
   assert.strictEqual(timedOut, false, 'server requests actually overlap instead of waiting for another connection');
   assert(arrived >= 2);
-  assert.strictEqual(first.state().data[settings.THEME_STORAGE_KEY], 'dark');
-  assert.strictEqual(second.state().data[settings.THEME_STORAGE_KEY], 'dark');
+  assert.strictEqual(first.state().data[settings.themeMode.key], 'dark');
+  assert.strictEqual(second.state().data[settings.themeMode.key], 'dark');
   first.beforeRequest = second.beforeRequest = null;
   // Two incoming versions may download in parallel, but cannot interleave local commits.
   first.replaceState({ ...first.state(), data: { ...first.state().data, _x_extension_language_2024_unique_: 'ja' } });
-  second.replaceState({ ...second.state(), data: { ...second.state().data, [settings.THEME_STORAGE_KEY]: 'system' } });
+  second.replaceState({ ...second.state(), data: { ...second.state().data, [settings.themeMode.key]: 'system' } });
   arrived = 0;
   let releaseIncoming;
   const incomingBarrier = new Promise((resolve) => { releaseIncoming = resolve; });
@@ -61,7 +61,7 @@ async function run() {
   const pending = (await manager.status()).connections.find((value) => value.state === 'pending');
   await manager.handle({ operation: 'sync', id: pending.id });
   await manager.handle({ operation: 'sync', id: pending.id === a.id ? b.id : a.id });
-  assert.strictEqual(first.state().data[settings.THEME_STORAGE_KEY], 'system');
+  assert.strictEqual(first.state().data[settings.themeMode.key], 'system');
   assert.strictEqual(second.state().data._x_extension_language_2024_unique_, 'ja');
   await manager.handle({ operation: 'pause', id: a.id });
   let statuses = (await manager.status()).connections;
@@ -75,7 +75,7 @@ async function run() {
   const firstFiles = structuredClone([...first.files]);
   const chromeBefore = structuredClone(device.chrome.storage.sync.values);
   await manager.handle({ operation: 'remove', id: a.id });
-  const hintKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+  const hintKey = settings.webdavConnections.key;
   const withoutHints = (values) => Object.fromEntries(Object.entries(values).filter(([key]) => key !== hintKey));
   assert.deepStrictEqual(withoutHints(device.chrome.storage.sync.values), withoutHints(chromeBefore), 'removing a connection retains Chrome preferences');
   assert.deepStrictEqual(device.chrome.storage.sync.values[hintKey].items.map((item) => item.endpoint), ['https://second.test/dav/'],
@@ -90,7 +90,7 @@ async function run() {
   assert.strictEqual(device.chrome.alarms.names.size, 0);
   assert.deepStrictEqual((await device.createController().status()).connections, [], 'deletion survives a worker restart');
 
-  const legacy = createDevice(createServer(), { sync: { [settings.THEME_STORAGE_KEY]: 'light' } });
+  const legacy = createDevice(createServer(), { sync: { [settings.themeMode.key]: 'light' } });
   await legacy.controller.handle({ operation: 'save', config });
   await legacy.controller.stop();
   const createMigrated = () => syncApi.createController({ chrome: legacy.chrome, settings,
@@ -109,11 +109,11 @@ async function run() {
   const partialA = createServer();
   const partialB = createServer();
   const partial = createDevice({ fetch: (url, options) => (new URL(url).hostname === 'second.test' ? partialB : partialA).fetch(url, options) },
-    { sync: { [settings.THEME_STORAGE_KEY]: 'light' } }, [], syncApi.createController);
+    { sync: { [settings.themeMode.key]: 'light' } }, [], syncApi.createController);
   const pa = await partial.controller.handle({ operation: 'add', config });
   const pb = await partial.controller.handle({ operation: 'add', config: { ...config, endpoint: 'https://second.test/dav/' } });
   await Promise.all([pa, pb].map(({ id }) => partial.controller.handle({ operation: 'enable', id })));
-  partialA.replaceState({ ...partialA.state(), data: { [settings.THEME_STORAGE_KEY]: 'dark' } });
+  partialA.replaceState({ ...partialA.state(), data: { [settings.themeMode.key]: 'dark' } });
   const replace = partial.wallpaperStore.replaceAll;
   let interrupted = false;
   partial.wallpaperStore.replaceAll = async (records) => {
@@ -138,7 +138,7 @@ async function run() {
   await partial.controller.handle({ operation: 'remove', id: pb.id });
 
   const flowServer = createServer();
-  const flow = createDevice(flowServer, { sync: { [settings.THEME_STORAGE_KEY]: 'light' } }, [], syncApi.createController);
+  const flow = createDevice(flowServer, { sync: { [settings.themeMode.key]: 'light' } }, [], syncApi.createController);
   const probes = () => flowServer.requests.filter((request) => request.path.includes('/probe-')).length;
   flowServer.offline = true;
   await assert.rejects(flow.controller.handle({ operation: 'add', config, enable: true }), /network-error/);
@@ -152,7 +152,7 @@ async function run() {
   let current = (await flow.controller.status()).connections[0];
   assert.strictEqual(current.id, added.id);
   assert.strictEqual(current.enabled, true, 'adding can save and enable in one step');
-  assert.strictEqual(flowServer.state().data[settings.THEME_STORAGE_KEY], 'light');
+  assert.strictEqual(flowServer.state().data[settings.themeMode.key], 'light');
   await assert.rejects(flow.controller.handle({ operation: 'add', config: { ...config, endpoint: `${config.endpoint}/`, directory: '/lumno/' } }), /duplicate-connection/);
   const other = await flow.controller.handle({ operation: 'add', config: { ...config, directory: 'second' } });
   await assert.rejects(flow.controller.handle({ operation: 'save', id: other.id, config: { ...config, password: '' } }), /duplicate-connection/);
@@ -177,7 +177,7 @@ async function run() {
   // Connection details follow the user to other devices through browser sync;
   // the app password never does.
   {
-    const hintKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+    const hintKey = settings.webdavConnections.key;
     const server = createServer();
     const laptop = createDevice(server, {}, [], syncApi.createController);
     const added = await laptop.controller.handle({ operation: 'add', config });

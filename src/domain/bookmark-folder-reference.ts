@@ -50,7 +50,6 @@ interface FolderShortcutLike {
 }
 
 
-const BINDINGS_KEY = '_x_extension_shortcut_folder_bindings_2026_unique_';
 const ROOT_TYPES: ReadonlySet<string> = new Set<BookmarkRootType>(['bookmarks-bar', 'other', 'mobile', 'managed']);
 const SCOPES: ReadonlySet<string> = new Set<FolderReferenceScope>(['account', 'local', 'unknown']);
 // Chrome numbers its roots; Firefox uses fixed 12-character GUIDs. Mapping
@@ -186,7 +185,6 @@ function normalizeBindings(value: unknown): FolderBindings {
 }
 
 export {
-  BINDINGS_KEY,
   normalizeReference,
   normalizeBindings,
   describe,

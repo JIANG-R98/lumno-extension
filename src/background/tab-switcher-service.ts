@@ -82,6 +82,7 @@ import type {
   TabSwitcherThumbnailUpdate
 } from '../domain/messages';
 import { createInjectedAppRun } from '../platform/injection';
+import { tabSwitcherThumbnails } from '../domain/settings/features';
 
 // A tab as the switcher's helpers read it: a browser tab, a tab from the
 // recent list with its thumbnail fields, or a payload item.
@@ -167,9 +168,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
-
-// The recent-tab list and its thumbnails, kept in session storage.
-const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
 
 function shouldTrackSwitcherTab(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number' || tab.incognito === true) {
@@ -826,8 +824,8 @@ async function getTabSwitcherStateFromStorage(): Promise<Record<string, unknown>
   if (!storageArea || typeof storageArea.get !== 'function') {
     return null;
   }
-  const headResult = await readTabSwitcherStorage(storageArea, [TAB_SWITCHER_THUMBNAIL_STORAGE_KEY]);
-  const head = headResult ? headResult[TAB_SWITCHER_THUMBNAIL_STORAGE_KEY] : null;
+  const headResult = await readTabSwitcherStorage(storageArea, [tabSwitcherThumbnails.key]);
+  const head = headResult ? headResult[tabSwitcherThumbnails.key] : null;
   if (!isRecord(head)) {
     return null;
   }
@@ -876,7 +874,7 @@ function setTabSwitcherStateToStorage(state: TrackerState): Promise<boolean> {
     }
   });
   if (headSignature !== persistedTabSwitcherHeadSignature) {
-    writes[TAB_SWITCHER_THUMBNAIL_STORAGE_KEY] = head;
+    writes[tabSwitcherThumbnails.key] = head;
   }
   const removals = Array.from(persistedThumbnailSignatureByTabId.keys())
     .filter((tabId) => !nextSignatures.has(tabId))

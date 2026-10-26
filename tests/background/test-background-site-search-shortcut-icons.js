@@ -5,6 +5,8 @@ const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');
+const { newtabShortcutFaviconCache } = require('../../src/domain/settings/newtab-shortcuts.ts');
+const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // A custom site-search provider takes the icon chosen by hand for a shortcut
 // to the same site's home page. The worker writes it into the site-search
@@ -44,7 +46,7 @@ async function run() {
   ]);
   local[SHORTCUT_ICONS_KEY] = { beta: UPLOADED_ICON, github: GITHUB_ICON };
   const serviceSource = (page) => `https://t2.gstatic.cn/faviconV2?url=${encodeURIComponent(page)}`;
-  local[shortcutFavicon.DEFAULT_STORAGE_KEY] = [
+  local[newtabShortcutFaviconCache.key] = [
     ['https://www.alpha.example.test/', SERVICE_ICON],
     ['https://gamma.example.test/docs', SERVICE_ICON]
   ].reduce((cache, [page, dataUrl]) => shortcutFavicon.setCachedIcon(
@@ -72,7 +74,7 @@ async function run() {
     }
   });
   const readCache = () => shortcutFavicon.normalizeCacheMap(
-    harness.storage.local.data[shortcutFavicon.SITE_SEARCH_STORAGE_KEY],
+    harness.storage.local.data[siteSearchIconCache.key],
     Date.now(),
     shortcutFavicon.SITE_SEARCH_CACHE_OPTIONS
   );

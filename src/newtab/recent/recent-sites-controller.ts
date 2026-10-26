@@ -18,6 +18,7 @@ import type { RecentProgressState, RecentSitesViewController, RecentSitesViewOpt
 import type { SelectMenuInstance } from '../react/select-menu';
 import type { ShortcutSite } from '../shortcuts/shortcut-types';
 import type { RecentContextTarget } from './recent-types';
+import * as RecentSiteSettings from '../../domain/settings/recent-sites';
 
 interface RecentSitesControllerState {
   recentContextMenu: ContextMenuParts | null;
@@ -67,7 +68,7 @@ interface RecentSitesControllerDeps {
   renderRecentSites(items: RecentSite[]): unknown;
   PINNED_RECENT_SITES_STORAGE_KEY: string;
   progressMatch: Pick<typeof ProgressMatch, 'looksLikeSeriesPage' | 'compareProgressPages' | 'getProgressSiteKey'>;
-  progressHistory: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'createProgressId' | 'getHistoryId' | 'restoreVersion'>;
+  progressHistory: Pick<typeof ProgressHistory, 'createProgressId' | 'getHistoryId' | 'restoreVersion'>;
   progressHistoryStorageArea: Pick<StorageAreaLike, 'set'> | null;
   openProgressHistory?(item: RecentHistoryItem): unknown;
   pageState: RecentSitesControllerState;
@@ -741,7 +742,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
         reject(new Error('storage-unavailable'));
         return;
       }
-      void progressHistoryStorageArea.set({ [progressHistory.STORAGE_KEY]: map }, () => {
+      void progressHistoryStorageArea.set({ [RecentSiteSettings.progressHistory.key]: map }, () => {
         const error = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.lastError : null;
         if (error) reject(new Error(error.message || 'storage-error'));
         else resolve(map);

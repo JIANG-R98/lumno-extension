@@ -4,6 +4,7 @@
 // device's local overflow record, which WebDAV carries between devices.
 import * as references from './bookmark-folder-reference';
 import type { BookmarkRootType, FolderReference, FolderReferenceScope } from './bookmark-folder-reference';
+import { newtabShortcutsGroupChunk2, newtabShortcutsGroupChunk3, newtabShortcutsGroupHead, newtabShortcutsLegacy, newtabShortcutsLegacyChunk2, newtabShortcutsLegacyChunk3 } from './settings/newtab-shortcuts';
 
 type ShortcutIconSource = 'service' | 'favicon-is' | 'cache' | 'custom' | 'builtin';
 
@@ -207,21 +208,16 @@ const SHORTCUT_GROUP_TITLE_MAX_LENGTH = 24;
 const DEFAULT_SHORTCUT_GROUP_ID = 'g0';
 const SHORTCUTS_STORAGE_VERSION = 2;
 const SHORTCUTS_SYNC_KEYS: readonly string[] = Object.freeze([
-  '_x_extension_newtab_shortcuts_v2_2026_unique_',
-  '_x_extension_newtab_shortcuts_v2_chunk_2_2026_unique_',
-  '_x_extension_newtab_shortcuts_v2_chunk_3_2026_unique_'
+  newtabShortcutsGroupHead.key,
+  newtabShortcutsGroupChunk2.key,
+  newtabShortcutsGroupChunk3.key
 ]);
-// The flat list older versions wrote. It is read until the first save in
-// the new format and then left untouched, because a device still running an
-// older version reads it (and backs it up to WebDAV) as its whole list.
-const LEGACY_SHORTCUTS_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const LEGACY_SHORTCUTS_CHUNK_KEYS: readonly string[] = Object.freeze([
-  LEGACY_SHORTCUTS_KEY,
-  '_x_extension_newtab_shortcuts_chunk_2_2026_unique_',
-  '_x_extension_newtab_shortcuts_chunk_3_2026_unique_'
+  newtabShortcutsLegacy.key,
+  newtabShortcutsLegacyChunk2.key,
+  newtabShortcutsLegacyChunk3.key
 ]);
 const SHORTCUT_STORAGE_KEYS: readonly string[] = Object.freeze([...SHORTCUTS_SYNC_KEYS, ...LEGACY_SHORTCUTS_CHUNK_KEYS]);
-const SHORTCUTS_LOCAL_OVERFLOW_KEY = '_x_extension_newtab_shortcuts_local_overflow_2026_unique_';
 // Every older device has updated long before this, so the legacy copy can
 // give its sync bytes back.
 const LEGACY_SHORTCUTS_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -889,10 +885,8 @@ export {
   DEFAULT_SHORTCUT_GROUP_ID,
   SHORTCUTS_STORAGE_VERSION,
   SHORTCUTS_SYNC_KEYS,
-  LEGACY_SHORTCUTS_KEY,
   LEGACY_SHORTCUTS_CHUNK_KEYS,
   SHORTCUT_STORAGE_KEYS,
-  SHORTCUTS_LOCAL_OVERFLOW_KEY,
   LEGACY_SHORTCUTS_RETENTION_MS,
   DEFAULT_SHORTCUTS_SYNC_ITEM_BUDGET_BYTES,
   DEFAULT_SHORTCUTS_SYNC_TOTAL_BUDGET_BYTES,

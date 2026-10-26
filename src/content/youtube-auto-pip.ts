@@ -5,6 +5,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
 import { claimContentScript } from '../platform/content-registry';
+import { youtubePipRecoveryReloadAt } from '../domain/settings/page-cache';
 
 (function () {
   if (!claimContentScript('youtube-auto-pip')) {
@@ -37,7 +38,6 @@ import { claimContentScript } from '../platform/content-registry';
     ownerToken: "",
     runtimeMessageHandlerBound: false
   };
-  const RECOVERY_RELOAD_GUARD_KEY = "_x_lumno_yt_pip_recovery_reload_at_2026_";
   const RECOVERY_RELOAD_GUARD_MS = 15000;
   const ENTER_SUPPRESS_AFTER_EXIT_MS = 1200;
   const ENTER_SUPPRESS_AFTER_VISIBLE_MS = 1400;
@@ -80,7 +80,7 @@ import { claimContentScript } from '../platform/content-registry';
 
   function shouldAllowRecoveryReload(): boolean {
     try {
-      const raw = sessionStorage.getItem(RECOVERY_RELOAD_GUARD_KEY);
+      const raw = sessionStorage.getItem(youtubePipRecoveryReloadAt.key);
       const lastAt = Number(raw || 0);
       if (!lastAt) {
         return true;
@@ -93,7 +93,7 @@ import { claimContentScript } from '../platform/content-registry';
 
   function markRecoveryReloadNow(): void {
     try {
-      sessionStorage.setItem(RECOVERY_RELOAD_GUARD_KEY, String(Date.now()));
+      sessionStorage.setItem(youtubePipRecoveryReloadAt.key, String(Date.now()));
     } catch (_error) {
       // Ignore storage write failures.
     }

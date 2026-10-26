@@ -1,13 +1,12 @@
 // Paints the Options page in the cached theme and opens the linked tab
 // before the page script runs, then follows the stored theme once read.
-import * as SETTINGS from '../domain/settings';
-import type { ThemeMode } from '../domain/settings';
+import * as AppearanceSettings from '../domain/settings/appearance';
+import * as PageCacheSettings from '../domain/settings/page-cache';
+import type { ThemeMode } from '../domain/settings/appearance';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation';
 
 (function() {
-  const THEME_STORAGE_KEY = SETTINGS.THEME_STORAGE_KEY;
-  const THEME_CACHE_KEY = SETTINGS.OPTIONS_THEME_PRELOAD_STORAGE_KEY;
   const PRELOAD_THEME_ATTRIBUTE = 'data-options-preload-theme';
   const PRELOAD_THEME_MODE_ATTRIBUTE = 'data-options-theme-mode';
   const BACKGROUND_PRELOAD_ID = '_x_extension_options_background_preload_2026_unique_';
@@ -71,7 +70,7 @@ import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation
 
   function readCachedThemeMode(): ThemeMode {
     try {
-      return SETTINGS.normalizeThemeMode(globalThis.localStorage.getItem(THEME_CACHE_KEY));
+      return AppearanceSettings.themeMode.parse(globalThis.localStorage.getItem(PageCacheSettings.optionsThemePreload.key));
     } catch (e) {
       return 'system';
     }
@@ -79,7 +78,7 @@ import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation
 
   function cacheThemeMode(mode: ThemeMode): void {
     try {
-      globalThis.localStorage.setItem(THEME_CACHE_KEY, mode);
+      globalThis.localStorage.setItem(PageCacheSettings.optionsThemePreload.key, mode);
     } catch (e) {
       // Best effort only; chrome.storage remains the source of truth.
     }
@@ -150,8 +149,8 @@ import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation
   try {
     const storage = LumnoSettingsStorage.getProviderStorage(globalThis.chrome).area;
     if (storage && typeof storage.get === 'function') {
-      storage.get([THEME_STORAGE_KEY], (result) => {
-        const storedMode = SETTINGS.normalizeThemeMode(result && result[THEME_STORAGE_KEY]);
+      storage.get([AppearanceSettings.themeMode.key], (result) => {
+        const storedMode = AppearanceSettings.themeMode.parse(result && result[AppearanceSettings.themeMode.key]);
         currentThemeMode = storedMode;
         cacheThemeMode(storedMode);
         applyTheme(resolveTheme(storedMode));

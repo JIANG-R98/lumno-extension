@@ -8,9 +8,10 @@ import { createDailyQuoteSection } from './options-appearance-daily-quote-sectio
 import type { SettingSpec } from './options-setting-bindings';
 import { createDailyQuoteSectionController } from './react/daily-quote-section';
 import { getElement, getTag } from '../../tests/react/dom';
+import { customQuotePick } from '../domain/settings/newtab-quote';
 
 const sections: Array<{ destroy(): void }> = [];
-const PREFS_KEY = Settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY;
+const PREFS_KEY = Settings.newtabQuotePrefs.key;
 const LIBRARY: QuoteLibrary = {
   version: 1,
   filename: 'quotes.txt',
@@ -68,7 +69,7 @@ async function setUp({ local = {}, readLibraryFile = vi.fn(() => Promise.resolve
 }
 
 const expanded = (host: HTMLElement, id: string) => getElement(host, `#_x_extension_newtab_quote_${id}_2026_unique_`).dataset.expanded;
-const prefs = (patch: Partial<Settings.NewtabQuotePrefs>) => ({ ...Settings.normalizeNewtabQuotePrefs(null), ...patch });
+const prefs = (patch: Partial<Settings.NewtabQuotePrefs>) => ({ ...Settings.newtabQuotePrefs.parse(null), ...patch });
 
 beforeEach(() => {
   vi.stubGlobal('chrome', { runtime: { lastError: undefined } });
@@ -129,7 +130,7 @@ describe('Options Appearance daily quote section', () => {
     await act(async () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    expect(localWrites).toEqual([{ [CustomQuotes.KEY]: LIBRARY, [CustomQuotes.PICK_KEY]: null }]);
+    expect(localWrites).toEqual([{ [CustomQuotes.KEY]: LIBRARY, [customQuotePick.key]: null }]);
     expect(writes).toEqual([{ [PREFS_KEY]: prefs({ provider: 'custom' }) }]);
     expect(getTag(host, '#_x_extension_newtab_quote_import_2026_unique_', 'button').textContent).toBe('Replace file');
     expect(getTag(host, '#_x_extension_newtab_quote_shuffle_2026_unique_', 'button').hidden).toBe(false);
@@ -153,7 +154,7 @@ describe('Options Appearance daily quote section', () => {
     await act(async () => {
       getTag(host, '#_x_extension_newtab_quote_shuffle_2026_unique_', 'button').click();
     });
-    expect(Object.keys(localWrites[0] || {})).toEqual([CustomQuotes.PICK_KEY]);
+    expect(Object.keys(localWrites[0] || {})).toEqual([customQuotePick.key]);
     expect(showToast).toHaveBeenCalledTimes(1);
     expect(['First', 'Second']).toContain(showToast.mock.calls[0]?.[0]);
   });

@@ -31,7 +31,7 @@ interface UrlPolicyDeps {
   FAVICON_UTILS: Pick<typeof FaviconUtils,
     'isLocalNetworkHost' | 'shouldBlockFaviconForHost' | 'shouldAvoidDirectFaviconForHost' | 'getCanonicalPageUrlForFavicon'>;
   BLACKLIST_UTILS: Pick<typeof BlacklistUtils, 'normalizeItems' | 'isUrlBlocked'>;
-  SETTINGS: Pick<typeof LumnoSettings, 'normalizeFaviconEnhancedFetchEnabled'>;
+  SETTINGS: Pick<typeof LumnoSettings, 'faviconEnhancedFetchEnabled'>;
   storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
   SEARCH_BLACKLIST_STORAGE_KEY: string;
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
@@ -230,7 +230,7 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
   }
 
   function normalizeFaviconEnhancedFetchEnabled(value: unknown): boolean {
-    return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
+    return SETTINGS.faviconEnhancedFetchEnabled.parse(value);
   }
 
   function loadSearchBlacklistItems(): Promise<BlacklistRule[]> {

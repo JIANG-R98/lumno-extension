@@ -8,7 +8,7 @@
 //   await newtab.dragTo(newtab.card('link'), newtab.shortcutSlot(1));
 //   await newtab.undo(); await newtab.redo();
 
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('./newtab-page');
 
 const SHORTCUT_ROW = { left: 300, top: 400, width: 64, height: 64, gap: 8 };
@@ -22,12 +22,12 @@ async function openDragPage(options) {
   const config = Object.assign({}, options || {});
   const local = Object.assign({}, config.local || {});
   if (config.webdavBackup) {
-    local[settings.WEBDAV_STATUS_STORAGE_KEY] = { enabled: true, state: 'ready' };
+    local[settings.webdavStatus.key] = { enabled: true, state: 'ready' };
   }
   const sync = Object.assign({}, config.sync || {});
   if (config.recent) {
-    sync[settings.RECENT_COUNT_STORAGE_KEY] = 8;
-    sync[settings.RECENT_MODE_STORAGE_KEY] = 'latest';
+    sync[settings.recentCount.key] = 8;
+    sync[settings.recentMode.key] = 'latest';
   }
   const page = await createNewtabPage(Object.assign({}, config, { layout: true, local, sync, history: config.recent || config.history }));
   await page.settle(300);

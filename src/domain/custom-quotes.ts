@@ -1,5 +1,5 @@
-const KEY = '_x_extension_custom_quotes_2026_unique_';
-const PICK_KEY = '_x_extension_custom_quote_pick_2026_unique_';
+import { customQuotes } from './settings/newtab-quote';
+const KEY = customQuotes.key;
 const MAX_BYTES = 1024 * 1024;
 const MAX_QUOTES = 1000;
 
@@ -110,7 +110,6 @@ async function readLibraryFile(file: QuoteFile | null | undefined, now?: number)
 
 export {
   KEY,
-  PICK_KEY,
   MAX_BYTES,
   MAX_QUOTES,
   parseQuotes,

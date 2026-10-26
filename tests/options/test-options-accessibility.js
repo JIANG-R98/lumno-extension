@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
@@ -61,7 +61,7 @@ function testMarkupAndStyles() {
 
 async function testOnThePage() {
   const page = await createOptionsPage({
-    sync: { [settings.SEARCH_BLACKLIST_STORAGE_KEY]: [{ pattern: 'a.com', matchModes: ['suffix'] }] },
+    sync: { [settings.searchBlacklist.key]: [{ pattern: 'a.com', matchModes: ['suffix'] }] },
     respond: (message) => (message.action === 'openExtensionShortcutsPage' ? { ok: false } : undefined)
   });
   await page.settle(200);
@@ -107,7 +107,7 @@ async function testOnThePage() {
     await page.click(buttons[buttons.length - 1]);
   }
   await page.settle(120);
-  assert.deepStrictEqual(page.storage.sync.data[settings.SEARCH_BLACKLIST_STORAGE_KEY], [], 'the rule should be removed');
+  assert.deepStrictEqual(page.storage.sync.data[settings.searchBlacklist.key], [], 'the rule should be removed');
   assert.deepStrictEqual(announcement(), ['status', 'polite', 'true'], 'status updates should be announced politely');
   page.close();
 }

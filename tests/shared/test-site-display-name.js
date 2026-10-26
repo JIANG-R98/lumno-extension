@@ -1,6 +1,6 @@
 const assert = require('assert');
 const siteDisplayName = require('../../src/domain/site-display-name.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -56,7 +56,7 @@ assert.ok(
 // New Tab names recent sites with the shared resolver.
 async function testRecentSitesUseTheResolver() {
   const page = await createNewtabPage({
-    sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 4, [settings.RECENT_MODE_STORAGE_KEY]: 'latest' },
+    sync: { [settings.recentCount.key]: 4, [settings.recentMode.key]: 'latest' },
     history: [
       { url: 'https://docs.github.com/en/get-started', title: 'Documentation', lastVisitTime: Date.now(), visitCount: 3 },
       { url: 'https://weibo.com/home', title: 'Home', lastVisitTime: Date.now() - 1000, visitCount: 3 }

@@ -1,16 +1,17 @@
 const assert = require('assert');
 const fs = require('fs');
 const { webcrypto, randomUUID } = require('crypto');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
 const contract = require('../../src/domain/webdav-contract.ts');
 const client = require('../../src/background/webdav-client.ts');
 const syncApi = require('../../src/background/webdav-sync.ts');
 const { probeProvider } = require('../../scripts/dev/probe-webdav.js');
+const { newtabShortcutsLegacy, shortcutFolderBindings } = require('../../src/domain/settings/newtab-shortcuts.ts');
 const cryptoApi = { subtle: webcrypto.subtle, randomUUID };
 const config = { endpoint: 'https://dav.example.test/dav/', directory: 'lumno', username: 'user', password: 'app-password' };
-const theme = settings.THEME_STORAGE_KEY;
+const theme = settings.themeMode.key;
 const language = '_x_extension_language_2024_unique_';
 const customSearch = '_x_extension_site_search_custom_2024_unique_';
 const engine = (name) => [{ name, url: `https://${name}.example/?q=%s` }];
@@ -629,7 +630,7 @@ async function run() {
   const deletion = contract.mergeStates(base, empty({ [language]: 'en' }), base);
   assert.strictEqual(Object.hasOwn(deletion.state.data, theme), false);
   assert.throws(() => contract.validateState({ ...empty(), version: 100 }), /invalid-state/);
-  const quote = settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY;
+  const quote = settings.newtabQuotePrefs.key;
   const quoteBase = empty({ [quote]: { enabled: true, position: 'search', category: 'literature', fontSize: 16 } });
   const quoteLocal = empty({ [quote]: { ...quoteBase.data[quote], fontSize: 20 } });
   const quoteRemote = empty({ [quote]: { ...quoteBase.data[quote], position: 'bottom' } });
@@ -651,7 +652,7 @@ async function run() {
   assert.deepStrictEqual(contract.mergeStates(empty(), quoteLocal, quoteBoth).conflicts, [quote],
     'a missing base record counts as empty, so every field the sides set differently conflicts');
   assert.deepStrictEqual(contract.mergeStates(empty(), quoteLocal, quoteBoth, 'local').state.data[quote], quoteLocal.data[quote]);
-  const folderColors = settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY;
+  const folderColors = settings.bookmarkFolderColorRefs.key;
   const workRef = 'a'.repeat(16);
   const homeRef = 'b'.repeat(16);
   const colorBase = empty({ [folderColors]: { [workRef]: { color: '#5393FF', dateAdded: 1 } } });
@@ -710,13 +711,13 @@ async function run() {
   assert(wallpaper.length <= 160 * 1024);
   const firstShortcut = shortcuts.createShortcutRecord({ id: 'first', title: 'First', url: 'https://example.com/' }, { now: 100 });
   const overflowShortcut = shortcuts.createShortcutRecord({ id: 'overflow', title: 'Overflow', url: 'https://other.example/' }, { now: 100 });
-  const [topbarMode, topbarLight, topbarDark, topbarLegacy] = settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS;
+  const [topbarMode, topbarLight, topbarDark, topbarLegacy] = settings.BOOKMARK_TOPBAR_SURFACE_KEYS;
   const customQuotes = '_x_extension_custom_quotes_2026_unique_';
   const quotePick = '_x_extension_custom_quote_pick_2026_unique_';
   assert(contract.LOCAL_PREFERENCE_KEYS.includes(customQuotes), 'the custom quote collection travels with WebDAV');
-  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(customQuotes), 'the custom quote collection stays out of browser sync');
+  assert(!settings.BROWSER_SYNC_KEYS.includes(customQuotes), 'the custom quote collection stays out of browser sync');
   const first = createDevice(server, {
-    sync: { [theme]: 'light', [language]: 'en', [shortcuts.LEGACY_SHORTCUTS_KEY]: [firstShortcut] },
+    sync: { [theme]: 'light', [language]: 'en', [newtabShortcutsLegacy.key]: [firstShortcut] },
     local: { [contract.OVERFLOW_KEY]: { authoritative: false, items: [overflowShortcut] },
       [contract.ICONS_KEY]: { first: `data:image/png;base64,${icon.toString('base64')}` },
       [contract.LOCAL_WALLPAPER_KEY]: { version: 1, light: 'custom-wallpaper-test', dark: 'custom-wallpaper-test' },
@@ -726,7 +727,7 @@ async function run() {
   }, [{ id: 'custom-wallpaper-test', key: 'custom-wallpaper-test', name: 'Test', width: 480, height: 270, updatedAt: 100,
     imageDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}`, thumbnailDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}` }]);
   await first.controller.handle({ operation: 'connect', config });
-  assert.strictEqual(first.chrome.storage.local.values[settings.LOCAL_PRIMARY_STORAGE_KEY], undefined);
+  assert.strictEqual(first.chrome.storage.local.values[settings.localPrimary.key], undefined);
   assert.strictEqual(first.chrome.storage.local.values[contract.OVERFLOW_KEY].items.length, 0);
   assert.deepStrictEqual(server.state().shortcuts.map((item) => item.id), ['first', 'overflow']);
   assert.strictEqual(server.state().wallpapers.length, 1);
@@ -738,7 +739,7 @@ async function run() {
 
   const second = createDevice(server, { sync: { [theme]: 'system' } });
   assert.deepStrictEqual(await second.controller.handle({ operation: 'connect', config }), { needsChoice: true });
-  assert.strictEqual(second.chrome.storage.local.values[settings.LOCAL_PRIMARY_STORAGE_KEY], undefined, 'first-use choice cannot silently migrate');
+  assert.strictEqual(second.chrome.storage.local.values[settings.localPrimary.key], undefined, 'first-use choice cannot silently migrate');
   await second.controller.handle({ operation: 'connect', config, decision: 'remote' });
   assert.strictEqual(second.chrome.storage.sync.values[theme], 'light');
   assert.strictEqual(second.chrome.storage.local.values[contract.ICONS_KEY].first, first.chrome.storage.local.values[contract.ICONS_KEY].first);
@@ -766,7 +767,7 @@ async function run() {
   assert.deepStrictEqual([topbarMode, topbarLight, topbarDark].map((key) => second.chrome.storage.local.values[key]),
     ['custom', '#112233', '#445566'], 'WebDAV carries the bookmark bar material into local storage');
   assert.strictEqual(Object.hasOwn(server.state().data, topbarLegacy), false, 'the legacy single color migrates locally and never syncs');
-  [first, second].forEach((device) => settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.forEach((key) => {
+  [first, second].forEach((device) => settings.BOOKMARK_TOPBAR_SURFACE_KEYS.forEach((key) => {
     assert.strictEqual(Object.hasOwn(device.chrome.storage.sync.values, key), false, 'bookmark bar material never enters browser sync');
   }));
   await set(first.chrome.storage.local, { [topbarMode]: 'clear' });
@@ -805,7 +806,7 @@ async function run() {
   assert.strictEqual(first.chrome.storage.sync.values[theme], 'system');
   // A paused device that kept its old value takes the newer server value.
   await first.controller.handle({ operation: 'pause' });
-  const simple = settings.SIMPLE_MODE_ENABLED_STORAGE_KEY;
+  const simple = settings.simpleModeEnabled.key;
   await set(second.chrome.storage.sync, { [simple]: true });
   await second.controller.handle({ operation: 'sync' });
   await first.controller.handle({ operation: 'connect', config: { ...config, password: '' } });
@@ -829,7 +830,7 @@ async function run() {
   await set(first.chrome.storage.sync, { [language]: 'en' });
   assert.strictEqual(first.chrome.storage.sync.values[language], 'en', 'Chrome settings remain writable while WebDAV is offline');
   await first.controller.handle({ operation: 'pause' });
-  assert.strictEqual(first.chrome.storage.local.values[settings.LOCAL_PRIMARY_STORAGE_KEY], undefined, 'pausing WebDAV leaves Chrome authoritative');
+  assert.strictEqual(first.chrome.storage.local.values[settings.localPrimary.key], undefined, 'pausing WebDAV leaves Chrome authoritative');
   server.offline = false;
   await first.controller.handle({ operation: 'connect', config: { ...config, password: '' } });
   const validRemote = server.state();
@@ -870,7 +871,7 @@ async function run() {
   await set(first.chrome.storage.sync, { [customSearch]: [] });
   await first.controller.handle({ operation: 'sync' });
   await first.controller.handle({ operation: 'browser' });
-  assert.strictEqual(first.chrome.storage.local.values[settings.LOCAL_PRIMARY_STORAGE_KEY], undefined);
+  assert.strictEqual(first.chrome.storage.local.values[settings.localPrimary.key], undefined);
   assert.strictEqual(first.chrome.storage.sync.values[theme], 'dark');
   assert.strictEqual((await first.controller.status()).enabled, false);
 
@@ -1103,7 +1104,7 @@ async function run() {
   assetFile[1].bytes[20] ^= 1;
   await assert.rejects(corrupt.controller.handle({ operation: 'connect', config, decision: 'remote' }), /asset-integrity/);
   assert.strictEqual(corrupt.chrome.storage.sync.values[theme], 'system', 'damaged remote media cannot replace local preferences');
-  assert.strictEqual(corrupt.chrome.storage.local.values[settings.LOCAL_PRIMARY_STORAGE_KEY], undefined);
+  assert.strictEqual(corrupt.chrome.storage.local.values[settings.localPrimary.key], undefined);
   assetFile[1].bytes = originalBytes;
 
   const longList = Array.from({ length: 60 }, (_, index) => shortcuts.createShortcutRecord({
@@ -1116,32 +1117,31 @@ async function run() {
   assert.strictEqual(Object.keys(chromePlan.payload).length, 3, 'bounded backup updates every shortcut chunk together');
   assert(contract.byteLength(JSON.stringify(chromePlan.payload[contract.SHORTCUT_SYNC_KEYS[0]])) < 8192);
   assert(!JSON.stringify(chromePlan.payload).includes('"first"'), 'backup clears stale tails');
-  const legacyChrome = { [shortcuts.LEGACY_SHORTCUTS_KEY]: [firstShortcut] };
+  const legacyChrome = { [newtabShortcutsLegacy.key]: [firstShortcut] };
   const legacyBackup = contract.planChromeBackup(shortcuts.createShortcutStoragePlan({ items: [firstShortcut] }).payload, legacyChrome);
-  assert(!legacyBackup.remove.includes(shortcuts.LEGACY_SHORTCUTS_KEY) &&
-    !Object.hasOwn(legacyBackup.payload, shortcuts.LEGACY_SHORTCUTS_KEY), 'backup leaves the legacy list for older devices');
+  assert(!legacyBackup.remove.includes(newtabShortcutsLegacy.key) &&
+    !Object.hasOwn(legacyBackup.payload, newtabShortcutsLegacy.key), 'backup leaves the legacy list for older devices');
   const smallPayload = shortcuts.createShortcutStoragePlan({ items: [firstShortcut] }).payload;
   const unchangedBackup = contract.planChromeBackup(smallPayload, smallPayload);
   assert(unchangedBackup.complete);
   assert(!contract.SHORTCUT_SYNC_KEYS.some((key) => Object.hasOwn(unchangedBackup.payload, key)),
     'an unchanged grouped copy is not rewritten for a new revision alone');
   const folderServer = createServer();
-  const folderRefs = require('../../src/domain/bookmark-folder-reference.ts');
   const portableFolder = shortcuts.createShortcutRecord({ id: 'folder-sync-entry', type: 'folder', title: 'Design',
     folderRef: { version: 1, root: 'bookmarks-bar', scope: 'account', path: ['Design'], fingerprint: '0123456789abcdef' }
   }, { now: 100 });
   const folderA = createDevice(folderServer, { sync: shortcuts.createShortcutStoragePlan({ items: [firstShortcut, portableFolder] }).payload,
-    local: { [folderRefs.BINDINGS_KEY]: { [portableFolder.id]: { folderId: '42' } } } });
+    local: { [shortcutFolderBindings.key]: { [portableFolder.id]: { folderId: '42' } } } });
   await folderA.controller.handle({ operation: 'connect', config });
   assert.strictEqual(folderServer.state().version, 2, 'portable folders opt into the new protocol');
   assert.deepStrictEqual(folderServer.state().shortcuts.map((item) => item.id), [firstShortcut.id, portableFolder.id]);
   assert(!JSON.stringify(folderServer.state()).includes('folderId'), 'no local bookmark IDs reach WebDAV');
-  assert(!JSON.stringify(folderServer.state()).includes(folderRefs.BINDINGS_KEY));
-  const folderB = createDevice(folderServer, { local: { [folderRefs.BINDINGS_KEY]: { [portableFolder.id]: { folderId: '117' } } } });
+  assert(!JSON.stringify(folderServer.state()).includes(shortcutFolderBindings.key));
+  const folderB = createDevice(folderServer, { local: { [shortcutFolderBindings.key]: { [portableFolder.id]: { folderId: '117' } } } });
   await folderB.controller.handle({ operation: 'connect', config, decision: 'remote' });
   const bFolders = contract.readShortcutState(folderB.chrome.storage.sync.values, folderB.chrome.storage.local.values[contract.OVERFLOW_KEY]).items;
   assert.deepStrictEqual(bFolders.map((item) => item.id), [firstShortcut.id, portableFolder.id]);
-  assert.strictEqual(folderB.chrome.storage.local.values[folderRefs.BINDINGS_KEY][portableFolder.id].folderId, '117');
+  assert.strictEqual(folderB.chrome.storage.local.values[shortcutFolderBindings.key][portableFolder.id].folderId, '117');
   assert.deepStrictEqual(contract.readShortcutState(folderB.chrome.storage.sync.values, null).items[1].folderRef, portableFolder.folderRef,
     'bounded Chrome backup carries the portable locator');
   await folderB.controller.handle({ operation: 'sync' });
@@ -1233,9 +1233,9 @@ async function run() {
   const conflictBase = empty({ [theme]: 'light', [language]: 'en', [customSearch]: engine('base') });
   const conflictLocal = empty({ [theme]: 'dark', [language]: 'ja', [customSearch]: engine('local') });
   const conflictRemote = empty({ [theme]: 'system', [language]: 'en', [customSearch]: engine('remote'),
-    [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true });
+    [settings.simpleModeEnabled.key]: true });
   assert.deepStrictEqual(contract.mergeStates(conflictBase, conflictLocal, conflictRemote, 'remote').state.data,
-    { [theme]: 'system', [language]: 'ja', [customSearch]: engine('remote'), [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true },
+    { [theme]: 'system', [language]: 'ja', [customSearch]: engine('remote'), [settings.simpleModeEnabled.key]: true },
     'choosing a conflict version preserves unrelated edits from both sides');
   const conflictServer = createServer();
   const conflictDevice = createDevice(conflictServer, { sync: conflictBase.data });
@@ -1266,15 +1266,15 @@ async function run() {
   await conflictDevice.controller.handle({ operation: 'sync', decision: 'remote' });
   assert.strictEqual(conflictDevice.chrome.storage.sync.values[theme], 'system');
   assert.strictEqual(conflictDevice.chrome.storage.sync.values[language], 'ja');
-  assert.strictEqual(conflictServer.state().data[settings.SIMPLE_MODE_ENABLED_STORAGE_KEY], true);
+  assert.strictEqual(conflictServer.state().data[settings.simpleModeEnabled.key], true);
 
   const migrated = createDevice(createServer(), { sync: { [theme]: 'light' }, local: {
-    [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [theme]: 'dark' } });
+    [settings.localPrimary.key]: true, [theme]: 'dark' } });
   await migrated.controller.mirrorChrome();
   assert.strictEqual(settingsStorage.createProviderStorageRuntime(migrated.chrome).getActiveAreaName(), 'sync');
   assert.strictEqual(migrated.chrome.storage.sync.values[theme], 'dark', 'an older local installation migrates without losing edits');
   const tooLarge = createDevice(createServer(), { sync: { [theme]: 'light' }, local: {
-    [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [theme]: 'dark', [customSearch]: 'x'.repeat(120 * 1024) } });
+    [settings.localPrimary.key]: true, [theme]: 'dark', [customSearch]: 'x'.repeat(120 * 1024) } });
   await assert.rejects(tooLarge.controller.mirrorChrome(), /chrome-capacity/);
   assert.strictEqual(tooLarge.chrome.storage.sync.values[theme], 'light', 'an oversized legacy migration cannot partially overwrite Chrome');
   assert.strictEqual(tooLarge.chrome.storage.local.values[customSearch].length, 120 * 1024);
@@ -1284,15 +1284,15 @@ async function run() {
   await auto.controller.handle({ operation: 'save', config });
   await auto.controller.handle({ operation: 'enable' });
   await set(auto.chrome.storage.sync, {
-    [theme]: 'dark', [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true,
-    [settings.AGGREGATE_SEARCH_STORAGE_KEY]: [{ id: 'research', name: 'Research', providers: ['gg', 'bd'] }],
+    [theme]: 'dark', [settings.simpleModeEnabled.key]: true,
+    [settings.aggregateSearches.key]: [{ id: 'research', name: 'Research', providers: ['gg', 'bd'] }],
     ['_x_extension_site_search_custom_2024_unique_']: [{ key: 'docs', name: 'Docs', template: 'https://example.com/?q={query}' }],
     ['_x_extension_search_blacklist_2026_unique_']: ['https://hidden.example/']
   });
   await new Promise((resolve) => setTimeout(resolve, 1750));
   assert.strictEqual(autoServer.state().data[theme], 'dark', 'Chrome changes trigger WebDAV without a manual sync');
-  assert.strictEqual(autoServer.state().data[settings.SIMPLE_MODE_ENABLED_STORAGE_KEY], true);
-  assert.strictEqual(autoServer.state().data[settings.AGGREGATE_SEARCH_STORAGE_KEY][0].id, 'research');
+  assert.strictEqual(autoServer.state().data[settings.simpleModeEnabled.key], true);
+  assert.strictEqual(autoServer.state().data[settings.aggregateSearches.key][0].id, 'research');
   assert.strictEqual(autoServer.state().data['_x_extension_site_search_custom_2024_unique_'][0].key, 'docs');
   assert.deepStrictEqual(autoServer.state().data['_x_extension_search_blacklist_2026_unique_'], ['https://hidden.example/']);
   const beforeManualSync = autoServer.requests.length;
@@ -1309,7 +1309,7 @@ async function run() {
   // A first join can merge wallpapers: the server's settings and selection win, uploads
   // from both sides are kept once per image, and links are kept once per address.
   const mergeServer = createServer();
-  const links = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;
+  const links = settings.newtabLinkWallpapers.key;
   const sharedImage = fs.readFileSync('assets/wallpapers/lumno-newtab-seurat-coast-white-thumb.webp');
   const onlyB = fs.readFileSync('assets/wallpapers/lumno-newtab-monet-coastal-white-thumb.webp');
   const record = (id, bytes, updatedAt) => ({ id, key: id, name: id, width: 0, height: 0, updatedAt,
@@ -1359,7 +1359,7 @@ async function testShortcutGroups() {
   const groupedPlan = shortcuts.createShortcutStoragePlan({ groups, items: [link('home', 'g0'), link('docs', 'work')] });
   const legacyList = [link('stale', 'g0')];
   const groupServer = createServer();
-  const a = createDevice(groupServer, { sync: { ...groupedPlan.payload, [shortcuts.LEGACY_SHORTCUTS_KEY]: legacyList } });
+  const a = createDevice(groupServer, { sync: { ...groupedPlan.payload, [newtabShortcutsLegacy.key]: legacyList } });
   await a.controller.handle({ operation: 'connect', config });
   const published = groupServer.state();
   assert.strictEqual(published.version, contract.GROUPED_STATE_VERSION, 'real groups need the grouped protocol');
@@ -1367,12 +1367,12 @@ async function testShortcutGroups() {
   assert.deepStrictEqual(published.shortcuts.map((item) => [item.id, item.groupId]), [['home', 'g0'], ['docs', 'work']]);
   assert(!JSON.stringify(published).includes('stale'), 'the legacy list is not mistaken for current shortcuts');
 
-  const b = createDevice(groupServer, { sync: { [shortcuts.LEGACY_SHORTCUTS_KEY]: legacyList } });
+  const b = createDevice(groupServer, { sync: { [newtabShortcutsLegacy.key]: legacyList } });
   await b.controller.handle({ operation: 'connect', config, decision: 'remote' });
   const received = contract.readShortcutState(b.chrome.storage.sync.values, b.chrome.storage.local.values[contract.OVERFLOW_KEY]);
   assert.deepStrictEqual(received.groups, groups, 'a joining device receives the groups');
   assert.deepStrictEqual(received.items.map((item) => item.id), ['home', 'docs']);
-  assert.deepStrictEqual(b.chrome.storage.sync.values[shortcuts.LEGACY_SHORTCUTS_KEY], legacyList,
+  assert.deepStrictEqual(b.chrome.storage.sync.values[newtabShortcutsLegacy.key], legacyList,
     'applying a remote state keeps the legacy list an older device still reads');
 
   const renamed = shortcuts.createShortcutStoragePlan({ groups: [groups[0], { id: 'work', title: '工作台' }],
@@ -1419,10 +1419,10 @@ async function testShortcutGroups() {
 // An older version drops the settings it does not know whenever it saves; that
 // must not read as removing them.
 function testOlderWriters() {
-  const glass = settings.NEWTAB_GLASS_STYLE_STORAGE_KEY;
-  const size = settings.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY;
-  const ink = settings.NEWTAB_TIME_INK_STORAGE_KEY;
-  const twelveHour = settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY;
+  const glass = settings.newtabGlassStyle.key;
+  const size = settings.newtabTimeFontSize.key;
+  const ink = settings.newtabTimeInk.key;
+  const twelveHour = settings.newtabTime12Hour.key;
   const quotes = '_x_extension_custom_quotes_2026_unique_';
   const shared = '_x_extension_recent_count_2024_unique_';
   const own = (data) => contract.validateState({ ...empty(data), keys: contract.KNOWN_KEYS });
@@ -1469,7 +1469,7 @@ async function testBackgroundRounds() {
   const oversized = createServer();
   const stalled = createDevice(oversized, { sync: { [theme]: 'light' } }, [], quiet);
   await stalled.controller.handle({ operation: 'connect', config });
-  await set(stalled.chrome.storage.local, { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [theme]: 'dark',
+  await set(stalled.chrome.storage.local, { [settings.localPrimary.key]: true, [theme]: 'dark',
     [customSearch]: 'x'.repeat(120 * 1024) });
   const before = oversized.requests.length;
   stalled.chrome.alarms.fire(syncApi.ALARM_NAME);
@@ -1488,7 +1488,7 @@ async function testBackgroundRounds() {
   const overflowServer = createServer();
   const partial = createDevice(overflowServer, { sync: { [theme]: 'light' } }, [], quiet);
   await partial.controller.handle({ operation: 'connect', config });
-  await set(partial.chrome.storage.local, { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true,
+  await set(partial.chrome.storage.local, { [settings.localPrimary.key]: true,
     ...shortcuts.createShortcutStoragePlan({ items: longList }, { maxItemBytes: Number.MAX_SAFE_INTEGER, maxTotalBytes: Number.MAX_SAFE_INTEGER }).payload });
   assert.deepStrictEqual(await partial.controller.handle({ operation: 'sync' }), { ok: true },
     'a sync whose backup is incomplete still succeeds');
@@ -1504,7 +1504,7 @@ async function testBackgroundRounds() {
   await broken.controller.handle({ operation: 'connect', config });
   const originalSet = broken.chrome.storage.local.set;
   broken.chrome.storage.local.set = (payload, callback) => {
-    if (Object.keys(payload).some((key) => key.startsWith(settings.WEBDAV_STATUS_STORAGE_KEY))) {
+    if (Object.keys(payload).some((key) => key.startsWith(settings.webdavStatus.key))) {
       broken.chrome.runtime.lastError = { message: 'QUOTA_BYTES quota exceeded' };
       callback();
       broken.chrome.runtime.lastError = null;
@@ -1606,7 +1606,7 @@ async function testBackgroundRounds() {
   const unreadable = createDevice(unreadableServer, { sync: { [theme]: 'light' } }, [], (options) => {
     const originalGet = options.chrome.storage.local.get;
     options.chrome.storage.local.get = (keys, callback) => {
-      if (Array.isArray(keys) && keys.length === 1 && keys[0] === settings.LOCAL_PRIMARY_STORAGE_KEY) {
+      if (Array.isArray(keys) && keys.length === 1 && keys[0] === settings.localPrimary.key) {
         options.chrome.runtime.lastError = { message: 'IO error' };
         callback(undefined);
         options.chrome.runtime.lastError = null;

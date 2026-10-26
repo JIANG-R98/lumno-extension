@@ -76,7 +76,7 @@ window.chrome = {
 };
 
 // Extension pages load settings.ts before the tab switcher runtime.
-window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
+window.eval(moduleScript('src/domain/settings/index.ts', 'LumnoSettings'));
 window.eval(moduleScript('src/shared/ui/toast.ts', 'LumnoToast'));
 window.eval(moduleScript('src/shared/page-color-scheme.ts', 'LumnoPageColorScheme'));
 const tabSwitcherViewStub = {

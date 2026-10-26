@@ -3,6 +3,7 @@ const assert = require('assert');
 const store = require('../../src/domain/search/aggregate-search-store.ts');
 const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
+const { aggregateSearches } = require('../../src/domain/settings/search.ts');
 
 const providers = [
   { key: 'gg', name: 'Google' },
@@ -298,7 +299,7 @@ assert.strictEqual(
       get() {
         return Promise.reject(new Error('temporary sync failure'));
       }
-    }, store.STORAGE_KEY, { runtime: { lastError: null } }),
+    }, aggregateSearches.key, { runtime: { lastError: null } }),
     /temporary sync failure/,
     'storage failures must remain distinguishable from a genuinely empty aggregate list'
   );

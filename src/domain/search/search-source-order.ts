@@ -2,7 +2,7 @@
 // the group blocks of the search scope panel, each Settings list, and the
 // browser content source types. Nothing is stored until the reader moves
 // something, and anything the record does not mention keeps its usual place.
-const STORAGE_KEY = '_x_extension_search_source_order_2026_unique_';
+import { searchSourceOrder } from '../settings/search';
 const SCHEMA_VERSION = 1;
 
 // The stored record, always complete once normalized.
@@ -113,7 +113,7 @@ function normalizeLocal(value: unknown): string[] {
 
 function getRecordBytes(record: SearchSourceOrder): number {
   try {
-    return JSON.stringify(record).length + STORAGE_KEY.length;
+    return JSON.stringify(record).length + searchSourceOrder.key.length;
   } catch (error) {
     return Number.MAX_SAFE_INTEGER;
   }
@@ -435,7 +435,6 @@ function rankScopeItems<T extends ScopeItem | null>(
 }
 
 export {
-  STORAGE_KEY,
   SCHEMA_VERSION,
   GROUP_IDS,
   DEFAULT_GROUP_ORDER,

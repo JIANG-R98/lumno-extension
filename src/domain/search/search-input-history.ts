@@ -1,4 +1,5 @@
 import type { StorageAreaLike, StorageChangeEventLike, StorageChanges, StorageItems } from '../storage-port';
+import { searchInputHistory } from '../settings/search';
 
 type HistoryDirection = 'previous' | 'next' | '';
 
@@ -15,7 +16,6 @@ interface SearchInputHistoryOptions {
   maxEntries?: number;
 }
 
-const STORAGE_KEY = '_x_extension_search_input_history_2026_unique_';
 const DEFAULT_MAX_ENTRIES = 50;
 const MAX_ENTRY_LENGTH = 4096;
 
@@ -68,7 +68,7 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
   const storageArea = config.storageArea || null;
   const storageChanges = config.storageChanges || null;
   const storageAreaName = config.storageAreaName || 'local';
-  const storageKey = config.storageKey || STORAGE_KEY;
+  const storageKey = config.storageKey || searchInputHistory.key;
   const maxEntries = Number.isFinite(Number(config.maxEntries))
     ? Math.max(1, Math.round(Number(config.maxEntries)))
     : DEFAULT_MAX_ENTRIES;
@@ -244,7 +244,6 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
 }
 
 export {
-  STORAGE_KEY,
   DEFAULT_MAX_ENTRIES,
   createSearchInputHistoryController,
   getShortcutDirection,

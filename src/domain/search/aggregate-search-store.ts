@@ -2,6 +2,7 @@
 // Stored as one synced record of definitions that refer to their sources
 // (built-in or custom site searches) by reference.
 import type { SiteSearchProvider } from './types';
+import { aggregateSearches } from '../settings/search';
 
 // One aggregate search as stored, after normalizing.
 interface AggregateSearch {
@@ -41,7 +42,6 @@ interface AggregateScopeProvider extends SiteSearchProvider {
 
 type CreateProviderId = (item: unknown, index: number, attempt: number) => unknown;
 
-const STORAGE_KEY = '_x_extension_aggregate_searches_2026_unique_';
 const SCHEMA_VERSION = 2;
 const MIN_SOURCE_COUNT = 2;
 const MAX_SOURCE_COUNT = 10;
@@ -295,7 +295,7 @@ function serializeAggregateSearches(items: unknown): { version: number; items: A
 }
 
 function getSerializedStorageByteLength(value: unknown, storageKey?: string): number {
-  return getUtf8ByteLength(String(storageKey || STORAGE_KEY)) +
+  return getUtf8ByteLength(String(storageKey || aggregateSearches.key)) +
     getUtf8ByteLength(JSON.stringify(value));
 }
 
@@ -457,7 +457,6 @@ function isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null 
 }
 
 export {
-  STORAGE_KEY,
   SCHEMA_VERSION,
   MIN_SOURCE_COUNT,
   MAX_SOURCE_COUNT,

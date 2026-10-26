@@ -4,6 +4,11 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { StorageChromeApi } from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
+import { motionEffectsEnabled, simpleModeEnabled, themeMode } from '../domain/settings/appearance';
+import { overlayEnterAnimation, overlayFontFallback, overlayFontFamily, overlayOpenTabsDefaultVisible, overlayPageThemeAdaptationEnabled, overlaySizeMode, overlayTabPriority, overlayWidth } from '../domain/settings/overlay-panel';
+import { aggregateSearches, defaultSearchEngine, faviconEnhancedFetchEnabled, faviconRequestBlacklist, macosCtrlSuggestionNavigationEnabled, numberShortcutInstantEnabled, searchBlacklist, searchResultDisplayLimit, searchResultPriority, searchResultSourceTypes, siteSearchCustom, siteSearchDisabled, siteSearchIconCache, tabRankScoreDebug } from '../domain/settings/search';
+import { documentPipEnabled } from '../domain/settings/features';
+import { language } from '../domain/settings/locale';
 
 type StoredValues = Record<string, unknown>;
 
@@ -33,33 +38,33 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 }
 
 const STORAGE_KEYS = Object.freeze({
-  themeMode: '_x_extension_theme_mode_2024_unique_',
-  language: '_x_extension_language_2024_unique_',
-  defaultSearchEngine: '_x_extension_default_search_engine_2024_unique_',
-  siteSearchCustom: '_x_extension_site_search_custom_2024_unique_',
-  siteSearchDisabled: '_x_extension_site_search_disabled_2024_unique_',
-  aggregateSearches: '_x_extension_aggregate_searches_2026_unique_',
-  siteSearchIconCache: '_x_extension_site_search_icon_cache_canonical_2026_unique_',
-  documentPipEnabled: '_x_extension_document_pip_enabled_2026_unique_',
-  searchResultPriority: '_x_extension_search_result_priority_2026_unique_',
-  searchResultSourceTypes: '_x_extension_search_result_source_types_2026_unique_',
-  searchResultDisplayLimit: '_x_extension_search_result_display_limit_2026_unique_',
-  searchBlacklist: '_x_extension_search_blacklist_2026_unique_',
-  faviconRequestBlacklist: '_x_extension_favicon_request_blacklist_2026_unique_',
-  faviconEnhancedFetchEnabled: '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_',
-  overlayOpenTabsDefaultVisible: '_x_extension_overlay_open_tabs_default_visible_2026_unique_',
-  overlaySizeMode: '_x_extension_overlay_size_mode_2026_unique_',
-  overlayWidth: '_x_extension_overlay_width_2026_unique_',
-  overlayEnterAnimation: '_x_extension_overlay_enter_animation_2026_unique_',
-  overlayFontFamily: '_x_extension_overlay_font_family_2026_unique_',
-  overlayFontFallback: '_x_extension_overlay_font_fallback_2026_unique_',
-  overlayPageThemeAdaptationEnabled: '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_',
-  motionEffectsEnabled: '_x_extension_motion_effects_enabled_2026_unique_',
-  simpleModeEnabled: '_x_extension_simple_mode_enabled_2026_unique_',
-  numberShortcutInstantEnabled: '_x_extension_number_shortcut_instant_enabled_2026_unique_',
-  macosCtrlSuggestionNavigationEnabled: '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_',
-  overlayTabPriority: '_x_extension_overlay_tab_priority_2024_unique_',
-  tabRankScoreDebug: '_x_extension_tab_rank_score_debug_2026_unique_'
+  themeMode: themeMode.key,
+  language: language.key,
+  defaultSearchEngine: defaultSearchEngine.key,
+  siteSearchCustom: siteSearchCustom.key,
+  siteSearchDisabled: siteSearchDisabled.key,
+  aggregateSearches: aggregateSearches.key,
+  siteSearchIconCache: siteSearchIconCache.key,
+  documentPipEnabled: documentPipEnabled.key,
+  searchResultPriority: searchResultPriority.key,
+  searchResultSourceTypes: searchResultSourceTypes.key,
+  searchResultDisplayLimit: searchResultDisplayLimit.key,
+  searchBlacklist: searchBlacklist.key,
+  faviconRequestBlacklist: faviconRequestBlacklist.key,
+  faviconEnhancedFetchEnabled: faviconEnhancedFetchEnabled.key,
+  overlayOpenTabsDefaultVisible: overlayOpenTabsDefaultVisible.key,
+  overlaySizeMode: overlaySizeMode.key,
+  overlayWidth: overlayWidth.key,
+  overlayEnterAnimation: overlayEnterAnimation.key,
+  overlayFontFamily: overlayFontFamily.key,
+  overlayFontFallback: overlayFontFallback.key,
+  overlayPageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled.key,
+  motionEffectsEnabled: motionEffectsEnabled.key,
+  simpleModeEnabled: simpleModeEnabled.key,
+  numberShortcutInstantEnabled: numberShortcutInstantEnabled.key,
+  macosCtrlSuggestionNavigationEnabled: macosCtrlSuggestionNavigationEnabled.key,
+  overlayTabPriority: overlayTabPriority.key,
+  tabRankScoreDebug: tabRankScoreDebug.key
 });
 
 function getRuntimeUrl(chromeApi: RuntimeUrlApi | null, path: string): string {

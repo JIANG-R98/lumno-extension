@@ -19,7 +19,7 @@ import { publishBootValue } from '../platform/boot-handoff';
   }
 
   // The locale messages gate the page's first reveal; fetch them now instead of after storage answers.
-  const cachedLocale = readCache(settings.NEWTAB_LOCALE_CACHE_KEY);
+  const cachedLocale = readCache(settings.newtabLocaleCache.key);
   if (cachedLocale && settings.normalizeLocale(cachedLocale) === cachedLocale &&
       chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function') {
     const localePath = chromeApi.runtime.getURL(`_locales/${cachedLocale}/messages.json`);
@@ -31,7 +31,7 @@ import { publishBootValue } from '../platform/boot-handoff';
 
   let stored: unknown = null;
   try {
-    stored = JSON.parse(readCache(settings.NEWTAB_STARTUP_STORAGE_KEYS_CACHE_KEY) || 'null');
+    stored = JSON.parse(readCache(settings.newtabStartupStorageKeys.key) || 'null');
   } catch {
     stored = null;
   }

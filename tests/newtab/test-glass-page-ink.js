@@ -4,6 +4,7 @@
 const assert = require('assert');
 const vm = require('vm');
 const { moduleScript } = require('../helpers/module-script');
+const wallpaperSettings = require('../../src/domain/settings/newtab-wallpaper.ts');
 
 function createElement(rect) {
   const attributes = new Map();
@@ -127,7 +128,7 @@ async function createPage({ pixel, leftPixel, targets }) {
     targets,
     runtime,
     runFrames,
-    remembered: () => stored.get(tone.GLASS_INK_HINT_STORAGE_KEY) || null
+    remembered: () => stored.get(wallpaperSettings.newtabGlassInkHint.key) || null
   };
 }
 

@@ -14,9 +14,9 @@ interface LabsSectionDeps {
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createSettingToggleRowsController'>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'DOCUMENT_PIP_ENABLED_STORAGE_KEY' | 'NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY' |
-    'MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY' |
-    'normalizeNumberShortcutInstantEnabled' | 'normalizeMacosCtrlSuggestionNavigationEnabled'>;
+    'documentPipEnabled' | 'numberShortcutInstantEnabled' |
+    'macosCtrlSuggestionNavigationEnabled' |
+    'numberShortcutInstantEnabled' | 'macosCtrlSuggestionNavigationEnabled'>;
   getMessage: GetMessage;
   // The browser family the page runs in (data-browser-family).
   browserFamily: string;
@@ -39,19 +39,19 @@ function createLabsSection(deps: LabsSectionDeps) {
   const settings: readonly LabsSetting[] = [
     {
       key: 'documentPip',
-      storageKey: SETTINGS.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
+      storageKey: SETTINGS.documentPipEnabled.key,
       normalize: (raw) => raw === true,
       unsupportedBrowser: DOCUMENT_PIP_UNSUPPORTED_BROWSER
     },
     {
       key: 'numberShortcutInstant',
-      storageKey: SETTINGS.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
-      normalize: SETTINGS.normalizeNumberShortcutInstantEnabled
+      storageKey: SETTINGS.numberShortcutInstantEnabled.key,
+      normalize: SETTINGS.numberShortcutInstantEnabled.parse
     },
     {
       key: 'macosCtrlSuggestionNavigation',
-      storageKey: SETTINGS.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
-      normalize: SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled
+      storageKey: SETTINGS.macosCtrlSuggestionNavigationEnabled.key,
+      normalize: SETTINGS.macosCtrlSuggestionNavigationEnabled.parse
     }
   ];
   // Every experiment starts off until storage answers.

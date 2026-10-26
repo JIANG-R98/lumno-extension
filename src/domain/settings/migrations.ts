@@ -4,13 +4,18 @@
 //
 // Synced preferences are not rewritten here: devices on older versions
 // share them and keep writing their older shapes, so the normalizers in
-// settings.ts read every shape back instead. The migrations clean up and
+// schemas in this folder read every shape back instead. The migrations clean up and
 // convert data this device's own older versions left behind.
+import type { StorageItems } from '../storage-port';
+import { BOOKMARK_TOPBAR_SURFACE_SETTINGS } from './bookmarks';
+import { OVERLAY_FONT_SETTINGS } from './overlay-panel';
 import {
-  BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
-  OVERLAY_FONT_LOCAL_STORAGE_KEYS
-} from './settings';
-import type { StorageItems } from './storage-port';
+  LANGUAGE_MESSAGES_KEY,
+  LEGACY_SITE_SEARCH_ICON_KEYS,
+  REMOVED_AI_LOCAL_KEYS,
+  REMOVED_AI_SYNC_KEYS
+} from './removed';
+import { settingsSchemaVersion } from './sync-state';
 
 type SettingsArea = 'sync' | 'local';
 
@@ -42,29 +47,6 @@ interface SettingsMigrationPlan {
   patch: SettingsPatch;
 }
 
-// Local area only: each device migrates its own data.
-const SETTINGS_SCHEMA_VERSION_STORAGE_KEY = '_x_extension_settings_schema_version_2026_unique_';
-
-// The UI language's messages, which versions before 0.9.50 cached in
-// storage.
-const LANGUAGE_MESSAGES_STORAGE_KEY = '_x_extension_language_messages_2024_unique_';
-
-// The AI search settings, removed with the feature.
-const REMOVED_AI_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
-  '_x_extension_ai_search_mode_2026_unique_',
-  '_x_extension_ai_provider_2026_unique_',
-  '_x_extension_ai_entitlement_cache_2026_unique_'
-]);
-const REMOVED_AI_LOCAL_STORAGE_KEYS: readonly string[] = Object.freeze([
-  '_x_extension_ai_api_key_2026_unique_'
-]);
-
-// Site search icon caches the canonical cache replaced.
-const LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS: readonly string[] = Object.freeze([
-  '_x_extension_site_search_icon_cache_2026_unique_',
-  '_x_extension_site_search_icon_cache_retina_2026_unique_'
-]);
-
 const NO_READS: Readonly<Record<SettingsArea, readonly string[]>> = Object.freeze({ sync: [], local: [] });
 
 function createEmptyPatch(): SettingsPatch {
@@ -86,48 +68,44 @@ const SETTINGS_MIGRATIONS: readonly SettingsMigration[] = Object.freeze([
     version: 1,
     summary: 'Drop the language messages older versions cached in storage.',
     reads: NO_READS,
-    migrate: () => removeKeys({ sync: [LANGUAGE_MESSAGES_STORAGE_KEY], local: [LANGUAGE_MESSAGES_STORAGE_KEY] })
+    migrate: () => removeKeys({ sync: [LANGUAGE_MESSAGES_KEY], local: [LANGUAGE_MESSAGES_KEY] })
   },
   {
     version: 2,
     summary: 'Drop the settings of the removed AI search, including its API key.',
     reads: NO_READS,
-    migrate: () => removeKeys({ sync: REMOVED_AI_SYNC_STORAGE_KEYS, local: REMOVED_AI_LOCAL_STORAGE_KEYS })
+    migrate: () => removeKeys({ sync: REMOVED_AI_SYNC_KEYS, local: REMOVED_AI_LOCAL_KEYS })
   },
   {
     version: 3,
     summary: 'Drop the site search icon caches the canonical cache replaced.',
     reads: NO_READS,
-    migrate: () => removeKeys({ local: LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS })
+    migrate: () => removeKeys({ local: LEGACY_SITE_SEARCH_ICON_KEYS })
   },
   {
     version: 4,
     summary: 'Take the bookmark bar material out of browser sync: it is chosen against this ' +
       'device\'s wallpaper, which browser sync does not carry.',
     reads: NO_READS,
-    migrate: () => removeKeys({ sync: BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS })
+    migrate: () => removeKeys({ sync: BOOKMARK_TOPBAR_SURFACE_SETTINGS.map((setting) => setting.key) })
   },
   {
     version: 5,
     summary: 'Take the overlay fonts out of browser sync, where development builds kept them: ' +
       'they name this computer\'s installed faces.',
     reads: NO_READS,
-    migrate: () => removeKeys({ sync: OVERLAY_FONT_LOCAL_STORAGE_KEYS })
+    migrate: () => removeKeys({ sync: OVERLAY_FONT_SETTINGS.map((setting) => setting.key) })
   }
 ]);
 
 const SETTINGS_SCHEMA_VERSION = SETTINGS_MIGRATIONS.reduce((latest, migration) => Math.max(latest, migration.version), 0);
 
-// The stored version: a whole number, 0 for a device that never migrated.
-function normalizeSettingsSchemaVersion(value: unknown): number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0;
-}
 
 function getPendingSettingsMigrations(
   version: unknown,
   migrations: readonly SettingsMigration[] = SETTINGS_MIGRATIONS
 ): SettingsMigration[] {
-  const current = normalizeSettingsSchemaVersion(version);
+  const current = settingsSchemaVersion.parse(version);
   return migrations.filter((migration) => migration.version > current);
 }
 
@@ -180,7 +158,7 @@ function planSettingsMigrations(
   snapshot: SettingsSnapshot,
   migrations: readonly SettingsMigration[] = SETTINGS_MIGRATIONS
 ): SettingsMigrationPlan {
-  const current = normalizeSettingsSchemaVersion(version);
+  const current = settingsSchemaVersion.parse(version);
   let working = snapshot;
   let patch = createEmptyPatch();
   let reached = current;
@@ -197,17 +175,11 @@ function planSettingsMigrations(
 }
 
 export {
-  LANGUAGE_MESSAGES_STORAGE_KEY,
-  LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS,
-  REMOVED_AI_LOCAL_STORAGE_KEYS,
-  REMOVED_AI_SYNC_STORAGE_KEYS,
   SETTINGS_MIGRATIONS,
   SETTINGS_SCHEMA_VERSION,
-  SETTINGS_SCHEMA_VERSION_STORAGE_KEY,
   applySettingsPatch,
   getPendingSettingsMigrations,
   getSettingsMigrationReads,
-  normalizeSettingsSchemaVersion,
   planSettingsMigrations
 };
 export type {

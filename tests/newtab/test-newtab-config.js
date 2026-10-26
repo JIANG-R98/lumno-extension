@@ -1,6 +1,6 @@
 const assert = require('assert');
 const config = require('../../src/newtab/newtab-config.ts');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
 const layout = require('../../src/newtab/layout.ts');
 
@@ -37,9 +37,9 @@ shortcutsStore.SHORTCUT_STORAGE_KEYS.forEach((key) => {
   assert.ok(synced.includes(key), `the shortcuts move with the preferences: ${key}`);
 });
 [
-  settings.NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
-  ...settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
-  ...settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+  settings.newtabLocalWallpaper.key,
+  ...settings.BOOKMARK_TOPBAR_SURFACE_KEYS,
+  ...settings.OVERLAY_FONT_KEYS
 ].forEach((key) => {
   assert.ok(!synced.includes(key), `device-only data stays on this device: ${key}`);
 });

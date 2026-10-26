@@ -1,5 +1,6 @@
 const assert = require('assert');
 const order = require('../../src/domain/search/search-source-order.ts');
+const { searchSourceOrder } = require('../../src/domain/settings/search.ts');
 
 const KEY = '_x_extension_search_source_order_2026_unique_';
 
@@ -28,7 +29,7 @@ const PANEL_ITEMS = [
 ];
 
 function testContract() {
-  assert.strictEqual(order.STORAGE_KEY, KEY);
+  assert.strictEqual(searchSourceOrder.key, KEY);
   assert.deepStrictEqual(order.DEFAULT_GROUP_ORDER, ['aggregate', 'engine', 'site', 'ai', 'local']);
   assert.deepStrictEqual(order.LIST_IDS, ['custom', 'engine', 'site', 'ai', 'aggregate']);
 }

@@ -61,6 +61,7 @@ import { getShortcutsTabApi } from './react/shortcuts-tab';
 import { getToastApi } from '../shared/react/toast';
 import { getSettingsControlsApi } from './react/settings-controls';
 import { getSettingsNavigationApi } from './react/settings-navigation';
+import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
 
 (function() {
   const optionsRuntimeStartedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -109,15 +110,6 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
 
 
 
-  const {
-    THEME_STORAGE_KEY,
-    LANGUAGE_STORAGE_KEY,
-    FALLBACK_SHORTCUT_STORAGE_KEY,
-    SITE_SEARCH_STORAGE_KEY,
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
-    AGGREGATE_SEARCH_STORAGE_KEY,
-    SYNC_META_STORAGE_KEY
-  } = SETTINGS;
   // Device-only values (the language copy, the shortcut overflow, WebDAV
   // status) and the local-to-sync migration always use chrome.storage.local,
   // whichever area holds the synced settings.
@@ -129,8 +121,6 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
   if (!startupStorageReadBatch) {
     return;
   }
-  const SYNC_KEYS = SETTINGS.CHROME_SYNC_STORAGE_KEYS;
-  const SEARCH_SOURCE_ORDER_STORAGE_KEY = SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY;
   // Page state shared with the parts of this page split out into
   // src/options/: each receives this one object as `optionsState` and reads
   // and writes the same properties this file does.
@@ -152,11 +142,11 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     searchSourceOrderController: LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
       getMessage: (key, fallback) => getMessage(key, fallback),
       showToast: (message, isError) => showToast(message, isError),
-      read: () => LumnoSettingsStorage.readStorageValue(startupStorageReadBatch.area, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
+      read: () => LumnoSettingsStorage.readStorageValue(startupStorageReadBatch.area, chrome, SETTINGS.searchSourceOrder.key),
       write: (value) => LumnoSettingsStorage.writeStorageValue(
         rawStorageArea,
         chrome,
-        SEARCH_SOURCE_ORDER_STORAGE_KEY,
+        SETTINGS.searchSourceOrder.key,
         value
       ),
       onChange() {
@@ -251,9 +241,9 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     initTooltips,
     scrollToOptionsTarget: (...args) => scrollToOptionsTarget(...args),
     normalizeSiteSearchProvider,
-    SITE_SEARCH_STORAGE_KEY,
+    SITE_SEARCH_STORAGE_KEY: SETTINGS.siteSearchCustom.key,
     getSiteSearchBuiltinKey: (...args) => getSiteSearchBuiltinKey(...args),
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
+    SITE_SEARCH_DISABLED_STORAGE_KEY: SETTINGS.siteSearchDisabled.key,
     SITE_SEARCH,
     optionsState
   });
@@ -300,7 +290,7 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
     SETTINGS,
-    LANGUAGE_STORAGE_KEY,
+    LANGUAGE_STORAGE_KEY: SETTINGS.language.key,
     localStorageArea,
     getActivePrimaryAreaName: () => getActivePrimaryAreaName(),
     renderFeedbackSupport,
@@ -356,7 +346,7 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     getVersion: () => chrome?.runtime?.getManifest?.()?.version || '',
     localArea: localStorageArea,
     navigatorObj: navigator,
-    settingKeys: SETTINGS.CHROME_SYNC_STORAGE_KEYS
+    settingKeys: SETTINGS.BROWSER_SYNC_KEYS
   });
   const generalTab = OPTIONS_GENERAL_TAB.createGeneralTab(optionsSettingsControlsApi.createGeneralTabController(
     queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="general"]')
@@ -678,8 +668,8 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
   function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
-  storageChanges.on(SEARCH_SOURCE_ORDER_STORAGE_KEY, (changes) => {
-    optionsState.searchSourceOrderController.accept(changes[SEARCH_SOURCE_ORDER_STORAGE_KEY].newValue);
+  storageChanges.on(SETTINGS.searchSourceOrder.key, (changes) => {
+    optionsState.searchSourceOrderController.accept(changes[SETTINGS.searchSourceOrder.key].newValue);
   });
   optionsState.searchSourceOrderController.load();
 
@@ -705,7 +695,7 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     aggregateSearchListController,
     renderedSearchSourceKeys,
     getSearchSourceReorderCopy,
-    AGGREGATE_SEARCH_STORAGE_KEY,
+    AGGREGATE_SEARCH_STORAGE_KEY: SETTINGS.aggregateSearches.key,
     getActivePrimaryAreaName,
     AGGREGATE_SEARCH,
     showToast,
@@ -784,16 +774,16 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
   function refreshSyncStatus() {
     syncSection.refreshSyncStatus();
   }
-  storageChanges.on(SETTINGS.WEBDAV_STATUS_STORAGE_KEY, refreshSyncStatus, { area: 'local' });
+  storageChanges.on(SETTINGS.webdavStatus.key, refreshSyncStatus, { area: 'local' });
   storageChanges.on(
-    LumnoNewtabShortcutsStore && LumnoNewtabShortcutsStore.SHORTCUTS_LOCAL_OVERFLOW_KEY,
+    LumnoNewtabShortcutsStore && newtabShortcutsLocalOverflow.key,
     () => syncSection.refreshShortcutSyncSummary(),
     { area: 'local' }
   );
-  storageChanges.on([SYNC_META_STORAGE_KEY, ...SYNC_KEYS], refreshSyncStatus);
+  storageChanges.on([SETTINGS.syncMeta.key, ...SETTINGS.BROWSER_SYNC_KEYS], refreshSyncStatus);
 
-  storageChanges.on(LANGUAGE_STORAGE_KEY, (changes) => {
-    applyLanguageMode(changes[LANGUAGE_STORAGE_KEY].newValue || 'system');
+  storageChanges.on(SETTINGS.language.key, (changes) => {
+    applyLanguageMode(changes[SETTINGS.language.key].newValue || 'system');
   });
 
   const {
@@ -825,7 +815,7 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
       optionsState.searchShortcutStatus.load();
     }
   }
-  storageChanges.on(FALLBACK_SHORTCUT_STORAGE_KEY, () => loadCurrentShortcut());
+  storageChanges.on(SETTINGS.fallbackShortcut.key, () => loadCurrentShortcut());
 
   if (settingsVersion && chrome?.runtime?.getManifest) {
     const manifest = chrome.runtime.getManifest();
@@ -886,9 +876,9 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
     windowObj: window
   });
   optionsState.themeSection.init();
-  storageChanges.on(THEME_STORAGE_KEY, (changes) => {
+  storageChanges.on(SETTINGS.themeMode.key, (changes) => {
     if (optionsState.themeSection) {
-      optionsState.themeSection.applyStorageChange(changes[THEME_STORAGE_KEY].newValue);
+      optionsState.themeSection.applyStorageChange(changes[SETTINGS.themeMode.key].newValue);
     }
   });
 
@@ -928,7 +918,7 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
   updateTabsStickyVisualState();
   window.addEventListener('resize', scheduleOptionsViewportLayoutRefresh, { passive: true });
   optionsState.providerStorageRuntime.ready.then(() => {
-    syncSection.migrateStorageIfNeeded(SYNC_KEYS.slice());
+    syncSection.migrateStorageIfNeeded(SETTINGS.BROWSER_SYNC_KEYS.slice());
     refreshSyncStatus();
   });
 
@@ -964,15 +954,15 @@ import { getSettingsNavigationApi } from './react/settings-navigation';
 
   refreshCustomSelects();
 
-  storageChanges.on(AGGREGATE_SEARCH_STORAGE_KEY, (changes) => {
+  storageChanges.on(SETTINGS.aggregateSearches.key, (changes) => {
     getAggregateSearchStateCoordinator().applyStorageChange(
-      changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
+      changes[SETTINGS.aggregateSearches.key].newValue
     );
   });
 
   // A save on this page suspends refreshes briefly so its own write does not
   // re-render the list mid-edit; a change during that window refreshes after.
-  storageChanges.on([SITE_SEARCH_STORAGE_KEY, SITE_SEARCH_DISABLED_STORAGE_KEY], () => {
+  storageChanges.on([SETTINGS.siteSearchCustom.key, SETTINGS.siteSearchDisabled.key], () => {
     invalidateSiteSearchProviderRefresh();
     const now = Date.now();
     if (optionsState.siteSearchRefreshSuppressUntil && now < optionsState.siteSearchRefreshSuppressUntil) {

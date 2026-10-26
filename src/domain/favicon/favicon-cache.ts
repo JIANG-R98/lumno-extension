@@ -2,6 +2,7 @@
 // site theme colors, and hosts whose favicon may have changed since a
 // visit. Each is stored as one record of entries with their update times;
 // reading drops expired and malformed entries and keeps the newest ones.
+import { faviconDataCache, faviconUrlCache, faviconVisitDirty, siteThemeCache } from '../settings/search';
 
 // Page entries ("page:https://...") written under an older version used
 // the host's icon as a fallback, so they are dropped and acquired again.
@@ -65,16 +66,16 @@ interface CacheRetention {
 }
 
 const DEFAULTS: Readonly<FaviconCacheSettings> = Object.freeze({
-  faviconPersistStorageKey: '_x_extension_favicon_url_cache_2024_unique_',
+  faviconPersistStorageKey: faviconUrlCache.key,
   faviconPersistTtlMs: 1000 * 60 * 60 * 24 * 14,
   faviconPersistMaxEntries: 800,
-  faviconDataPersistStorageKey: '_x_extension_favicon_data_cache_2024_unique_',
+  faviconDataPersistStorageKey: faviconDataCache.key,
   faviconDataPersistMaxEntries: 220,
   faviconDataPersistMaxLength: 96000,
-  siteThemePersistStorageKey: '_x_extension_site_theme_cache_2026_unique_',
+  siteThemePersistStorageKey: siteThemeCache.key,
   siteThemePersistTtlMs: 1000 * 60 * 60 * 24 * 30,
   siteThemePersistMaxEntries: 800,
-  faviconVisitDirtyStorageKey: '_x_extension_favicon_visit_dirty_2026_unique_',
+  faviconVisitDirtyStorageKey: faviconVisitDirty.key,
   faviconVisitDirtyTtlMs: 1000 * 60 * 60 * 24,
   faviconVisitDirtyMaxEntries: 600,
   faviconCacheBootWaitMs: 120

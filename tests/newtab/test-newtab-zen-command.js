@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
@@ -9,7 +9,7 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 // each section is set to show, and is remembered for the next New Tab.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const ZEN = settings.NEWTAB_ZEN_MODE_STORAGE_KEY;
+const ZEN = settings.newtabZenMode.key;
 const SECTIONS = '[data-content-visible]';
 
 function sections(page) {

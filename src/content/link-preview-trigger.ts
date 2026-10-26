@@ -9,6 +9,8 @@ import * as LumnoMessaging from '../platform/messaging';
 import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
 import type { ListenerTarget } from '../platform/page-navigation';
 import { claimContentScript } from '../platform/content-registry';
+import { linkPreviewEnabled } from '../domain/settings/features';
+import { localPrimary } from '../domain/settings/sync-state';
 
 interface PrepareOptions {
   // Shift held over the link, before any press.
@@ -130,13 +132,6 @@ function isElement(value: EventTarget | null | undefined): value is Element {
     }
   }
 
-  // The Options switch, on until storage says otherwise as it defaults to on.
-  // Like every synced setting it lives in sync storage unless the user keeps
-  // settings local (local-primary), so both areas are read and the active
-  // one decides. The keys are settings.ts's, spelled out here: importing it
-  // would double this every-frame script.
-  const ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026_unique_';
-  const LOCAL_PRIMARY_STORAGE_KEY = '_x_extension_local_primary_2026_unique_';
   let triggerEnabled = true;
 
   function followEnabledSetting(): void {
@@ -164,13 +159,13 @@ function isElement(value: EventTarget | null | undefined): value is Element {
         // Ignore an extension context invalidated during reload or navigation.
       }
     };
-    read(storage.local, [ENABLED_STORAGE_KEY, LOCAL_PRIMARY_STORAGE_KEY], (result) => {
-      stored.local = result[ENABLED_STORAGE_KEY];
-      stored.localPrimary = result[LOCAL_PRIMARY_STORAGE_KEY] === true;
+    read(storage.local, [linkPreviewEnabled.key, localPrimary.key], (result) => {
+      stored.local = result[linkPreviewEnabled.key];
+      stored.localPrimary = result[localPrimary.key] === true;
     });
     if (storage.sync) {
-      read(storage.sync, [ENABLED_STORAGE_KEY], (result) => {
-        stored.sync = result[ENABLED_STORAGE_KEY];
+      read(storage.sync, [linkPreviewEnabled.key], (result) => {
+        stored.sync = result[linkPreviewEnabled.key];
       });
     }
     const onChanged = storage.onChanged;
@@ -181,11 +176,11 @@ function isElement(value: EventTarget | null | undefined): value is Element {
       if (!changes || (areaName !== 'sync' && areaName !== 'local')) {
         return;
       }
-      if (changes[ENABLED_STORAGE_KEY]) {
-        stored[areaName] = changes[ENABLED_STORAGE_KEY].newValue;
+      if (changes[linkPreviewEnabled.key]) {
+        stored[areaName] = changes[linkPreviewEnabled.key].newValue;
       }
-      if (areaName === 'local' && changes[LOCAL_PRIMARY_STORAGE_KEY]) {
-        stored.localPrimary = changes[LOCAL_PRIMARY_STORAGE_KEY].newValue === true;
+      if (areaName === 'local' && changes[localPrimary.key]) {
+        stored.localPrimary = changes[localPrimary.key].newValue === true;
       }
       apply();
     };

@@ -10,10 +10,11 @@ import type * as LumnoProgressMatch from '../domain/progress-match';
 import type * as LumnoProgressHistory from '../domain/progress-history';
 import type { ProgressComparison, ProgressConfidence } from '../domain/progress-match';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
+import * as RecentSiteSettings from '../domain/settings/recent-sites';
 
 type ProgressMatchApi = Pick<typeof LumnoProgressMatch,
   'getComparableUrl' | 'getProgressSiteKey' | 'compareProgressPages' | 'shouldAdvance' | 'looksLikeSeriesPage'>;
-type ProgressHistoryApi = Pick<typeof LumnoProgressHistory, 'STORAGE_KEY' | 'recordVersion' | 'getHistoryId'>;
+type ProgressHistoryApi = Pick<typeof LumnoProgressHistory, 'recordVersion' | 'getHistoryId'>;
 
 // A timer from the injected timer functions; only they read it.
 type TimerHandle = unknown;
@@ -484,7 +485,7 @@ function createProgressTracker(options: ProgressTrackerOptions): Readonly<Progre
     options?: { record?: boolean }
   ): Promise<void> {
     if (options && options.record) {
-      const historyKey = progressHistory.STORAGE_KEY;
+      const historyKey = RecentSiteSettings.progressHistory.key;
       const storedHistory = await storageGet(historyArea, historyKey);
       const nextHistory = progressHistory.recordVersion(
         storedHistory[historyKey],

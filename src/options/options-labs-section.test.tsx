@@ -74,26 +74,26 @@ describe('Options Labs tab', () => {
   it('binds every experiment and follows its stored value', () => {
     const { host, binder } = setUp();
     expect(binder.keys().sort()).toEqual([
-      Settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
-      Settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
-      Settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY
+      Settings.documentPipEnabled.key,
+      Settings.macosCtrlSuggestionNavigationEnabled.key,
+      Settings.numberShortcutInstantEnabled.key
     ].sort());
-    binder.store(Settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY, true);
+    binder.store(Settings.numberShortcutInstantEnabled.key, true);
     expect(getTag(host, `#${INSTANT_TOGGLE}`, 'input').checked).toBe(true);
-    binder.store(Settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY, 'yes');
+    binder.store(Settings.documentPipEnabled.key, 'yes');
     expect(getTag(host, `#${PIP_TOGGLE}`, 'input').checked).toBe(false);
   });
 
   it('saves a switched experiment', () => {
     const { host, writes } = setUp();
     act(() => getTag(host, `#${MAC_CTRL_TOGGLE}`, 'input').click());
-    expect(writes).toEqual([{ [Settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY]: true }]);
+    expect(writes).toEqual([{ [Settings.macosCtrlSuggestionNavigationEnabled.key]: true }]);
     expect(getTag(host, `#${MAC_CTRL_TOGGLE}`, 'input').checked).toBe(true);
   });
 
   it('shows web clip off and disabled where the browser lacks it, keeping the synced value', () => {
     const { host, binder, writes } = setUp('firefox');
-    binder.store(Settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY, true);
+    binder.store(Settings.documentPipEnabled.key, true);
     const row = getElement(host, '#_x_extension_document_pip_row_2026_unique_');
     const toggle = getTag(host, `#${PIP_TOGGLE}`, 'input');
     expect(row.dataset.browserUnsupported).toBe('firefox');

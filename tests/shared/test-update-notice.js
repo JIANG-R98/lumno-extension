@@ -8,6 +8,7 @@ const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { engagementStorage } = require('../helpers/newtab-notices');
+const featureSettings = require('../../src/domain/settings/features.ts');
 
 class FakeElement {
   constructor(tagName) {
@@ -224,7 +225,7 @@ async function testOnNewTab() {
   const version = JSON.parse(fs.readFileSync('manifest.json', 'utf8')).version;
   const storage = engagementStorage({
     updateNotice: true,
-    sync: { [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
+    sync: { [featureSettings.updateNoticeState.key]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
   });
   const page = await createNewtabPage(storage);
   await page.settle(600);
@@ -409,7 +410,7 @@ function flushMicrotasks() {
           callback(result);
         },
         set(values, callback) {
-          publishWrites.push(values[updateNotice.UPDATE_NOTICE_STORAGE_KEY]);
+          publishWrites.push(values[featureSettings.updateNoticeState.key]);
           if (typeof callback === 'function') {
             callback();
           }
@@ -444,7 +445,7 @@ function flushMicrotasks() {
   const firstDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.10');
   const nextDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.11');
   assert.strictEqual(
-    updateNotice.UPDATE_NOTICE_ENABLED_STORAGE_KEY,
+    featureSettings.updateNoticeEnabled.key,
     '_x_extension_update_notice_enabled_2026_unique_',
     'update notice module should expose the synced enablement preference key'
   );
@@ -457,7 +458,7 @@ function flushMicrotasks() {
   );
 
   const syncStore = {
-    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
+    [featureSettings.updateNoticeState.key]: normalized
   };
   const chromeApi = createStorageBackedChrome({}, syncStore, '0.9.10');
   // The page's settings storage runtime keeps one storage-mode listener for
@@ -569,8 +570,8 @@ function flushMicrotasks() {
   );
 
   const disabledStore = {
-    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized,
-    [updateNotice.UPDATE_NOTICE_ENABLED_STORAGE_KEY]: false
+    [featureSettings.updateNoticeState.key]: normalized,
+    [featureSettings.updateNoticeEnabled.key]: false
   };
   const disabledChromeApi = createStorageBackedChrome({}, disabledStore, '0.9.10');
   const disabledController = updateNotice.createUpdateNotice({
@@ -594,7 +595,7 @@ function flushMicrotasks() {
     false,
     'a disabled update notice should leave the session slot available'
   );
-  disabledChromeApi.storage.sync.set({ [updateNotice.UPDATE_NOTICE_ENABLED_STORAGE_KEY]: true }, () => {});
+  disabledChromeApi.storage.sync.set({ [featureSettings.updateNoticeEnabled.key]: true }, () => {});
   await flushMicrotasks();
   await flushMicrotasks();
   assert.strictEqual(
@@ -602,7 +603,7 @@ function flushMicrotasks() {
     'true',
     'turning the global prompt switch back on should show the current update notice'
   );
-  disabledChromeApi.storage.sync.set({ [updateNotice.UPDATE_NOTICE_ENABLED_STORAGE_KEY]: false }, () => {});
+  disabledChromeApi.storage.sync.set({ [featureSettings.updateNoticeEnabled.key]: false }, () => {});
   await flushMicrotasks();
   assert.strictEqual(
     disabledController.element.getAttribute('data-visible'),
@@ -611,7 +612,7 @@ function flushMicrotasks() {
   );
 
   const oldChromeApi = createStorageBackedChrome({}, {
-    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
+    [featureSettings.updateNoticeState.key]: normalized
   }, '0.9.9');
   const oldController = updateNotice.createUpdateNotice({
     documentObj: createFakeDocument(),
@@ -631,7 +632,7 @@ function flushMicrotasks() {
   );
 
   const missingTitleStore = {
-    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: updateNotice.normalizeUpdateNoticePayload({
+    [featureSettings.updateNoticeState.key]: updateNotice.normalizeUpdateNoticePayload({
       version: '0.9.10',
       previousVersion: '0.9.9',
       reason: 'update',
@@ -665,13 +666,13 @@ function flushMicrotasks() {
     'visible update notice should hydrate a missing release title'
   );
   assert.strictEqual(
-    missingTitleStore[updateNotice.UPDATE_NOTICE_STORAGE_KEY].title,
+    missingTitleStore[featureSettings.updateNoticeState.key].title,
     'Minor Bug Fixes',
     'hydrated release title should be persisted for all surfaces'
   );
 
   const cappedStore = {
-    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
+    [featureSettings.updateNoticeState.key]: normalized
   };
   const cappedChromeApi = createStorageBackedChrome({}, cappedStore, '0.9.10');
   const displayCountKey = updateNotice.getUpdateNoticeDisplayCountKey('0.9.10');

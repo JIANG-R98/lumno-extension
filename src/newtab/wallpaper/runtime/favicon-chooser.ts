@@ -7,6 +7,7 @@ import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
 import type { WallpaperStorage } from './wallpaper-storage';
 import type { WallpaperVisual } from './wallpaper-visual';
 import type { WallpaperState } from './wallpaper-runtime-types';
+import { newtabFaviconPreload } from '../../../domain/settings/newtab-wallpaper';
 
 // A favicon the panel offers.
 interface NewtabFaviconOption {
@@ -72,7 +73,6 @@ function createFaviconChooser(deps: FaviconChooserDeps) {
   const NEWTAB_FAVICON_THEME_QUERY = '(prefers-color-scheme: dark)';
   const NEWTAB_FAVICON_THEME_BROADCAST_CHANNEL = 'lumno:newtab-favicon-theme';
   const NEWTAB_FAVICON_THEME_REFRESH_ACTION = 'lumno:newtab-favicon-theme-refresh';
-  const NEWTAB_FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
   const NEWTAB_FAVICON_THEMES: Record<FaviconTheme, { color: string; shadowOpacity: string; mainOpacity: string }> = {
     light: {
       color: '#000000',
@@ -154,7 +154,7 @@ function createFaviconChooser(deps: FaviconChooserDeps) {
     const normalizedId = normalizeNewtabFaviconId(id);
     try {
       if (window && window.localStorage) {
-        window.localStorage.setItem(NEWTAB_FAVICON_PRELOAD_STORAGE_KEY, normalizedId);
+        window.localStorage.setItem(newtabFaviconPreload.key, normalizedId);
       }
     } catch {
       // The main runtime still applies the favicon even when localStorage is unavailable.

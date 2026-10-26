@@ -3,8 +3,8 @@ const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings');
 const { createSyncSection } = require('../../src/options/options-sync-section');
 
-const KEY = settings.BOOKMARK_VIEW_MODE_STORAGE_KEY;
-const [V2_HEAD, V2_CHUNK_2] = settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
+const KEY = settings.bookmarkViewMode.key;
+const [V2_HEAD, V2_CHUNK_2] = settings.NEWTAB_SHORTCUTS_GROUP_KEYS;
 
 function createSection(sync, local, options) {
   const config = options || {};
@@ -72,14 +72,14 @@ function createSection(sync, local, options) {
 // Grouped shortcuts move only as a whole save, never chunk by chunk.
 {
   const partial = createSection({}, { [V2_CHUNK_2]: ['b'] });
-  partial.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS);
+  partial.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_GROUP_KEYS);
   assert.deepStrictEqual(partial.writes, []);
   const whole = createSection({ [V2_CHUNK_2]: ['stray'] }, { [V2_HEAD]: { v: 2 }, [V2_CHUNK_2]: ['b'] });
-  whole.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS);
+  whole.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_GROUP_KEYS);
   assert.deepStrictEqual(whole.writes, [{ [V2_HEAD]: { v: 2 }, [V2_CHUNK_2]: ['b'] }],
     'the whole local save moves with its head, replacing a stray chunk in sync');
   const headed = createSection({}, { [V2_HEAD]: { v: 2 }, [V2_CHUNK_2]: ['b'] }, { syncAfterFirstRead: { [V2_HEAD]: { v: 3 } } });
-  headed.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS);
+  headed.section.migrateStorageIfNeeded(settings.NEWTAB_SHORTCUTS_GROUP_KEYS);
   assert.deepStrictEqual(headed.writes, [], 'once sync has its own grouped save, no local chunk moves');
 }
 

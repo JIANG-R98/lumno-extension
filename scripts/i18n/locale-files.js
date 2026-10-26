@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 require('../node/register-typescript');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const SOURCE_LOCALE = 'en';

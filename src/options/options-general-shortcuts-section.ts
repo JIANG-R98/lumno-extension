@@ -3,7 +3,7 @@
 // pages, the list of shortcuts, and quick tab switching. One React view
 // draws it; this keeps its values in step with storage.
 import type * as Settings from '../domain/settings';
-import type { RestrictedAction } from '../domain/settings';
+import type { RestrictedAction } from '../domain/settings/overlay-panel';
 import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
@@ -18,8 +18,8 @@ interface GeneralShortcutsSectionDeps {
   view(handlers: GeneralShortcutsSectionHandlers): SectionView<GeneralShortcutsSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
-    'RESTRICTED_ACTION_STORAGE_KEY' | 'RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY' |
-    'OVERLAY_TAB_PRIORITY_STORAGE_KEY'>;
+    'restrictedAction' | 'restrictedActionAutoBrowserSettingDone' |
+    'overlayTabPriority'>;
   runtime: MessageRuntime & { lastError?: { message?: string } | null };
   getMessage: GetMessage;
   showToast(message: string, isError?: boolean): void;
@@ -35,13 +35,13 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
 
   const render = (): void => controller.render(getModel());
   const restrictedAction = createSectionSetting({
-    storageKey: SETTINGS.RESTRICTED_ACTION_STORAGE_KEY,
+    storageKey: SETTINGS.restrictedAction.key,
     normalize: normalizeRestrictedAction,
     refreshSelects: true
   }, null, () => render());
   // Quick tab switching stays on: a stored "off" is shown, and written back, as on.
   const quickSwitch = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
+    storageKey: SETTINGS.overlayTabPriority.key,
     normalize: (): boolean => true,
     refreshSelects: true
   }, storageArea, () => render());
@@ -64,8 +64,8 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
       restrictedAction.change(next);
       if (storageArea) {
         storageArea.set({
-          [SETTINGS.RESTRICTED_ACTION_STORAGE_KEY]: next,
-          [SETTINGS.RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
+          [SETTINGS.restrictedAction.key]: next,
+          [SETTINGS.restrictedActionAutoBrowserSettingDone.key]: true
         });
       }
     },

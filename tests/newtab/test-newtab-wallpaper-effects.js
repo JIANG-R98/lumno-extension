@@ -14,8 +14,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(moduleScript('src/domain/settings.ts', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), sandbox, {
-  filename: 'src/domain/settings.ts'
+vm.runInNewContext(moduleScript('src/domain/settings/index.ts', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), sandbox, {
+  filename: 'src/domain/settings/index.ts'
 });
 vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effects.ts', 'LumnoNewtabWallpaperEffects'), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper-effects.ts'

@@ -6,10 +6,11 @@ const historyApi = require(path.join(repoRoot, 'src/domain/search/search-input-h
 const shortcutReference = require(path.join(repoRoot, 'src/domain/shortcut-reference.ts'));
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts } = require('../helpers/runtime-scripts');
+const searchSettings = require('../../src/domain/settings/search.ts');
 
 function createStorage(initialValue) {
   const state = {
-    [historyApi.STORAGE_KEY]: initialValue
+    [searchSettings.searchInputHistory.key]: initialValue
   };
   return {
     state,
@@ -64,7 +65,7 @@ async function testRecordDeduplicatesAndPersists() {
   assert.strictEqual(controller.record('two'), true);
   assert.deepStrictEqual(controller.getEntries(), ['one', 'three', 'two']);
   assert.deepStrictEqual(
-    storage.state[historyApi.STORAGE_KEY],
+    storage.state[searchSettings.searchInputHistory.key],
     ['one', 'three', 'two']
   );
 }
@@ -108,7 +109,7 @@ function testShortcutDetection() {
 // Alt+Up / Alt+Down walk through what was submitted before, on both search
 // surfaces, and come back to the unfinished draft.
 async function testSurfacesWalkTheHistory(name) {
-  const history = { [historyApi.STORAGE_KEY]: ['first query', 'second query'] };
+  const history = { [searchSettings.searchInputHistory.key]: ['first query', 'second query'] };
   const surface = await openSearchSurface(name, name === 'overlay' ? { localSettings: history } : { local: history });
   await surface.settle(80);
   await surface.type('unfinished draft');

@@ -7,6 +7,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import { queryHtmlTags } from '../dom-lookup';
 import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './host';
 import type { TabSwitcherHost, TabSwitcherReply } from './host';
+import { themeMode } from '../../domain/settings/appearance';
 
 // The context the worker opens the switcher with, as read from its message.
 interface OpenContext {
@@ -133,7 +134,6 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
 
 const PANEL_ID = '_x_extension_tab_switcher_panel_2026_unique_';
 const TAB_SWITCHER_ADVANCE_EVENT = '_x_extension_tab_switcher_advance_command_2026_unique_';
-const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
 const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
 const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
   ? window.matchMedia('(prefers-color-scheme: dark)')
@@ -626,9 +626,9 @@ function createSwitcherThemeController(
     destroyed = false;
     setSwitcherThemeMode('system');
     if (switcherThemeStorageArea && typeof switcherThemeStorageArea.get === 'function') {
-      void switcherThemeStorageArea.get([THEME_STORAGE_KEY], (result) => {
+      void switcherThemeStorageArea.get([themeMode.key], (result) => {
         if (!destroyed) {
-          setSwitcherThemeMode(result ? result[THEME_STORAGE_KEY] : undefined);
+          setSwitcherThemeMode(result ? result[themeMode.key] : undefined);
         }
       });
     }
@@ -637,7 +637,7 @@ function createSwitcherThemeController(
         if (!providerRuntime.isActiveAreaName(areaName)) {
           return;
         }
-        const themeChange = changes ? changes[THEME_STORAGE_KEY] : undefined;
+        const themeChange = changes ? changes[themeMode.key] : undefined;
         if (!themeChange) {
           return;
         }

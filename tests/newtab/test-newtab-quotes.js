@@ -2,9 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
-const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const quotes = require('../../src/newtab/top-content/quotes.ts');
+const quoteSettings = require('../../src/domain/settings/newtab-quote.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 // Stands in for the React line view: keeps the last model it was handed and
@@ -54,8 +54,8 @@ async function main() {
     getTooltipController: () => tooltipController,
     lineView: line.api,
     storageArea: {
-      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: prefs }); },
-      set(value, callback) { prefs = value[settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]; callback(); }
+      get(_keys, callback) { callback({ [settings.newtabQuotePrefs.key]: prefs }); },
+      set(value, callback) { prefs = value[settings.newtabQuotePrefs.key]; callback(); }
     },
     client: { getQuote: () => { requests += 1; return new Promise((resolve) => { resolveQuote = resolve; }); } }
   });
@@ -119,16 +119,16 @@ async function main() {
   assert.equal(runtime.element.nextElementSibling.id, 'search', 'The top placement sits right above the search box');
   assert.equal(document.body.dataset.quotePosition, 'top');
   assert.equal(section().positionSelect.value, 'top');
-  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'top' }).position, 'top');
+  assert.equal(settings.newtabQuotePrefs.parse({ position: 'top' }).position, 'top');
   choosePosition('input');
   assert.equal(runtime.element.previousElementSibling.id, 'search', 'The input placement sits right under the search box');
   assert.equal(runtime.element.nextElementSibling.id, 'shortcuts');
   assert.equal(document.body.dataset.quotePosition, 'input');
-  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'input' }).position, 'input');
+  assert.equal(settings.newtabQuotePrefs.parse({ position: 'input' }).position, 'input');
   for (const saved of [null, undefined, {}, { position: 'search' }, { position: 'bottom', category: 'poetry' }, { enabled: 'true' }]) {
-    assert.equal(settings.normalizeNewtabQuotePrefs(saved).enabled, false, 'Quotes stay off unless the user enabled them');
+    assert.equal(settings.newtabQuotePrefs.parse(saved).enabled, false, 'Quotes stay off unless the user enabled them');
   }
-  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'nope' }).position, 'search');
+  assert.equal(settings.newtabQuotePrefs.parse({ position: 'nope' }).position, 'search');
   choosePosition('bottom');
   assert.equal(document.body.dataset.quotePosition, 'bottom');
   assert.equal(runtime.element.dataset.position, 'bottom');
@@ -184,7 +184,7 @@ async function main() {
     getShortcutSection: () => document.querySelector('#shortcuts'),
     lineView: createLineView().api,
     storageArea: {
-      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'bottom' } }); },
+      get(_keys, callback) { callback({ [settings.newtabQuotePrefs.key]: { enabled: true, position: 'bottom' } }); },
       set(_value, callback) { callback(); }
     },
     client: { getQuote: () => { localeRequests += 1; return Promise.resolve({ text: '海上生明月', author: '', source: '', url: '' }); } }
@@ -215,7 +215,6 @@ async function main() {
   localeRuntime.destroy();
 
   // Mounting waits for the cached quote so the page reveals with it in place, never for the network.
-  const remote = LumnoNewtabRemoteContent;
   let cacheCallback = null;
   let storageListener = null;
   const cachedRuntime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,
@@ -224,7 +223,7 @@ async function main() {
     getSearchRoot: () => document.querySelector('#search'),
     lineView: createLineView().api,
     storageArea: {
-      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'top' } }); },
+      get(_keys, callback) { callback({ [settings.newtabQuotePrefs.key]: { enabled: true, position: 'top' } }); },
       set(_value, callback) { callback(); }
     },
     localStorageArea: { get(_keys, callback) { cacheCallback = callback; } },
@@ -234,14 +233,14 @@ async function main() {
   const mountTask = cachedRuntime.mount().then(() => { mounted = true; });
   await tick();
   assert.equal(mounted, false, 'Mount must wait for the cached quote read');
-  cacheCallback({ [remote.QUOTE_CACHE_KEY]: { literature: { quote: { text: '缓存', author: '', source: '', url: '' } } } });
+  cacheCallback({ [quoteSettings.quoteCache.key]: { literature: { quote: { text: '缓存', author: '', source: '', url: '' } } } });
   await mountTask;
   assert.equal(cachedRuntime.element.hidden, false, 'The cached quote is painted before mount settles');
   assert.equal(cachedRuntime.element.nextElementSibling.id, 'search');
   const parent = cachedRuntime.element.parentNode;
   const observer = new dom.window.MutationObserver(() => {});
   observer.observe(parent, { childList: true });
-  storageListener({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: {
+  storageListener({ [settings.newtabQuotePrefs.key]: {
     newValue: { enabled: true, position: 'top', fontSize: 18 } } }, 'sync');
   assert.equal(cachedRuntime.element.style.getPropertyValue('--x-nt-quote-font-size'), '18px');
   assert.equal(observer.takeRecords().length, 0, 'Re-rendering in place must not re-insert the quote');
@@ -258,7 +257,7 @@ async function main() {
     getSearchRoot: () => document.querySelector('#search'),
     lineView: shuffleLine.api,
     storageArea: {
-      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'input', category: 'poetry' } }); },
+      get(_keys, callback) { callback({ [settings.newtabQuotePrefs.key]: { enabled: true, position: 'input', category: 'poetry' } }); },
       set(_value, callback) { callback(); }
     },
     client: { getQuote: (category, options) => {

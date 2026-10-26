@@ -1,6 +1,6 @@
 const assert = require('assert');
-const diagnostics = require('../../src/domain/diagnostics.ts');
 const { createDiagnosticsExport } = require('../../src/options/options-diagnostics.ts');
+const { diagnosticErrors } = require('../../src/domain/settings/sync-state.ts');
 
 function createArea(values) {
   return {
@@ -41,7 +41,7 @@ function createDocument() {
 async function run() {
   const settingsArea = createArea({ theme: 'dark', quote: 'A private note', unrelated: true });
   const localArea = createArea({
-    [diagnostics.DIAGNOSTIC_ERRORS_STORAGE_KEY]: [{ at: 0, context: 'Storage write', name: 'Error', message: 'failed', count: 2 }]
+    [diagnosticErrors.key]: [{ at: 0, context: 'Storage write', name: 'Error', message: 'failed', count: 2 }]
   });
   const { documentObj, downloads } = createDocument();
   const exporter = createDiagnosticsExport({

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settings = require('../../src/domain/settings/index.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOnboardingPage } = require('../helpers/onboarding-page');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -267,7 +267,7 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
   {
     const remoteQr = 'https://lumno.kubai.design/qr-remote.webp';
     const page = await createOptionsPage({
-      sync: { [settings.LANGUAGE_STORAGE_KEY]: 'zh-CN' },
+      sync: { [settings.language.key]: 'zh-CN' },
       setup(window) {
         const packaged = window.fetch;
         window.fetch = async (url, init) => {

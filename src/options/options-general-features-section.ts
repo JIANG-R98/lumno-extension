@@ -13,13 +13,13 @@ interface GeneralFeaturesSectionDeps {
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: SectionSettingStorage | null;
   SETTINGS: Pick<typeof Settings,
-    'AUTO_PIP_ENABLED_STORAGE_KEY' | 'TAB_SWITCHER_ENABLED_STORAGE_KEY' |
-    'TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY' | 'LINK_PREVIEW_ENABLED_STORAGE_KEY' |
-    'PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY' | 'SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY' |
-    'SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY' | 'SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY' |
-    'normalizeTabSwitcherEnabled' | 'normalizeTabSwitcherCurrentWindowOnly' | 'normalizeLinkPreviewEnabled' |
-    'normalizeSelectionQuickActionsEnabled' | 'normalizeSelectionQuickActionsProvider' |
-    'normalizeSelectionQuickActionsGroupEnabled'>;
+    'autoPipEnabled' | 'tabSwitcherEnabled' |
+    'tabSwitcherCurrentWindowOnly' | 'linkPreviewEnabled' |
+    'pinnedTabRecoveryEnabled' | 'selectionQuickActionsEnabled' |
+    'selectionQuickActionsProvider' | 'selectionQuickActionsGroupEnabled' |
+    'tabSwitcherEnabled' | 'tabSwitcherCurrentWindowOnly' | 'linkPreviewEnabled' |
+    'selectionQuickActionsEnabled' | 'selectionQuickActionsProvider' |
+    'selectionQuickActionsGroupEnabled'>;
   getMessage: GetMessage;
   // The browser family the page runs in (data-browser-family).
   browserFamily: string;
@@ -67,25 +67,25 @@ function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
   const render = (): void => controller.render({ rows: getRows() });
   const setting = <V>(storageKey: string, normalize: (raw: unknown) => V) =>
     createSectionSetting({ storageKey, normalize, refreshSelects: true }, storageArea, () => render());
-  const autoPip = setting(SETTINGS.AUTO_PIP_ENABLED_STORAGE_KEY, isNotFalse);
-  const tabSwitcher = setting(SETTINGS.TAB_SWITCHER_ENABLED_STORAGE_KEY, SETTINGS.normalizeTabSwitcherEnabled);
+  const autoPip = setting(SETTINGS.autoPipEnabled.key, isNotFalse);
+  const tabSwitcher = setting(SETTINGS.tabSwitcherEnabled.key, SETTINGS.tabSwitcherEnabled.parse);
   const currentWindowOnly = setting(
-    SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
-    SETTINGS.normalizeTabSwitcherCurrentWindowOnly
+    SETTINGS.tabSwitcherCurrentWindowOnly.key,
+    SETTINGS.tabSwitcherCurrentWindowOnly.parse
   );
-  const linkPreview = setting(SETTINGS.LINK_PREVIEW_ENABLED_STORAGE_KEY, SETTINGS.normalizeLinkPreviewEnabled);
-  const pinnedTabRecovery = setting(SETTINGS.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY, isTrue);
+  const linkPreview = setting(SETTINGS.linkPreviewEnabled.key, SETTINGS.linkPreviewEnabled.parse);
+  const pinnedTabRecovery = setting(SETTINGS.pinnedTabRecoveryEnabled.key, isTrue);
   const selectionQuickActions = setting(
-    SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-    SETTINGS.normalizeSelectionQuickActionsEnabled
+    SETTINGS.selectionQuickActionsEnabled.key,
+    SETTINGS.selectionQuickActionsEnabled.parse
   );
   const selectionProvider = setting(
-    SETTINGS.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
-    SETTINGS.normalizeSelectionQuickActionsProvider
+    SETTINGS.selectionQuickActionsProvider.key,
+    SETTINGS.selectionQuickActionsProvider.parse
   );
   const selectionGroup = setting(
-    SETTINGS.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-    SETTINGS.normalizeSelectionQuickActionsGroupEnabled
+    SETTINGS.selectionQuickActionsGroupEnabled.key,
+    SETTINGS.selectionQuickActionsGroupEnabled.parse
   );
   const toggles = [autoPip, tabSwitcher, currentWindowOnly, linkPreview, pinnedTabRecovery, selectionQuickActions, selectionGroup];
   // Shown once the tab switcher's shortcut is known.
@@ -101,7 +101,7 @@ function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
     },
     onSelect(key, value) {
       if (key === selectionProvider.storageKey) {
-        selectionProvider.change(SETTINGS.normalizeSelectionQuickActionsProvider(value));
+        selectionProvider.change(SETTINGS.selectionQuickActionsProvider.parse(value));
       }
     },
     getViewportTopInset
