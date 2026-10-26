@@ -12,13 +12,13 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
-import type { RecentSite } from '../../domain/recent-sites-store';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { lazyInstance } from '../../shared/lazy-instance';
 import { RemixIcon } from '../../shared/react/remix-icon';
+import type { RecentSite } from '../../domain/recent-sites-store';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.

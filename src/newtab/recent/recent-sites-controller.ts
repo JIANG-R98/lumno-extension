@@ -3,8 +3,6 @@ import type { Disposition } from '../../domain/navigation-disposition';
 import type * as ProgressHistory from '../../domain/progress-history';
 import type { ProgressHistoryMap, ProgressVersion } from '../../domain/progress-history';
 import type * as ProgressMatch from '../../domain/progress-match';
-import type * as RecentSitesStore from '../../domain/recent-sites-store';
-import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../../domain/recent-sites-store';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import * as LumnoMessaging from '../../platform/messaging';
 import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
@@ -19,6 +17,9 @@ import type { SelectMenuInstance } from '../react/select-menu';
 import type { ShortcutSite } from '../shortcuts/shortcut-types';
 import type { RecentContextTarget } from './recent-types';
 import * as RecentSiteSettings from '../../domain/settings/recent-sites';
+import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../../domain/recent-sites-store';
+import * as RecentSitesMerge from '../../domain/recent-sites-merge';
+import * as RecentSitesStore from '../../domain/recent-sites-store';
 
 interface RecentSitesControllerState {
   recentContextMenu: ContextMenuParts | null;
@@ -54,15 +55,6 @@ interface RecentSitesControllerDeps {
   shouldExcludeFromRecentSites(url: string): boolean;
   isBrowserPageRecentUrl(url: string): boolean;
   MAX_PINNED_RECENT_SITES: number;
-  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore,
-    | 'getRecentSiteUrlKey'
-    | 'normalizeHiddenRecentSiteEntry'
-    | 'normalizeHiddenRecentSites'
-    | 'isRecentSiteHidden'
-    | 'normalizeRecentSiteItem'
-    | 'isSamePinnedRecentSite'
-    | 'normalizePinnedRecentSites'
-    | 'mergeRecentSitesWithPinned'>;
   recentSitesStorageArea: StorageAreaLike | null;
   HIDDEN_RECENT_SITES_STORAGE_KEY: string;
   renderRecentSites(items: RecentSite[]): unknown;
@@ -112,7 +104,6 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
     shouldExcludeFromRecentSites,
     isBrowserPageRecentUrl,
     MAX_PINNED_RECENT_SITES,
-    NEWTAB_RECENT_STORE,
     recentSitesStorageArea,
     HIDDEN_RECENT_SITES_STORAGE_KEY,
     renderRecentSites,
@@ -407,15 +398,15 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
   }
 
   function getRecentSiteUrlKey(item: unknown): string {
-    return NEWTAB_RECENT_STORE.getRecentSiteUrlKey(item);
+    return RecentSitesStore.getRecentSiteUrlKey(item);
   }
 
   function normalizeHiddenRecentSiteEntry(item: unknown): HiddenRecentSite | null {
-    return NEWTAB_RECENT_STORE.normalizeHiddenRecentSiteEntry(item);
+    return RecentSitesStore.normalizeHiddenRecentSiteEntry(item);
   }
 
   function normalizeHiddenRecentSites(items: unknown): HiddenRecentSite[] {
-    return NEWTAB_RECENT_STORE.normalizeHiddenRecentSites(items, getRecentStoreOptions());
+    return RecentSitesStore.normalizeHiddenRecentSites(items, getRecentStoreOptions());
   }
 
   function readHiddenRecentSites(): Promise<HiddenRecentSite[]> {
@@ -434,7 +425,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
   }
 
   function isRecentSiteHidden(item: unknown): boolean {
-    return NEWTAB_RECENT_STORE.isRecentSiteHidden(item, pageState.hiddenRecentSites);
+    return RecentSitesStore.isRecentSiteHidden(item, pageState.hiddenRecentSites);
   }
 
   function hideRecentSiteTemporarily(item: RecentSite): Promise<HideResult> {
@@ -480,16 +471,16 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
   }
 
   function normalizeRecentSiteRecord(item: unknown, options?: RecentSiteStorageOptions): RecentSite | null {
-    return NEWTAB_RECENT_STORE.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
+    return RecentSitesStore.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
   }
 
   // Pinned cards are one per site, tracked cards one per work.
   function isSamePinnedSite(a: unknown, b: unknown): boolean {
-    return NEWTAB_RECENT_STORE.isSamePinnedRecentSite(a, b, getRecentStoreOptions());
+    return RecentSitesStore.isSamePinnedRecentSite(a, b, getRecentStoreOptions());
   }
 
   function normalizePinnedRecentSites(items: unknown): RecentSite[] {
-    return NEWTAB_RECENT_STORE.normalizePinnedRecentSites(items, getRecentStoreOptions());
+    return RecentSitesStore.normalizePinnedRecentSites(items, getRecentStoreOptions());
   }
 
   function readPinnedRecentSites(): Promise<RecentSite[]> {
@@ -512,7 +503,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
   }
 
   function mergeRecentSitesWithPinned(items: unknown, limit: number): RecentSite[] {
-    return NEWTAB_RECENT_STORE.mergeRecentSitesWithPinned(
+    return RecentSitesMerge.mergeRecentSitesWithPinned(
       items,
       pageState.pinnedRecentSites,
       pageState.hiddenRecentSites,

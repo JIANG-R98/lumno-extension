@@ -4,7 +4,6 @@
 //
 // They are created here and started by background.ts, which wires the
 // browser events, so starting them keeps its place in the worker's startup.
-import * as LumnoNewtabRecentSitesStore from '../domain/recent-sites-store';
 import * as LumnoProgressHistory from '../domain/progress-history';
 import * as LumnoProgressMatch from '../domain/progress-match';
 import * as LumnoSettings from '../domain/settings';
@@ -18,6 +17,7 @@ import {
 } from './worker-context';
 import * as FaviconCanonical from '../domain/favicon/canonical';
 import * as Tracker from './progress/tracker';
+import * as RecentSitesStore from '../domain/recent-sites-store';
 
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
 function isProgressTrackingEnabled(): boolean {
@@ -46,7 +46,7 @@ const pageShortcutMenuController = chrome.contextMenus
 // The popup's pin among the New Tab's recent sites; episodes and chapters
 // start tracked while progress tracking (Labs) is on.
 const popupRecentPin = LumnoPopupRecentPin.createController({
-  store: LumnoNewtabRecentSitesStore,
+  store: RecentSitesStore,
   settingsStore: workerSettings,
   storeOptions: {
     normalizeHost,

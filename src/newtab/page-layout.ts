@@ -1,7 +1,6 @@
 // Page geometry: bookmark and recent grid column counts, the width modes
 // and search width, shortcut grid sizing, which content sections show, and
 // the search entry's vertical position as the viewport changes.
-import type * as RecentSitesStore from '../domain/recent-sites-store';
 import type { NewtabWidthMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type * as LumnoNewtabLayout from './layout';
@@ -15,6 +14,7 @@ import type { ShortcutDock } from './shortcuts/shortcut-dock';
 import type { ShortcutPageActions } from './shortcuts/shortcut-page-actions';
 import type { ShortcutsController } from './shortcuts/shortcuts-controller';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
+import * as RecentSitesStore from '../domain/recent-sites-store';
 
 interface NewtabWidthModeConfig extends WidthModeConfig {
   searchMaxWidth: number;
@@ -64,7 +64,6 @@ interface PageLayoutDeps extends
   Pick<ShortcutDock, 'resetShortcutDockHover'>,
   Pick<ShortcutContextMenu, 'closeShortcutContextMenu'>,
   Pick<ShortcutPageActions, 'closeShortcutDialog'> {
-  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore, 'normalizeRecentCount'>;
   NEWTAB_LAYOUT: Pick<typeof LumnoNewtabLayout, 'getAdaptiveGridColumnCount' | 'CONTENT_MAX_WIDTH_PX'>;
   NEWTAB_MOBILE_FLOW_BREAKPOINT_PX: number;
   NEWTAB_WIDTH_MODE_CONFIGS: Record<NewtabWidthMode, NewtabWidthModeConfig>;
@@ -80,7 +79,6 @@ interface PageLayoutDeps extends
 
 function createPageLayout(deps: PageLayoutDeps) {
   const {
-    NEWTAB_RECENT_STORE,
     normalizeBookmarkColumns,
     NEWTAB_LAYOUT,
     NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
@@ -117,7 +115,7 @@ function createPageLayout(deps: PageLayoutDeps) {
   let currentRecentGridColumns = 4;
 
   function normalizeRecentCount(value: unknown): number {
-    return NEWTAB_RECENT_STORE.normalizeRecentCount(value);
+    return RecentSitesStore.normalizeRecentCount(value);
   }
 
   function normalizeRecentMode(value: unknown, fallback?: unknown): 'latest' | 'most' {

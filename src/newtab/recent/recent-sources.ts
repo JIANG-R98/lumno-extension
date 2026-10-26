@@ -1,8 +1,6 @@
 // Where recent sites come from: open tabs, top sites and history, read
 // once at startup and then on demand, merged into the recent list; plus the
 // change history dialog and the recent context menu's copy.
-import type { RecentSite, RecentSiteOptions, RecentSiteSources } from '../../domain/recent-sites-store';
-import type * as RecentSitesStore from '../../domain/recent-sites-store';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type {
@@ -13,6 +11,8 @@ import type {
 import type { RecentContextTarget, StartupRecentSourceReads } from './recent-types';
 import { getRecentHistoryDialogApi } from '../react/recent-history-dialog-lazy';
 import type { BrowserIconIndex } from '../../domain/favicon/types';
+import type { RecentSite, RecentSiteOptions, RecentSiteSources } from '../../domain/recent-sites-store';
+import * as RecentSitesMerge from '../../domain/recent-sites-merge';
 
 interface RecentSourcesState {
   recentContextMenu: ContextMenuParts | null;
@@ -35,7 +35,6 @@ interface RecentSourcesDeps {
   // Whether top sites list the user's sites (Edge lists its own).
   TOP_SITES_FOLLOW_HISTORY: boolean;
   startupRecentSourceReadsAt: number;
-  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore, 'mergeRecentSiteSources'>;
   getRecentStoreOptions(): RecentSiteOptions;
   isBrowserPageRecentUrl(url: string | undefined): boolean;
   pageState: RecentSourcesState;
@@ -53,7 +52,6 @@ function createRecentSources(deps: RecentSourcesDeps) {
     showToast,
     TOP_SITES_FOLLOW_HISTORY,
     startupRecentSourceReadsAt,
-    NEWTAB_RECENT_STORE,
     getRecentStoreOptions,
     isBrowserPageRecentUrl
   } = deps;
@@ -189,7 +187,7 @@ function createRecentSources(deps: RecentSourcesDeps) {
       return Promise.resolve([]);
     }
 
-    const mergeSources = (sources: RecentSourceReads, mergeMode: string): RecentSite[] => NEWTAB_RECENT_STORE.mergeRecentSiteSources({
+    const mergeSources = (sources: RecentSourceReads, mergeMode: string): RecentSite[] => RecentSitesMerge.mergeRecentSiteSources({
       ...getRecentStoreOptions(),
       ...(sources || {}),
       mode: mergeMode || viewMode,

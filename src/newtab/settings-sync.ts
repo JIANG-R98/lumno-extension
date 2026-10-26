@@ -5,7 +5,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
 import type { SiteSearchIconCache } from '../shared/search/site-search-icon-cache';
 import type * as ProgressHistory from '../domain/progress-history';
 import type { ProgressHistoryMap } from '../domain/progress-history';
-import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type * as LumnoSettings from '../domain/settings';
 import type { NewtabWidthMode, ThemeMode } from '../domain/settings';
@@ -46,6 +45,7 @@ import { shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
 import { bingDailyCache } from '../domain/settings/newtab-wallpaper';
 import { progressHistory } from '../domain/settings/recent-sites';
 import type { CachedIconMap } from '../domain/favicon/shortcut-favicon/types';
+import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 
 interface SettingsSyncState {
   currentBookmarkCount: number;

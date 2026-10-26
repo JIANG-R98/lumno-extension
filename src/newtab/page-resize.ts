@@ -1,7 +1,7 @@
 // Window resizes: re-measures the layout once per frame, and once more
 // after the resize settles, without animating the blocks.
-import type { RecentSite } from '../domain/recent-sites-store';
 import type { SectionLoaders } from './section-loaders';
+import type { RecentSite } from '../domain/recent-sites-store';
 
 // A card's place on screen before a layout change.
 type CardLayout = Map<HTMLElement, { left: number; top: number }>;

@@ -54,7 +54,6 @@ import * as LumnoNewtabPageState from './page-state';
 import * as NEWTAB_RECENT_CARD_DRAG from './recent/recent-card-drag';
 import * as NEWTAB_RECENT_SECTION from './recent/recent-section';
 import * as NEWTAB_RECENT_SITES_CONTROLLER from './recent/recent-sites-controller';
-import * as NEWTAB_RECENT_STORE from '../domain/recent-sites-store';
 import * as NEWTAB_RECENT_SOURCES from './recent/recent-sources';
 import * as NEWTAB_DEFAULT_SEARCH_ENGINE from './search/default-search-engine';
 import * as NEWTAB_DIRECT_NAVIGATION_SETTLE from './search/direct-navigation-settle';
@@ -263,7 +262,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     showToast: (...args) => showToast(...args),
     TOP_SITES_FOLLOW_HISTORY,
     startupRecentSourceReadsAt,
-    NEWTAB_RECENT_STORE,
     getRecentStoreOptions: (...args) => getRecentStoreOptions(...args),
     isBrowserPageRecentUrl: (...args) => isBrowserPageRecentUrl(...args),
     pageState
@@ -894,7 +892,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     shouldExcludeFromRecentSites,
     isBrowserPageRecentUrl,
     MAX_PINNED_RECENT_SITES,
-    NEWTAB_RECENT_STORE,
     recentSitesStorageArea,
     HIDDEN_RECENT_SITES_STORAGE_KEY: hiddenRecentSites.key,
     renderRecentSites: (...args) => renderRecentSites(...args),
@@ -1126,7 +1123,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     updateBookmarkSectionPosition,
     updateSearchEntryLayout
   } = NEWTAB_PAGE_LAYOUT.createPageLayout({
-    NEWTAB_RECENT_STORE,
     normalizeBookmarkColumns: (...args) => normalizeBookmarkColumns(...args),
     NEWTAB_LAYOUT,
     NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,

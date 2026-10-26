@@ -1,6 +1,9 @@
 const assert = require('assert');
 const path = require('path');
-const recentStore = require('../../src/domain/recent-sites-store.ts');
+const recentStore = {
+  ...require('../../src/domain/recent-sites-store.ts'),
+  ...require('../../src/domain/recent-sites-merge.ts')
+};
 const recentSitesStorage = require('../../src/platform/recent-sites-storage.ts');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 const { pinnedRecentSites } = require('../../src/domain/settings/recent-sites.ts');

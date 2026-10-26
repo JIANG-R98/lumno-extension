@@ -1,5 +1,4 @@
 // Loading and rendering the bookmark and recent-site sections.
-import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 import { queryHtmlElement } from '../shared/dom-lookup';
 import type { AppearanceModes } from './appearance-modes';
 import type { BookmarkCascadeActions } from './bookmarks/bookmark-cascade-actions';
@@ -20,6 +19,7 @@ import type { ShortcutDrag, ShortcutDragSession } from './shortcuts/shortcut-dra
 import type { ShortcutsController } from './shortcuts/shortcuts-controller';
 import type { PageFavicons } from './theme/page-favicons';
 import type { UrlPolicy } from './url-policy';
+import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 
 interface SectionLoadOptions {
   force?: boolean;

@@ -3,8 +3,8 @@
 // episode or chapter starts tracked, as when it is pinned on the New Tab.
 import type { SettingsStore } from '../platform/settings-store';
 import { pinnedRecentSites } from '../domain/settings/recent-sites';
-import type { RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
 import type { RecentPinStatus, RecentPinToggleStatus } from '../domain/messages';
+import type { RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
 
 // The recent sites store functions the controller uses.
 interface RecentSitesStoreApi {

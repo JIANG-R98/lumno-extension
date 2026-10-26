@@ -3,7 +3,6 @@
 // applies them before the first reveal.
 import type * as ProgressHistory from '../domain/progress-history';
 import type { ProgressHistoryMap } from '../domain/progress-history';
-import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 import type * as LumnoSettings from '../domain/settings';
 import type { NewtabWidthMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
@@ -20,6 +19,7 @@ import type { SectionLoaders } from './section-loaders';
 import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 import { progressHistory } from '../domain/settings/recent-sites';
+import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 
 interface StartupPreferencesState {
   progressTrackingEnabled: boolean;

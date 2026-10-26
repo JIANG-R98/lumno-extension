@@ -1,9 +1,9 @@
 // Loading and saving the New Tab's pinned and hidden recent sites
 // (domain/recent-sites-store.ts normalizes them).
-import { normalizeHiddenRecentSites, normalizePinnedRecentSites } from '../domain/recent-sites-store';
-import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import { hiddenRecentSites, pinnedRecentSites } from '../domain/settings/recent-sites';
+import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
+import { normalizeHiddenRecentSites, normalizePinnedRecentSites } from '../domain/recent-sites-store';
 
 interface RecentSiteStorageOptions extends RecentSiteOptions {
   // The storage key; the default pinned or hidden key when absent.

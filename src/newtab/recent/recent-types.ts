@@ -1,5 +1,5 @@
-// Types the recent-site modules share.
 import type { RecentSite } from '../../domain/recent-sites-store';
+// Types the recent-site modules share.
 
 // What a recent card's context menu was opened for.
 interface RecentContextTarget {
