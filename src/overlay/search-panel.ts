@@ -49,7 +49,7 @@ import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render';
 import * as PANEL_TAB_MATCHING from './panel/tab-matching';
 import * as OVERLAY_CONTEXT from './overlay-context';
 import * as OVERLAY_STATE from './overlay-state';
-import { TAB_SWITCHER_HOST_ID } from './tab-switcher-host';
+import { TAB_SWITCHER_HOST_ID } from '../shared/tab-switcher/host';
 import type { OverlaySizePreset } from './lifecycle';
 import type { StorageChangeListener } from './panel/types';
 import type { ThemeMode } from '../domain/settings';

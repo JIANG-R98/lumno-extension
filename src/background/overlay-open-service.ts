@@ -255,7 +255,7 @@ export function openOverlayOnTab(
   shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
   const overlayInjectionFiles = [
     'build/icon-font-preload.js',
-    'src/react/overlay-islands.js',
+    'build/overlay-islands.js',
     'build/overlay.js'
   ];
   const runOverlayScript = (tabZoomFactor: number): void => {

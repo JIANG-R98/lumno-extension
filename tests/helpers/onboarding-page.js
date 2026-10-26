@@ -10,7 +10,7 @@ const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackPageTimers } = require('./page-timers');
-const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
+const { EXTENSION_ORIGIN, createArea, createEvent } = require('./options-page');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -83,10 +83,8 @@ async function createOnboardingPage(options) {
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
   const settle = timers.settle;
   run(bundleScript('onboarding-preload'), 'build/onboarding-preload.js');
-  run(reactEntryScript('src/react/overlay-islands.js'), 'src/react/overlay-islands.js');
-  window.LumnoOnboardingReactBootstrap = { reactReady: false };
-  run(reactEntryScript('src/react/onboarding-islands.js'), 'src/react/onboarding-islands.js');
-  await settle(50);
+  run(bundleScript('overlay-islands'), 'build/overlay-islands.js');
+  run(bundleScript('overlay'), 'build/overlay.js');
   run(bundleScript('onboarding'), 'build/onboarding.js');
   await settle(120);
   return {

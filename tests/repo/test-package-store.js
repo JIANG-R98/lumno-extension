@@ -53,22 +53,14 @@ assert(
   'store package should not include README-only images'
 );
 assert(
-  entries.includes('src/react/newtab-islands.js') &&
-    entries.includes('src/react/options-islands.js') &&
-    entries.includes('src/react/onboarding-islands.js') &&
-    entries.includes('src/react/overlay-islands.js') &&
-    entries.includes('src/react/react-shared.js') &&
-    entries.includes('src/react/tab-switcher-shared.js') &&
-    entries.includes('src/react/react-runtime.js') &&
-    entries.includes('src/react/rolldown-runtime.js') &&
-    entries.includes('build/react-page-bootstrap.js'),
-  'store package should include both page entries, shared React chunks, and bootstrap'
+  entries.includes('build/chunks/react-runtime.js') &&
+    entries.every((entry) => !entry.startsWith('src/react/')),
+  'store package should include the page chunks and nothing from the old React output folder'
 );
 [
   'LICENSE',
   'THIRD_PARTY_NOTICES.md',
-  'src/react/third-party-licenses.md',
-  'src/react/overlay-third-party-licenses.md'
+  'build/third-party-licenses.md'
 ].forEach((file) => {
   assert(entries.includes(file), `store package should include the license file ${file}`);
 });
@@ -80,10 +72,12 @@ assert(
   entries.every((entry) => !/^(?:supabase|docs|scripts|tests)\//.test(entry)),
   'store package should contain no backend, deployment, or repository tooling files'
 );
-// Every bundle ships, minified, in place of the files it is built from.
-const { BUNDLES } = require('../../scripts/build/bundles');
-BUNDLES.forEach((bundle) => {
-  const bundlePath = `build/${bundle.name}.js`;
+// Every entry ships, minified, in place of the files it is built from, and
+// so does every chunk the page entries share.
+const { ENTRIES } = require('../../scripts/build/entries');
+const builtScripts = ENTRIES.map((entry) => `build/${entry.name}.js`)
+  .concat(entries.filter((entry) => /^build\/chunks\/.+\.js$/.test(entry)));
+builtScripts.forEach((bundlePath) => {
   assert(entries.includes(bundlePath), `store package should include ${bundlePath}`);
   assert(!entries.includes(`${bundlePath}.map`), `store package should not include the ${bundlePath} source map`);
   const packaged = readPackagedText(bundlePath);
@@ -120,19 +114,20 @@ assert.strictEqual(
   'store package should preserve the source manifest version'
 );
 
-const bootstrapTagPattern = /<script\s+src="\.\.\/\.\.\/build\/react-page-bootstrap\.js"[^>]*><\/script>/;
 [
-  'newtab.html',
-  'src/options/options.html',
-  'src/onboarding/onboarding.html'
-].forEach((page) => {
+  ['newtab.html', 'newtab'],
+  ['src/options/options.html', 'options'],
+  ['src/onboarding/onboarding.html', 'onboarding'],
+  ['src/popup/popup.html', 'popup']
+].forEach(([page, entry]) => {
   const sourceHtml = fs.readFileSync(path.join(repoRoot, page), 'utf8');
   assert.strictEqual(
     readPackagedText(page),
     sourceHtml,
-    `${page} should load the same bundles in the store package`
+    `${page} should load the same scripts in the store package`
   );
-  assert(bootstrapTagPattern.test(sourceHtml), `${page} should load the React page bootstrap`);
+  assert(sourceHtml.includes(`<script type="module" src="../../build/${entry}.js"></script>`),
+    `${page} should load its page entry as a module`);
 });
 assert(
   /<body\b[^>]*>\s*<script src="\.\.\/\.\.\/build\/wallpaper-effect-preload\.js"><\/script>/.test(readPackagedText('newtab.html')),

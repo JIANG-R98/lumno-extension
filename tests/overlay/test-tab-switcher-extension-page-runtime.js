@@ -79,7 +79,7 @@ window.chrome = {
 window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
 window.eval(moduleScript('src/shared/ui/toast.ts', 'LumnoToast'));
 window.eval(moduleScript('src/shared/page-color-scheme.ts', 'LumnoPageColorScheme'));
-window.eval(moduleScript('src/overlay/tab-switcher.ts'));
+window.eval(moduleScript('src/shared/tab-switcher/tab-switcher.ts'));
 
 const unavailableResult =
   window._x_extension_toggleTabSwitcher_2026_unique_({

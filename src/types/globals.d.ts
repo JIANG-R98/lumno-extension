@@ -6,7 +6,7 @@ import type * as SearchSourceOrder from '../domain/search/search-source-order';
 import type { createLinkPreviewViewApi } from '../shared/react/link-preview-view';
 import type { createPipDockViewApi } from '../shared/react/pip-dock-view';
 import type { createTabSwitcherViewApi } from '../shared/react/tab-switcher';
-import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
+import type { TabSwitcherReply } from '../shared/tab-switcher/host';
 import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
@@ -150,7 +150,7 @@ declare global {
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
   var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;
   // Opens the tab switcher with the context the worker sends, read as
-  // untrusted; set by src/overlay/tab-switcher.ts.
+  // untrusted; set by src/shared/tab-switcher/tab-switcher.ts.
   var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;
 }
 

@@ -6,7 +6,7 @@ const { extensionFilePath } = require('../../scripts/build/extension-output');
 
 // The background injects the overlay bundle first: the clip window's dock
 // draws through its React.
-const overlayIslandsSource = fs.readFileSync(extensionFilePath('src/react/overlay-islands.js'), 'utf8');
+const overlayIslandsSource = fs.readFileSync(extensionFilePath('build/overlay-islands.js'), 'utf8');
 
 // The web clip picker, injected into a page with a fake Document
 // Picture-in-Picture API: pick an element, open it in the floating window and

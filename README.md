@@ -227,14 +227,14 @@ Existing server data requires an explicit initial-version choice. Later conflict
 
 Development and CI use Node.js 22. If you use `nvm`, run `nvm use` to select the version declared in `.nvmrc`.
 
-Chrome loads a built extension: `npm run build` writes it to `dist/chrome/` (never committed). It copies the pages, styles, assets and locales as they are, builds the React islands into its `src/react/` with Vite, bundles every script the extension runs into its `build/` with Rolldown, the bundler under Vite, and writes its `manifest.json` from the one in the repository. The folder keeps the repository's layout, so page URLs match the store package. Before loading the development extension for the first time, run:
+Chrome loads a built extension: `npm run build` writes it to `dist/chrome/` (never committed). It copies the pages, styles, assets and locales as they are, builds every script the extension runs into its `build/` with Vite, and writes its `manifest.json` from the one in the repository. The folder keeps the repository's layout, so page URLs match the store package. Before loading the development extension for the first time, run:
 
 ```bash
 npm ci
 npm run build
 ```
 
-The scripts under `src/` are TypeScript ES modules (files not typed yet start with `// @ts-nocheck`): each one imports what it uses, and a bundle holds the modules `scripts/build/bundles.js` lists for it and everything they import. While you work, `npm run watch` keeps `dist/chrome/` current: it copies changed files and rebuilds the React islands and the bundles on every change.
+The scripts under `src/` are TypeScript ES modules: each one imports what it uses, and every script in `build/` is built from one entry module that `scripts/build/entries.js` lists. Page scripts are ES modules that share chunks; preloads, content scripts and the service worker are self-contained classic scripts. While you work, `npm run watch` keeps `dist/chrome/` current: it copies changed files and rebuilds the scripts on every change.
 
 Then keep Developer mode enabled in `chrome://extensions/` and load `dist/chrome` as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 
@@ -266,7 +266,7 @@ npm run lint
 | `src/domain/` | Pure logic with no browser or DOM access: settings keys and normalization, routes, search ranking and matching (`search/`), favicon rules, shortcut and recent-site stores |
 | `src/platform/` | Browser and extension API wrappers: browser detection and URL guards |
 | `src/shared/` | UI and page runtime shared by several surfaces: `search/` (input and suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/`, preloads |
-| `src/*/react/` | React views of each surface, built into `dist/chrome/src/react/`; `src/shared/react/` holds the ones several pages use |
+| `src/*/react/` | React views of each surface; `src/shared/react/` holds the ones several pages use |
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |
 | `assets/wallpapers/` | Built-in new tab wallpapers and thumbnails |

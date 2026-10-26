@@ -189,7 +189,6 @@ async function bootOptionsPage(
   }));
   vi.resetModules();
   await runPageBundle('options-preload');
-  await import('./options-islands-entry');
   trackListeners(document);
   trackListeners(window);
   await act(async () => {

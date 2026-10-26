@@ -8,8 +8,6 @@
 const fs = require('fs');
 const path = require('path');
 const { extensionFilePath } = require('../../scripts/build/extension-output');
-const esbuild = require('esbuild');
-const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
@@ -17,28 +15,10 @@ const { trackPageTimers } = require('./page-timers');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const EXTENSION_ORIGIN = 'chrome-extension://lumno-test';
-const reactEntryCache = new Map();
 
 // The React islands entry is an ES module importing its sibling chunks; the
 // page loads it with import(). Bundled into one classic script it can run in
 // JSDOM.
-function reactEntryScript(file) {
-  if (!reactEntryCache.has(file)) {
-    const result = esbuild.buildSync({
-      absWorkingDir: repoRoot,
-      tsconfigRaw: BUNDLE_TSCONFIG_RAW,
-      entryPoints: [extensionFilePath(file)],
-      bundle: true,
-      format: 'iife',
-      target: ['chrome110'],
-      write: false,
-      logLevel: 'silent'
-    });
-    reactEntryCache.set(file, result.outputFiles[0].text);
-  }
-  return reactEntryCache.get(file);
-}
-
 function createEvent() {
   const listeners = [];
   return {
@@ -267,12 +247,7 @@ async function createOptionsPage(options) {
   const keys = trackListeners(window);
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
   run(bundleScript('options-preload'), 'build/options-preload.js');
-  window.LumnoOptionsReactBootstrap = { reactReady: false };
-  run(reactEntryScript('src/react/options-islands.js'), 'src/react/options-islands.js');
   const settle = timers.settle;
-  // The page bundle is a script the bootstrap adds once the React entry has
-  // loaded, so React has rendered the islands by the time it runs.
-  await settle(50);
   run(bundleScript('options'), 'build/options.js');
   await settle(80);
 
@@ -347,4 +322,4 @@ async function createOptionsPage(options) {
   return page;
 }
 
-module.exports = { EXTENSION_ORIGIN, createArea, createEvent, createOptionsPage, reactEntryScript };
+module.exports = { EXTENSION_ORIGIN, createArea, createEvent, createOptionsPage };

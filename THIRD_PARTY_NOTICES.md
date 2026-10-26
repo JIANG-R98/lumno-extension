@@ -1,38 +1,27 @@
 # Third-party notices
 
 Lumno's own code is licensed under the GNU General Public License v3.0 only
-(see [LICENSE](LICENSE)). The source code, including the React sources in
-the `react/` folders of `src/` that the minified bundles in the package's
-`src/react/` are built from, is at https://github.com/kubai087/lumno-extension.
+(see [LICENSE](LICENSE)). The source code in `src/` that the minified
+scripts in the package's `build/` are built from is at
+https://github.com/kubai087/lumno-extension.
 
 Lumno also ships the third-party components below. Each one stays under its
 own license, and the GPL does not cover the ones whose license is not
 GPL-compatible. Their license texts ship alongside them, in the files listed.
 
-## npm packages in the React bundles
+## npm packages in the built scripts
 
-`npm run build:react` bundles these into `src/react/` with Vite and writes
-their license texts next to the bundles, to `src/react/third-party-licenses.md`
-(the page chunks) and `src/react/overlay-third-party-licenses.md` (the in-page
-overlay bundle). Both files ship in the package; like the bundles, they are
-build output and not in the repository.
+`npm run build` bundles these into the scripts in `build/` with Vite and
+writes their license texts next to them, to `build/third-party-licenses.md`.
+The file ships in the package; like the scripts, it is build output and not
+in the repository.
 
 | Package | License |
 | --- | --- |
 | react, react-dom, scheduler | MIT |
 | @number-flow/react, number-flow | MIT |
 | react-colorful | MIT |
-
-## npm packages in the runtime bundles
-
-`npm run build:bundles` bundles these into `build/` with Rolldown and writes
-their license texts next to the bundles, to `build/third-party-licenses.md`.
-The file ships in the package; like the bundles, it is build output and not in
-the repository.
-
-| Package | Bundles | License |
-| --- | --- | --- |
-| [pinyin-pro](https://github.com/zh-lx/pinyin-pro) | `build/pinyin.js`, `build/pinyin-data.js` | MIT |
+| [pinyin-pro](https://github.com/zh-lx/pinyin-pro) | MIT |
 
 ## Data
 

@@ -12,7 +12,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackPageTimers } = require('./page-timers');
 const { recordAllListeners } = require('./trusted-events');
-const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
+const { EXTENSION_ORIGIN, createArea, createEvent } = require('./options-page');
 const { createFakeBookmarks, shortcutsStorage } = require('./newtab-fixtures');
 const { createFakeLayout } = require('./fake-layout');
 
@@ -209,10 +209,6 @@ async function createNewtabPage(options) {
   const settle = timers.settle;
   run(bundleScript('newtab-preload'), 'build/newtab-preload.js');
   run(bundleScript('wallpaper-effect-preload'), 'build/wallpaper-effect-preload.js');
-  window.LumnoNewtabReactBootstrap = { reactReady: false };
-  run(reactEntryScript('src/react/newtab-islands.js'), 'src/react/newtab-islands.js');
-  // The bootstrap adds the page bundle once the React entry has loaded.
-  await settle(50);
   run(bundleScript('newtab'), 'build/newtab.js');
   await settle(120);
 

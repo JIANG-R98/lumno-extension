@@ -1998,7 +1998,7 @@ function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem
       target: { tabId: hostTabId },
       files: [
         'build/icon-font-preload.js',
-        'src/react/overlay-islands.js',
+        'build/overlay-islands.js',
         'build/tab-switcher.js'
       ]
     }, () => {

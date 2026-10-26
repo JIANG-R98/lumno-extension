@@ -16,7 +16,7 @@ const { parseCss } = require('./css-rules');
 const HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
 const PANEL_ID = '_x_extension_tab_switcher_panel_2026_unique_';
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const overlayIslandsSource = fs.readFileSync(extensionFilePath('src/react/overlay-islands.js'), 'utf8');
+const overlayIslandsSource = fs.readFileSync(extensionFilePath('build/overlay-islands.js'), 'utf8');
 
 function createChromeEvent() {
   const listeners = [];
@@ -45,7 +45,7 @@ function createChromeEvent() {
 //   darkSystem   whether prefers-color-scheme: dark matches
 //   viewport     { width, height, scale, offsetLeft, offsetTop } for visualViewport
 //   respond      (message) => response for chrome.runtime.sendMessage
-//   bridge       also run the extension-page bridge (src/overlay/tab-switcher-page-bridge.ts)
+//   bridge       also run the extension-page bridge (src/shared/tab-switcher/page-bridge.ts)
 //   connect      chrome.runtime.connect implementation (for the bridge)
 //   tabsGetCurrent  chrome.tabs.getCurrent implementation
 function createTabSwitcherPage(options) {
@@ -134,10 +134,10 @@ function createTabSwitcherPage(options) {
   const documentEvents = trackListeners(window.document);
 
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
-  run(overlayIslandsSource, 'src/react/overlay-islands.js');
+  run(overlayIslandsSource, 'build/overlay-islands.js');
   run(bundleScript('tab-switcher'), 'build/tab-switcher.js');
   if (config.bridge) {
-    run(moduleScript('src/overlay/tab-switcher-page-bridge.ts'), 'src/overlay/tab-switcher-page-bridge.ts');
+    run(moduleScript('src/shared/tab-switcher/page-bridge.ts'), 'src/shared/tab-switcher/page-bridge.ts');
   }
 
   const page = {

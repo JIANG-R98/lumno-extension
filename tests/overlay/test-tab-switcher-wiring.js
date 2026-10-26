@@ -19,7 +19,7 @@ const localeMessages = Object.fromEntries(localeNames.map((locale) => [
 
 const contentScripts = getManifestContentScripts();
 assert.ok(
-  contentScripts.every((files) => !files.includes('src/overlay/tab-switcher.ts') && !files.includes('src/overlay/tab-switcher-page-bridge.ts')),
+  contentScripts.every((files) => !files.includes('src/shared/tab-switcher/tab-switcher.ts') && !files.includes('src/shared/tab-switcher/page-bridge.ts')),
   'web pages should not preload the switcher; the background injects it on the first command'
 );
 const observerEntry = manifest.content_scripts[contentScripts.findIndex((files) => files.includes('src/content/shortcut-key-observer.ts'))];

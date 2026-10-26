@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const { BUNDLES, BUNDLE_DIRECTORY } = require('../build/bundles');
+const { BUILD_DIRECTORY, ENTRIES } = require('../build/entries');
 const { EXTENSION_OUTPUT, extensionOutputPath } = require('../build/extension-output');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const missing = [];
-const bundleNames = new Set(BUNDLES.map((bundle) => bundle.name));
+const entryNames = new Set(ENTRIES.map((entry) => entry.name));
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -52,10 +52,10 @@ function checkPath(value) {
   if (/^(https?:|chrome:|__MSG_)/.test(value)) {
     return;
   }
-  // Bundles are build output: a reference needs a bundle of that name.
-  const bundle = normalizeManifestResourcePath(value).match(new RegExp(`^${BUNDLE_DIRECTORY}/([\\w-]+)\\.js$`));
-  if (bundle) {
-    if (!bundleNames.has(bundle[1])) {
+  // Built scripts are build output: a reference needs an entry of that name.
+  const entry = normalizeManifestResourcePath(value).match(new RegExp(`^${BUILD_DIRECTORY}/([\\w-]+)\\.js$`));
+  if (entry) {
+    if (!entryNames.has(entry[1])) {
       missing.push(value);
     }
     return;
@@ -63,15 +63,9 @@ function checkPath(value) {
   if (manifestResourcePatternHasMatch(value)) {
     return;
   }
-  // The React islands are build output too, in the development extension.
-  const onDisk = isBuiltReactPath(value) ? extensionOutputPath(value) : value;
-  if (!fs.existsSync(onDisk)) {
+  if (!fs.existsSync(value)) {
     missing.push(value);
   }
-}
-
-function isBuiltReactPath(value) {
-  return normalizeManifestResourcePath(value).startsWith('src/react/');
 }
 
 function checkRelativeResourcePath(file, value) {
@@ -177,16 +171,16 @@ function listHtmlFiles(dir) {
   return files;
 }
 
-// The runtime sources and the React islands built from the react/ folders,
-// each under the path it has in the extension.
+// The runtime sources and the scripts built from them, each under the path
+// it has in the extension.
 function listRuntimeFiles() {
-  const builtReact = extensionOutputPath('src/react');
-  if (!fs.existsSync(builtReact)) {
-    throw new Error(`Missing ${EXTENSION_OUTPUT}/src/react/; run npm run build first.`);
+  const built = extensionOutputPath(BUILD_DIRECTORY);
+  if (!fs.existsSync(built)) {
+    throw new Error(`Missing ${EXTENSION_OUTPUT}/${BUILD_DIRECTORY}/; run npm run build first.`);
   }
   return listJsFiles('src').map((file) => ({ file, disk: file }))
-    .concat(listJsFiles(builtReact).map((disk) => ({
-      file: path.join('src/react', path.relative(builtReact, disk)),
+    .concat(listJsFiles(built).map((disk) => ({
+      file: path.join(BUILD_DIRECTORY, path.relative(built, disk)),
       disk
     })));
 }
@@ -296,7 +290,7 @@ function run() {
     process.exitCode = 1;
     return false;
   }
-  BUNDLES.forEach((bundle) => bundle.files.forEach(checkPath));
+  ENTRIES.forEach((entry) => checkPath(entry.source));
   checkRuntimeGetUrlReferences();
   checkHtmlReferences();
   checkCssFiles();

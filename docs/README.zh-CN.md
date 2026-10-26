@@ -227,14 +227,14 @@ WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。添加连�
 
 开发和 CI 使用 Node.js 22。如果使用 `nvm`，运行 `nvm use` 即可切换到 `.nvmrc` 中声明的版本。
 
-Chrome 加载的是构建后的扩展：`npm run build` 会把它写到 `dist/chrome/`（不提交）。页面、样式、资源和语言文件原样复制，React 岛用 Vite 构建到其中的 `src/react/`，扩展运行的所有脚本用 Rolldown（Vite 底层的打包器）打包到其中的 `build/`，`manifest.json` 由仓库里的同名文件生成。该目录保持与仓库相同的结构，因此页面 URL 与商店包一致。首次加载开发版前，请运行：
+Chrome 加载的是构建后的扩展：`npm run build` 会把它写到 `dist/chrome/`（不提交）。页面、样式、资源和语言文件原样复制，扩展运行的所有脚本用 Vite 构建到其中的 `build/`，`manifest.json` 由仓库里的同名文件生成。该目录保持与仓库相同的结构，因此页面 URL 与商店包一致。首次加载开发版前，请运行：
 
 ```bash
 npm ci
 npm run build
 ```
 
-`src/` 下的脚本都是 TypeScript ES 模块（尚未补类型的文件以 `// @ts-nocheck` 开头），各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。开发期间运行 `npm run watch` 可保持 `dist/chrome/` 最新：每次改动都会复制变更的文件，并重新构建 React 岛和脚本包。
+`src/` 下的脚本都是 TypeScript ES 模块，各自 import 所需的模块；`build/` 中的每个脚本都由 `scripts/build/entries.js` 列出的一个入口模块构建而成。页面脚本是共享 chunk 的 ES 模块；预加载脚本、内容脚本和 service worker 是自包含的经典脚本。开发期间运行 `npm run watch` 可保持 `dist/chrome/` 最新：每次改动都会复制变更的文件并重新构建脚本。
 
 然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将 `dist/chrome` 作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 
@@ -266,7 +266,7 @@ npm run lint
 | `src/domain/` | 不访问浏览器和 DOM 的纯逻辑：设置键与规范化、路由、搜索排序与匹配（`search/`）、favicon 规则、快捷方式与最近访问存储 |
 | `src/platform/` | 浏览器与扩展 API 的封装：浏览器识别、URL 守卫 |
 | `src/shared/` | 多个界面共用的 UI 与页面运行时：`search/`（输入与建议）、`ui/`（提示、Toast、菜单与控件样式）、`favicon/`、预加载脚本 |
-| `src/*/react/` | 各界面的 React 视图，构建产物输出到 `dist/chrome/src/react/`；多个页面共用的在 `src/shared/react/` |
+| `src/*/react/` | 各界面的 React 视图；多个页面共用的在 `src/shared/react/` |
 | `_locales/` | 扩展 UI 文案 |
 | `assets/data/` | 内置站内搜索和浏览器快捷入口数据 |
 | `assets/wallpapers/` | 新标签页内置壁纸与缩略图 |

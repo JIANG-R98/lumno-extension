@@ -1,8 +1,8 @@
 'use strict';
 
 // Starts the development extension in dist/chrome/: copies the files that
-// ship as they are (extension-output.js) and writes its manifest. The React
-// islands and the bundles are built into it next (npm run build).
+// ship as they are (extension-output.js) and writes its manifest. The
+// entries are built into it next (npm run build).
 //   node scripts/build/build-static.js [--watch]
 // --watch keeps copying the files as they change.
 
@@ -21,8 +21,10 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const outDir = path.join(repoRoot, EXTENSION_OUTPUT);
 
 // Earlier builds wrote their output inside the repository.
+const IN_TREE_OUTPUT = ['build', 'src/react'];
+
 function removeInTreeOutput() {
-  BUILT_DIRECTORIES.forEach((directory) => {
+  IN_TREE_OUTPUT.forEach((directory) => {
     const inTree = path.join(repoRoot, directory);
     if (fs.existsSync(inTree)) {
       fs.rmSync(inTree, { recursive: true, force: true });
@@ -33,18 +35,10 @@ function removeInTreeOutput() {
 
 function buildStatic() {
   removeInTreeOutput();
-  // The built folders are left to their own builds, which empty them.
+  // The built folders are left to their own build, which empties them.
   if (fs.existsSync(outDir)) {
-    fs.readdirSync(outDir).forEach((entry) => {
-      if (entry !== 'build' && entry !== 'src') {
-        fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
-      }
-    });
-    const srcDir = path.join(outDir, 'src');
-    if (fs.existsSync(srcDir)) {
-      fs.readdirSync(srcDir).filter((entry) => entry !== 'react')
-        .forEach((entry) => fs.rmSync(path.join(srcDir, entry), { recursive: true, force: true }));
-    }
+    fs.readdirSync(outDir).filter((entry) => !BUILT_DIRECTORIES.includes(entry))
+      .forEach((entry) => fs.rmSync(path.join(outDir, entry), { recursive: true, force: true }));
   }
   fs.mkdirSync(outDir, { recursive: true });
   copyExtensionFiles(outDir);

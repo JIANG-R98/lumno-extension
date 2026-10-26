@@ -30,11 +30,11 @@ build writes. To try the Firefox build, see
 the Development section of the [README](../README.md#development).
 
 `dist/chrome/` is build output and never committed. It holds the pages,
-styles, assets and locales copied as they are, and two built folders:
-
-- `build/`: Rolldown bundles of the scripts in `src/`.
-- `src/react/`: the React islands, built by Vite from the `react/` folders in
-  `src/` (`src/newtab/react/`, `src/shared/react/`, ...).
+styles, assets and locales copied as they are, and `build/`: every script the
+extension runs, built by Vite from the entry modules
+[`scripts/build/entries.js`](../scripts/build/entries.js) lists. Page scripts
+are ES modules that share chunks (`build/chunks/`); preloads, content scripts
+and the service worker are self-contained classic scripts.
 
 While you work, `npm run watch` keeps `dist/chrome/` current as you edit.
 
@@ -74,10 +74,10 @@ the ones below it, and a surface never imports another surface.
 - New third-party code, icons or fonts must come under a license that allows
   redistribution. Add them to [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
   and put their license texts next to them.
-- The React bundles have size budgets. A change that grows a route by more than
-  a few KiB fails CI unless one of its commit messages carries a
+- What each surface loads has a size budget. A change that grows a route by
+  more than a few KiB fails CI unless one of its commit messages carries a
   `Bundle-Growth: <why>` trailer; see
-  [`tests/repo/test-react-bundle-budgets.js`](../tests/repo/test-react-bundle-budgets.js).
+  [`tests/repo/test-bundle-budgets.js`](../tests/repo/test-bundle-budgets.js).
 
 ## Translations
 

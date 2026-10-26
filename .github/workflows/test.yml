@@ -36,8 +36,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The React bundle growth check compares against the commit this change
-      # builds on: the base of a pull request, or main before a push.
+      # The bundle growth check compares against the commit this change builds
+      # on: the base of a pull request, or main before a push.
       - name: Resolve bundle growth base
         shell: bash
         env:
@@ -57,21 +57,21 @@ jobs:
             echo "LUMNO_BUNDLE_BASE=$BEFORE_SHA" >> "$GITHUB_ENV"
           fi
 
-      # The React bundles are build output, not committed, so the base's are
+      # The built scripts are build output, not committed, so the base's are
       # measured by building it in a worktree of its own.
-      - name: Build the base's React bundles
+      - name: Build the base's scripts
         if: ${{ env.LUMNO_BUNDLE_BASE != '' }}
         shell: bash
         run: |
           base_dir="$RUNNER_TEMP/bundle-base"
           git worktree add --detach "$base_dir" "$LUMNO_BUNDLE_BASE"
-          if (cd "$base_dir" && npm ci --ignore-scripts --no-audit --no-fund && npm run build:react); then
+          if (cd "$base_dir" && npm ci --ignore-scripts --no-audit --no-fund && npm run build); then
             echo "LUMNO_BUNDLE_BASE_DIR=$base_dir" >> "$GITHUB_ENV"
           else
-            echo "::warning::Could not build the React bundles of $LUMNO_BUNDLE_BASE; only the bundle ceilings are checked."
+            echo "::warning::Could not build the scripts of $LUMNO_BUNDLE_BASE; only the bundle ceilings are checked."
           fi
 
-      # Builds the React bundles once, runs both test suites, then the static
+      # Builds the extension once, runs both test suites, then the static
       # checks (the same ones npm run check runs after its own build).
       - name: Run tests and checks
         run: npm run verify

@@ -7,9 +7,8 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "npm run build:static && npm run build:react && npm run build:bundles",
-    "build:react": "vite build --config vite.config.mjs && vite build --config vite.overlay.config.mjs",
-    "build:bundles": "node scripts/build/build-bundles.js",
+    "build": "npm run build:static && npm run build:entries",
+    "build:entries": "node scripts/build/build.js",
     "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.test.json --noEmit",
     "test": "npm run build && npm run test:legacy && npm run test:react",
     "verify": "npm test && npm run check:static",
@@ -17,8 +16,7 @@
     "test:react": "vitest run --config vitest.config.ts",
     "test:e2e": "node tests/e2e/run.js",
     "check": "npm run build && npm run check:static",
-    "check:static": "npm run check:no-js && npm run check:js && npm run check:locales && npm run typecheck && npm run check:react-bundle && npm run check:manifest && npm run lint",
-    "check:react-bundle": "node --check dist/chrome/src/react/newtab-islands.js && node --check dist/chrome/src/react/options-islands.js && node --check dist/chrome/src/react/onboarding-islands.js && node --check dist/chrome/src/react/overlay-islands.js && node --check dist/chrome/src/react/popup-islands.js && node --check dist/chrome/src/react/react-shared.js && node --check dist/chrome/src/react/tab-switcher-shared.js && node --check dist/chrome/src/react/react-runtime.js && node --check dist/chrome/src/react/rolldown-runtime.js",
+    "check:static": "npm run check:no-js && npm run check:js && npm run check:locales && npm run typecheck && npm run check:manifest && npm run lint",
     "check:no-js": "node scripts/check/check-no-js.js",
     "check:js": "node scripts/check/check-js-syntax.js",
     "check:locales": "node scripts/check/check-locales.js",

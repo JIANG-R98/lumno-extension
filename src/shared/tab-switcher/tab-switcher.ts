@@ -1,11 +1,11 @@
-import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import type { TabSwitcherTab, TabSwitcherThumbnailUpdate, TabSwitcherViewController } from '../shared/react/tab-switcher';
-import * as TOAST from '../shared/ui/toast';
-import * as LumnoMessaging from '../platform/messaging';
-import { queryHtmlTags } from '../shared/dom-lookup';
-import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './tab-switcher-host';
-import type { TabSwitcherHost, TabSwitcherReply } from './tab-switcher-host';
+import * as PAGE_COLOR_SCHEME from '../page-color-scheme';
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import type { TabSwitcherTab, TabSwitcherThumbnailUpdate, TabSwitcherViewController } from '../react/tab-switcher';
+import * as TOAST from '../ui/toast';
+import * as LumnoMessaging from '../../platform/messaging';
+import { queryHtmlTags } from '../dom-lookup';
+import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './host';
+import type { TabSwitcherHost, TabSwitcherReply } from './host';
 
 // The context the worker opens the switcher with, as read from its message.
 interface OpenContext {

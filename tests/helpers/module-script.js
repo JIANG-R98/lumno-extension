@@ -11,7 +11,7 @@ const path = require('path');
 const vm = require('vm');
 const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
-const { BUNDLES } = require('../../scripts/build/bundles');
+const { getEntry } = require('../../scripts/build/entries');
 const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 
@@ -35,6 +35,8 @@ function build(entry, globalName) {
       format: 'iife',
       globalName,
       target: ['chrome110', 'firefox140'],
+      // As the extension's build does, for React and anything else that asks.
+      define: { 'process.env.NODE_ENV': '"production"' },
       charset: 'utf8',
       write: false,
       logLevel: 'silent'
@@ -98,18 +100,15 @@ function runModuleInContext(file, context, globalName = '__lumnoTestModule', opt
   return context[globalName];
 }
 
-// A bundle from scripts/build/bundles.js, as the page or injection list runs
-// it (development build). `expose` leaves the exports of some of its modules
-// on globals, so a test can reach the instances the bundle uses:
-// { 'src/x.ts': 'GlobalName' }.
+// An entry from scripts/build/entries.js, as a classic script that runs it
+// the way the page, manifest or injection list does. `expose` leaves the
+// exports of some of its modules on globals, so a test can reach the
+// instances the entry uses: { 'src/x.ts': 'GlobalName' }.
 function bundleScript(name, expose) {
-  const bundle = BUNDLES.find((candidate) => candidate.name === name);
-  if (!bundle) {
-    throw new Error(`No bundle named ${name} in scripts/build/bundles.js`);
-  }
+  const entry = getEntry(name);
   const key = `bundle:${name}\0${JSON.stringify(expose || {})}`;
   if (!cache.has(key)) {
-    const imports = bundle.files.map((file) => `import ${JSON.stringify(sourcePath(file))};`);
+    const imports = [`import ${JSON.stringify(sourcePath(entry.source))};`];
     Object.entries(expose || {}).forEach(([file, globalName], index) => {
       imports.push(`import * as exposed${index} from ${JSON.stringify(sourcePath(file))};`);
       imports.push(`globalThis.${globalName} = exposed${index};`);
@@ -120,7 +119,8 @@ function bundleScript(name, expose) {
 }
 
 // The source of a script the worker imports by URL: a build/<name>.js path
-// is built from scripts/build/bundles.js, anything else is read from disk.
+// is built from its entry in scripts/build/entries.js, anything else is read
+// from disk.
 function workerScriptSource(url) {
   const match = String(url).match(/(?:^|\/)build\/([\w-]+)\.js$/);
   return match ? bundleScript(match[1]) : fs.readFileSync(String(url), 'utf8');

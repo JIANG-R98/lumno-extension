@@ -20,8 +20,6 @@ linkTargets.forEach((target) => {
 });
 
 const generatedLicenseFiles = [
-  'src/react/third-party-licenses.md',
-  'src/react/overlay-third-party-licenses.md',
   'build/third-party-licenses.md'
 ];
 const bundledSections = generatedLicenseFiles.flatMap((file) => read(file).split(/^## /m).slice(1));

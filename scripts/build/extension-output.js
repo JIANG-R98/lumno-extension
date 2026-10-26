@@ -5,16 +5,16 @@
 //
 // dist/chrome/ is the development extension: load it in chrome://extensions.
 // It keeps the repository's layout, so page URLs (newtab.html,
-// src/options/options.html, ...) are the same as in the store package. Two
-// of its folders are build output: build/ (the bundles, see bundles.js) and
-// src/react/ (the React islands Vite builds); everything else is copied.
+// src/options/options.html, ...) are the same as in the store package. Its
+// build/ folder is build output (the entries in entries.js); everything else
+// is copied.
 
 const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const EXTENSION_OUTPUT = 'dist/chrome';
-const BUILT_DIRECTORIES = ['build', 'src/react'];
+const BUILT_DIRECTORIES = ['build'];
 
 // Copied from the repository, filtered by isExtensionFile.
 const EXTENSION_ROOTS = [

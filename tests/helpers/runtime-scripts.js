@@ -1,34 +1,26 @@
 'use strict';
 
 // The files each runtime runs, in run order. Pages, manifest content scripts
-// and the background's injection lists load bundles (scripts/build/bundles.js);
-// these helpers expand every bundle into the modules it runs, so checks can
-// ask "does the overlay run X before Y" without parsing load lists.
+// and the background's injection lists load built entries
+// (scripts/build/entries.js); these helpers expand every entry into the
+// modules it runs, so checks can ask "does the overlay run X before Y"
+// without parsing load lists.
 
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
 const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 const { execFileSync } = require('child_process');
-const { BUNDLES, BUNDLE_DIRECTORY } = require('../../scripts/build/bundles');
+const { BUILD_DIRECTORY, getEntry } = require('../../scripts/build/entries');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const bundlesByName = new Map(BUNDLES.map((bundle) => [bundle.name, bundle]));
 
 function toRepoPath(file) {
   return path.relative(repoRoot, path.resolve(repoRoot, file)).split(path.sep).join('/');
 }
 
-function getBundle(name) {
-  const bundle = bundlesByName.get(name);
-  if (!bundle) {
-    throw new Error(`No bundle named ${name} in scripts/build/bundles.js`);
-  }
-  return bundle;
-}
-
-// The modules a bundle runs, in the order they run: each of its files after
-// what it imports, in import order, as modules evaluate.
+// The modules an entry runs, in the order they run: each module after what
+// it imports, in import order, as modules evaluate.
 const bundleModules = new Map();
 function getBundleFiles(name) {
   if (!bundleModules.has(name)) {
@@ -36,7 +28,7 @@ function getBundleFiles(name) {
       absWorkingDir: repoRoot,
       tsconfigRaw: BUNDLE_TSCONFIG_RAW,
       stdin: {
-        contents: getBundle(name).files.map((file) => `import './${file}';`).join('\n'),
+        contents: `import './${getEntry(name).source}';`,
         resolveDir: repoRoot,
         sourcefile: 'bundle-entry.js'
       },
@@ -62,9 +54,10 @@ function getBundleFiles(name) {
   return bundleModules.get(name).slice();
 }
 
-// A loaded path: a bundle expands into its files, anything else stays as is.
+// A loaded path: a built entry expands into its modules, anything else stays
+// as is.
 function expandScriptPath(repoPath) {
-  const match = repoPath.match(new RegExp(`^${BUNDLE_DIRECTORY}/([\\w-]+)\\.js$`));
+  const match = repoPath.match(new RegExp(`^${BUILD_DIRECTORY}/([\\w-]+)\\.js$`));
   return match ? getBundleFiles(match[1]) : [repoPath];
 }
 
@@ -78,25 +71,18 @@ function readScriptTags(html) {
   });
 }
 
-// The scripts a page runs: its script tags in document order, and for the
-// React page bootstrap, the page's React islands followed by its page bundle.
+// The scripts a page runs: its classic script tags in document order, then
+// its module script, which runs once the markup is parsed.
 function getPageScripts(page) {
   const pagePath = toRepoPath(page);
   const html = fs.readFileSync(path.join(repoRoot, pagePath), 'utf8');
   const baseMatch = html.match(/<base href="([^"]+)"/);
   const baseDir = path.posix.join(path.posix.dirname(pagePath), baseMatch ? baseMatch[1] : '');
   const resolve = (from, src) => toRepoPath(path.posix.join(from, src));
-  return readScriptTags(html).flatMap((attributes) => {
-    const scriptPath = resolve(baseDir, attributes.src);
-    const files = expandScriptPath(scriptPath);
-    if (!attributes['data-page-entry']) {
-      return files;
-    }
-    const scriptDir = path.posix.dirname(scriptPath);
-    return files
-      .concat(resolve(scriptDir, attributes['data-react-entry']))
-      .concat(expandScriptPath(resolve(scriptDir, attributes['data-page-entry'])));
-  });
+  const tags = readScriptTags(html);
+  const ordered = tags.filter((attributes) => attributes.type !== 'module')
+    .concat(tags.filter((attributes) => attributes.type === 'module'));
+  return ordered.flatMap((attributes) => expandScriptPath(resolve(baseDir, attributes.src)));
 }
 
 function getManifestContentScripts() {

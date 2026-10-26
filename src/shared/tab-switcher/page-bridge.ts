@@ -1,5 +1,5 @@
-import * as LumnoMessaging from '../platform/messaging';
-import { getTabSwitcherHost } from './tab-switcher-host';
+import * as LumnoMessaging from '../../platform/messaging';
+import { getTabSwitcherHost } from './host';
 
 // What a tab switcher command answers, to the worker or an extension page.
 interface BridgeReply {

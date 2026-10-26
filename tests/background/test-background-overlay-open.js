@@ -34,7 +34,7 @@ async function testOpensAtOnceAndReusesTheRuntime() {
   assert.strictEqual(queries.length, 1, 'an injectable page should open without querying other tabs first');
   assert.strictEqual(session.pages.log[0].kind, 'func', 'the worker should first ask the page whether it already runs the overlay');
   assert.deepStrictEqual(session.injections().map((entry) => entry.files),
-    [['build/icon-font-preload.js', 'src/react/overlay-islands.js', 'build/overlay.js']]);
+    [['build/icon-font-preload.js', 'build/overlay-islands.js', 'build/overlay.js']]);
   assert.ok(session.pages.log.every((entry) => entry.injectImmediately),
     'probing, injecting and opening should all run without waiting for document_idle');
   assert.strictEqual(session.pages.page(7).overlayOpen, true);

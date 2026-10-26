@@ -1,9 +1,9 @@
 'use strict';
 
 // Builds the development extension into dist/chrome/ and keeps it current:
-// copied files, the React islands and the bundles each rebuild as their
-// sources change. Reload the extension in chrome://extensions after a change
-// to the worker or the manifest; reload pages for everything else.
+// copied files and the built entries each rebuild as their sources change.
+// Reload the extension in chrome://extensions after a change to the worker or
+// the manifest; reload pages for everything else.
 //   npm run watch
 
 const path = require('path');
@@ -24,20 +24,9 @@ function run(args) {
   });
 }
 
-async function main() {
-  buildStatic();
-  const { build } = await import('vite');
-  // Both configs write to src/react/; neither may empty it on a rebuild.
-  for (const config of ['vite.config.mjs', 'vite.overlay.config.mjs']) {
-    await build({
-      configFile: path.join(repoRoot, config),
-      build: { emptyOutDir: false, watch: {} },
-      logLevel: 'warn'
-    });
-  }
-  run([path.join(__dirname, 'build-static.js'), '--watch']);
-  run([path.join(__dirname, 'build-bundles.js'), '--watch']);
-}
+buildStatic();
+run([path.join(__dirname, 'build-static.js'), '--watch']);
+run([path.join(__dirname, 'build.js'), '--watch']);
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {
@@ -45,8 +34,3 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     process.exit(0);
   });
 }
-
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});

@@ -194,13 +194,13 @@ async function testReconnectsAfterTheWorkerGoesAway() {
 
 function testPagesConnectTheBridgeAfterTheirReactEntry() {
   [
-    ['newtab.html', 'src/react/newtab-islands.js'],
-    ['src/options/options.html', 'src/react/options-islands.js'],
-    ['src/onboarding/onboarding.html', 'src/react/onboarding-islands.js']
+    ['newtab.html', 'src/newtab/react/react-islands-entry.ts'],
+    ['src/options/options.html', 'src/options/react/options-islands-entry.ts'],
+    ['src/onboarding/onboarding.html', 'src/onboarding/react/onboarding-islands-entry.ts']
   ].forEach(([page, reactEntry]) => {
     const scripts = getPageScripts(page);
-    assert.ok(runsBefore(scripts, 'src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts'), `${page} should load the runtime before the bridge`);
-    assert.ok(runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.ts'), `${page} should connect the bridge after its React entry`);
+    assert.ok(runsBefore(scripts, 'src/shared/tab-switcher/tab-switcher.ts', 'src/shared/tab-switcher/page-bridge.ts'), `${page} should load the runtime before the bridge`);
+    assert.ok(runsBefore(scripts, reactEntry, 'src/shared/tab-switcher/page-bridge.ts'), `${page} should connect the bridge after its React entry`);
   });
 }
 

@@ -2,8 +2,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { BUNDLE_DIRECTORY } = require('./bundles');
-const { EXTENSION_OUTPUT, EXTENSION_ROOTS, copyExtensionFiles, extensionOutputPath } = require('./extension-output');
+const { BUILD_DIRECTORY } = require('./entries');
+const { EXTENSION_ROOTS, copyExtensionFiles } = require('./extension-output');
 const { chromeManifest, writeManifest } = require('./manifests');
 
 const storeManifest = chromeManifest({ store: true });
@@ -44,25 +44,26 @@ function packagePathForFile(file) {
   return normalizePackagePath(path.relative(packageStageDir, file));
 }
 
-// The package holds what the development build has, with the React islands
-// it built (Vite minifies them either way) and minified bundles of its own.
-const builtReact = extensionOutputPath('src/react');
-if (!fs.existsSync(builtReact)) {
-  console.error(`Missing ${EXTENSION_OUTPUT}/src/react/; run npm run build first.`);
-  process.exit(1);
-}
+// The package holds what the development build has, with the entries built
+// again without source maps.
 copyExtensionFiles(packageStageDir);
-fs.cpSync(builtReact, stagedPath('src/react'), { recursive: true });
 writeManifest(packageStageDir, storeManifest);
-
-// The store builds its own bundles, minified.
-const bundleBuild = spawnSync(process.execPath, [
-  path.join(__dirname, 'build-bundles.js'), '--store', '--outdir', stagedPath(BUNDLE_DIRECTORY)
+const entryBuild = spawnSync(process.execPath, [
+  path.join(__dirname, 'build.js'), '--store', '--outdir', stagedPath(BUILD_DIRECTORY)
 ], { cwd: repoRoot, stdio: 'inherit' });
-if (bundleBuild.status !== 0) {
-  process.exit(bundleBuild.status || 1);
+if (entryBuild.status !== 0) {
+  process.exit(entryBuild.status || 1);
 }
-const stagedBundles = fs.readdirSync(stagedPath(BUNDLE_DIRECTORY)).filter((file) => file.endsWith('.js'));
+function listBuiltScripts(directory, prefix = '') {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      return listBuiltScripts(path.join(directory, entry.name), relative);
+    }
+    return entry.name.endsWith('.js') ? [relative] : [];
+  });
+}
+const stagedBundles = listBuiltScripts(stagedPath(BUILD_DIRECTORY));
 
 function getHtmlBaseHref(source) {
   const baseMatch = source.match(/<base\s+[^>]*href=["']([^"']+)["']/i);
@@ -92,7 +93,7 @@ collectHtmlFiles(stagedPath('src'));
 stagedHtmlFiles.push(stagedPath('newtab.html'));
 
 let zipResult = null;
-const zipArgs = ['-r', '-D', zipPath, ...packageRoots, BUNDLE_DIRECTORY, 'manifest.json'];
+const zipArgs = ['-r', '-D', zipPath, ...packageRoots, BUILD_DIRECTORY, 'manifest.json'];
 const psQuote = (value) => `'${String(value).replace(/'/g, "''")}'`;
 const powershell = (command, options = {}) => spawnSync('powershell.exe', [
   '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
@@ -245,7 +246,7 @@ function listFilesWithExtension(dir, extension) {
 }
 
 function checkRuntimeGetUrlReferences() {
-  const files = listJsFiles(stagedPath('src')).concat(listJsFiles(stagedPath(BUNDLE_DIRECTORY)));
+  const files = listJsFiles(stagedPath('src')).concat(listJsFiles(stagedPath(BUILD_DIRECTORY)));
   const staticGetUrlPattern = /chrome\.runtime\.getURL\(\s*(['"`])([^'"`]+)\1\s*\)/g;
   files.forEach((file) => {
     const source = fs.readFileSync(file, 'utf8');
@@ -340,7 +341,7 @@ Object.values(storeManifest.icons || {}).forEach(checkManifestPath);
     checkManifestPath(resource);
   });
 });
-stagedBundles.forEach((file) => checkManifestPath(`${BUNDLE_DIRECTORY}/${file}`));
+stagedBundles.forEach((file) => checkManifestPath(`${BUILD_DIRECTORY}/${file}`));
 checkRuntimeGetUrlReferences();
 checkHtmlReferences();
 checkCssFiles();

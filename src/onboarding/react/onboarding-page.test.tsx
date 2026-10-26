@@ -86,6 +86,8 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   trackListeners(document);
   trackListeners(window);
   await act(async () => {
+    await runPageBundle('overlay-islands');
+    await runPageBundle('overlay');
     await runPageBundle('onboarding');
   });
   return {

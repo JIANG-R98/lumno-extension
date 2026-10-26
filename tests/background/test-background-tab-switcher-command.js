@@ -209,7 +209,7 @@ async function testFallsBackToInjectingTheSwitcher() {
   const scripts = session.scripts().filter((script) => script.target.tabId === 11 && !script.target.allFrames);
   const files = scripts.find((script) => script.files && script.files.includes('build/tab-switcher.js'));
   assert.deepStrictEqual(files && files.files,
-    ['build/icon-font-preload.js', 'src/react/overlay-islands.js', 'build/tab-switcher.js'],
+    ['build/icon-font-preload.js', 'build/overlay-islands.js', 'build/tab-switcher.js'],
     'a page without the runtime should get the React islands before the switcher');
   const run = scripts.find((script) => typeof script.func === 'function' && script.args && script.args[0] && Array.isArray(script.args[0].tabs));
   assert.ok(run, 'the injected switcher should then be opened with the same context');
