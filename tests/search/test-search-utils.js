@@ -556,6 +556,27 @@ assert.deepStrictEqual(
   search.composeSearchFirstSuggestionSlate(searchFirstQuotaInput, { limit: 10, query: 'nothing matches' }).map((item) => item.title),
   'without an exact-title row the search-first slate should not change'
 );
+// #120: while a query's suggestions are pending, the previous suggestions
+// that still start with the query stay instead of dropping out.
+const previousEngineSlate = [
+  { type: 'history', title: 'WhatsApp Web', url: 'https://web.whatsapp.com/' },
+  { type: 'googleSuggest', title: 'whatsapp web' },
+  { type: 'googleSuggest', title: 'whatsapp web login' },
+  { type: 'googleSuggest', title: 'whatsapp desktop' },
+  { type: 'googleSuggest', title: 'whatsapp' }
+];
+assert.deepStrictEqual(
+  search.carryOverEngineSuggestions(previousEngineSlate, 'WhatsApp W').map((item) => item.title),
+  ['whatsapp web', 'whatsapp web login'],
+  'only search suggestions that extend the new query should carry over'
+);
+assert.deepStrictEqual(
+  search.carryOverEngineSuggestions(previousEngineSlate, 'whatsapp web').map((item) => item.title),
+  ['whatsapp web login'],
+  'a suggestion equal to the query is the search action itself and should not carry over'
+);
+assert.deepStrictEqual(search.carryOverEngineSuggestions(previousEngineSlate, '  '), []);
+assert.deepStrictEqual(search.carryOverEngineSuggestions(null, 'whatsapp'), []);
 const pinnedExactSearchActionSuggestions = search.pinExactSearchActionSecond([
   { type: 'history', title: 'Local A' },
   { type: 'history', title: 'Local B' },

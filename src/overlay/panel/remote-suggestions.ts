@@ -1,7 +1,9 @@
 // Remote search suggestions: requesting them from the background and
 // merging late responses into what is shown.
+import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SuggestionLike } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
+import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
 
 // Shared by the renders of one request: whether the search engine's
 // suggestions came back, and whether the list showed its final mix.
@@ -19,7 +21,11 @@ interface SuggestionUpdateOptions {
 interface RemoteSuggestionsState {
   suggestionsContainer: HTMLElement | null;
   lastSuggestionResponse: SuggestionLike[];
+  // The last answer that had the search engine's suggestions in it.
+  lastEngineSuggestionResponse: SuggestionLike[];
   latestOverlayQuery: string;
+  // The query of the rows shown; empty for the open tabs list.
+  lastRenderedQuery: string;
   // Only whether a site search is active.
   siteSearchState: unknown;
   localSearchScopeState: LocalSearchScope | null;
@@ -32,6 +38,8 @@ interface RemoteSuggestionsState {
 
 interface RemoteSuggestionsDeps {
   updateSearchSuggestions(rows: SuggestionLike[], query: string, options?: SuggestionUpdateOptions): void;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'carryOverEngineSuggestions'>;
+  SUGGESTIONS_HEIGHT_LAYOUT: Pick<typeof SuggestionsHeightLayout, 'holdSuggestionsHeight'>;
   isSlashCommandInput(input: string): boolean;
   getDirectUrlSuggestion(query: string): unknown;
   overlayState: RemoteSuggestionsState;
@@ -40,6 +48,8 @@ interface RemoteSuggestionsDeps {
 function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
   const {
     updateSearchSuggestions,
+    SEARCH_UTILS,
+    SUGGESTIONS_HEIGHT_LAYOUT,
     isSlashCommandInput,
     getDirectUrlSuggestion
   } = deps;
@@ -56,13 +66,16 @@ function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
     overlayState.overlayFirstResultRevealTimer = null;
   }
 
+  function isResultsListOpen(container: HTMLElement | null): container is HTMLElement {
+    return Boolean(container &&
+      container.getAttribute('data-collapsed') !== 'true' &&
+      container.getAttribute('aria-hidden') !== 'true');
+  }
+
   // Shows the last answer again while a request is pending; false while
   // the list is collapsed or hidden.
   function updatePendingSearchSuggestions(query: string): boolean {
-    const container = overlayState.suggestionsContainer;
-    if (!container ||
-        container.getAttribute('data-collapsed') === 'true' ||
-        container.getAttribute('aria-hidden') === 'true') {
+    if (!isResultsListOpen(overlayState.suggestionsContainer)) {
       return false;
     }
     updateSearchSuggestions(overlayState.lastSuggestionResponse, query);
@@ -92,6 +105,17 @@ function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
       !requestLocalSearchScope &&
       !getDirectUrlSuggestion(requestQuery);
     const remoteMixState: RemoteMixState = { settled: false };
+    // A list of another query's results keeps its height until this
+    // query's full answer; the open tabs list gives way at once.
+    if (!requestLocalSearchScope && overlayState.lastRenderedQuery &&
+        isResultsListOpen(overlayState.suggestionsContainer)) {
+      SUGGESTIONS_HEIGHT_LAYOUT.holdSuggestionsHeight(overlayState.suggestionsContainer, window);
+    }
+    // Shown with the local results until this query's suggestions arrive.
+    const carriedEngineSuggestions = SEARCH_UTILS.carryOverEngineSuggestions(
+      overlayState.lastEngineSuggestionResponse,
+      requestQuery
+    );
     if (overlayState.overlayRemoteSuggestionDebounceTimer) {
       window.clearTimeout(overlayState.overlayRemoteSuggestionDebounceTimer);
       overlayState.overlayRemoteSuggestionDebounceTimer = null;
@@ -101,7 +125,7 @@ function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
       overlayState.overlayFirstResultRevealTimer = null;
     }
     if (showExactSearchPendingState) {
-      updateSearchSuggestions([], requestQuery, { remoteMixState });
+      updateSearchSuggestions(carriedEngineSuggestions, requestQuery, { remoteMixState });
     }
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'getSearchSuggestions',
@@ -144,7 +168,7 @@ function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
           });
         }, OVERLAY_FIRST_RESULT_REVEAL_DELAY_MS);
       } else if (!showExactSearchPendingState) {
-        updateSearchSuggestions(localSuggestions, requestQuery, {
+        updateSearchSuggestions([...localSuggestions, ...carriedEngineSuggestions], requestQuery, {
           remoteMixState
         });
       }
@@ -204,6 +228,7 @@ function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
             return;
           }
           remoteMixState.settled = true;
+          overlayState.lastEngineSuggestionResponse = remoteResponse.suggestions;
           if (waitForFirstResultMix) {
             if (remoteMixState.visualSettled) {
               return;

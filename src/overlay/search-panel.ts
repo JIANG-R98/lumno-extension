@@ -277,6 +277,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     updateSearchSuggestions,
     clearSearchSuggestions
   } = PANEL_SUGGESTION_SOURCES.createSuggestionSources({
+    SUGGESTIONS_HEIGHT_LAYOUT,
     formatMessage: (...args) => formatMessage(...args),
     getPageFaviconCandidateUrl: (...args) => getPageFaviconCandidateUrl(...args),
     isLocalNetworkInput: (...args) => isLocalNetworkInput(...args),
@@ -340,6 +341,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     requestOverlaySearchSuggestions
   } = PANEL_REMOTE_SUGGESTIONS.createRemoteSuggestions({
     updateSearchSuggestions,
+    SEARCH_UTILS,
+    SUGGESTIONS_HEIGHT_LAYOUT,
     isSlashCommandInput: (...args) => isSlashCommandInput(...args),
     getDirectUrlSuggestion,
     overlayState

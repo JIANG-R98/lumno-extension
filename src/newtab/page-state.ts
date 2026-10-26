@@ -151,6 +151,7 @@ function createPageState(): NewtabPageState {
     selectedIndex: -1,
     currentSuggestions: [],
     lastSuggestionResponse: [],
+    lastEngineSuggestionResponse: [],
     latestQuery: '',
     latestRawQuery: '',
     siteSearchTriggerState: null,

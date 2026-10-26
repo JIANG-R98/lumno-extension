@@ -383,6 +383,27 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
     return Boolean(suggestion && suggestion.type === 'googleSuggest');
   }
 
+  // While the query's search engine suggestions are on their way: the last
+  // ones shown that still start with what is typed now, so the list keeps
+  // those rows instead of shrinking to the local ones and growing back on
+  // every key (#120).
+  function carryOverEngineSuggestions<T extends SuggestionLike>(
+    previous: ReadonlyArray<T | null | undefined> | null | undefined,
+    query: unknown
+  ): T[] {
+    const typed = normalizeSearchText(String(query || '').trim());
+    if (!typed) {
+      return [];
+    }
+    return (Array.isArray(previous) ? previous : []).filter((suggestion): suggestion is T => {
+      if (!suggestion || !isSearchEngineSuggestion(suggestion)) {
+        return false;
+      }
+      const text = normalizeSearchText(String(suggestion.title || '').trim());
+      return text.length > typed.length && text.startsWith(typed);
+    });
+  }
+
   function isSearchActionSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
     return Boolean(suggestion && suggestion.type === 'newtab');
   }
@@ -706,6 +727,7 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
     getSearchEngineSuggestionScore,
     normalizeSearchEngineSuggestions,
     isSearchEngineSuggestion,
+    carryOverEngineSuggestions,
     isKeywordSearchSuggestion,
     groupSearchSuggestionsByKind,
     composeSearchFirstSuggestionSlate,

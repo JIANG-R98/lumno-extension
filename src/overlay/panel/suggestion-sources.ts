@@ -17,6 +17,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
 import type { AutocompleteRow } from './autocomplete';
 import type { RemoteMixState } from './remote-suggestions';
 import type { CommandSuggestion, SlashCommand } from './slash-commands';
@@ -69,6 +70,7 @@ interface SuggestionSourcesDeps {
   SEARCH_UTILS: Pick<typeof SearchUtils,
     'isHelpCenterSiteSearchProvider' | 'composeSearchFirstSuggestionSlate' | 'rankSearchSuggestionSlate'>;
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'getSuggestionUpdateKind' | 'getActionContextKey'>;
+  SUGGESTIONS_HEIGHT_LAYOUT: Pick<typeof SuggestionsHeightLayout, 'releaseSuggestionsHeight'>;
   COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'load' | 'getLinks' | 'getCommunityChannel'>;
   getPageFaviconCandidateUrl(url: string): string;
   isLocalNetworkInput(input: string): boolean;
@@ -192,7 +194,8 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
     cancelPendingOverlaySuggestionRequests,
     shouldShowOpenTabsForEmptyQuery,
     requestTabsAndRender,
-    clearDefaultOpenTabsSuggestions
+    clearDefaultOpenTabsSuggestions,
+    SUGGESTIONS_HEIGHT_LAYOUT
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -752,6 +755,11 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
         syncSuggestionLastState();
         updateSelection();
       }
+      // Rows shown while the search engine's suggestions are pending keep
+      // the list's height; any other answer lets the list take its own.
+      if (!remoteMixState || finalRemoteMix) {
+        SUGGESTIONS_HEIGHT_LAYOUT.releaseSuggestionsHeight(container, window);
+      }
       commitSuggestionsNaturalHeightAfterRender();
       if (updateKind === 'structure') {
         overlayState.selectedIndex = -1;
@@ -760,6 +768,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   }
   function clearSearchSuggestions(): void {
     cancelPendingOverlaySuggestionRequests();
+    SUGGESTIONS_HEIGHT_LAYOUT.releaseSuggestionsHeight(overlayState.suggestionsContainer, window);
     overlayState.inlineSearchState = null;
     overlayState.siteSearchTriggerState = null;
     overlayState.localSearchScopeTriggerState = null;

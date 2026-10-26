@@ -17,6 +17,7 @@ import type {
   SuggestionsViewController
 } from '../../shared/react/search/suggestion-list/types';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
 import type { AppearanceModes } from '../appearance-modes';
 import type { ModeCommands } from '../mode-commands';
 import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, SendRuntimeMessage, Translate } from '../newtab-types';
@@ -41,6 +42,8 @@ interface SuggestionsControllerState {
   latestQuery: string;
   latestRawQuery: string;
   lastSuggestionResponse: Suggestion[];
+  // The last answer that had the search engine's suggestions in it.
+  lastEngineSuggestionResponse: Suggestion[];
   inputParts: SearchInputParts | null;
   tabs: OverlayTab[];
   inlineSearchState: InlineSearchState | null;
@@ -85,6 +88,7 @@ interface SuggestionsControllerDeps {
   suggestionsContainer: HTMLElement | null;
   suggestionItems: SuggestionElement[];
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'scrollItemIntoView'>;
+  SUGGESTIONS_HEIGHT_LAYOUT: Pick<typeof SuggestionsHeightLayout, 'holdSuggestionsHeight' | 'releaseSuggestionsHeight'>;
   refreshTabsForSearchContext: SearchNavigation['refreshTabsForSearchContext'];
   clearSiteSearchTabHint: SearchModeController['clearSiteSearchTabHint'];
   restoreUserAuthoredSearchInput: SearchAutocomplete['restoreUserAuthoredSearchInput'];
@@ -123,7 +127,8 @@ interface SuggestionsControllerDeps {
     | 'isHelpCenterSiteSearchProvider'
     | 'groupSearchSuggestionsByKind'
     | 'composeSearchFirstSuggestionSlate'
-    | 'rankSearchSuggestionSlate'>;
+    | 'rankSearchSuggestionSlate'
+    | 'carryOverEngineSuggestions'>;
   getMatchedOpenTabIdForSuggestion: SearchNavigation['getMatchedOpenTabIdForSuggestion'];
   // The suggestions the search blacklist does not leave out.
   filterBlacklistedSuggestions(list: Suggestion[], query: string): Suggestion[];
@@ -186,6 +191,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
     suggestionsContainer,
     suggestionItems,
     SUGGESTION_NAVIGATION,
+    SUGGESTIONS_HEIGHT_LAYOUT,
     refreshTabsForSearchContext,
     clearSiteSearchTabHint,
     restoreUserAuthoredSearchInput,
@@ -457,6 +463,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
 
   function clearSearchSuggestions(): void {
     directNavigationSettleController.cancel();
+    SUGGESTIONS_HEIGHT_LAYOUT.releaseSuggestionsHeight(suggestionsContainer, window);
     pageState.inlineSearchState = null;
     pageState.siteSearchTriggerState = null;
     pageState.localSearchScopeTriggerState = null;
@@ -505,7 +512,11 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
     return true;
   }
 
-  function renderSuggestions(suggestions: Suggestion[], query: string): Promise<void> | undefined {
+  function renderSuggestions(
+    suggestions: Suggestion[],
+    query: string,
+    options?: { pendingRemote?: boolean }
+  ): Promise<void> | undefined {
     if (pageState.searchSuggestionsDismissed) {
       return undefined;
     }
@@ -864,8 +875,14 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
         emptyMessage,
         emptyArt: slashCommandModeActive ? 'noCommands' : 'noResults'
       });
+      // Any answer but rows shown while suggestions are pending lets the
+      // list take its own height, and the frame follows it.
+      const heightReleased = !(options && options.pendingRemote) &&
+        SUGGESTIONS_HEIGHT_LAYOUT.releaseSuggestionsHeight(suggestionsContainer, window);
       if (updateKind !== 'highlight') {
         updateSelection();
+      }
+      if (updateKind !== 'highlight' || heightReleased) {
         setSuggestionsVisible(true);
       }
     });
@@ -941,8 +958,19 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
       clearTimeout(pageState.suggestionRequestWatchdogTimer);
       pageState.suggestionRequestWatchdogTimer = null;
     }
+    // A list of another query's results keeps its height until this
+    // query's full answer.
+    if (!requestLocalSearchScope && pageState.currentSuggestions.length > 0 && suggestionsContainer &&
+        suggestionsContainer.getAttribute('data-visible') === 'true') {
+      SUGGESTIONS_HEIGHT_LAYOUT.holdSuggestionsHeight(suggestionsContainer, window);
+    }
+    // Shown with the local results until this query's suggestions arrive.
+    const carriedEngineSuggestions = SEARCH_UTILS.carryOverEngineSuggestions(
+      pageState.lastEngineSuggestionResponse,
+      requestQuery
+    );
     if (showExactSearchPendingState) {
-      void renderSuggestions([], requestQuery);
+      void renderSuggestions(carriedEngineSuggestions, requestQuery, { pendingRemote: true });
     }
     pageState.suggestionRequestWatchdogTimer = setTimeout(function() {
       if (requestSeq !== pageState.suggestionRequestSeq || requestQuery !== pageState.latestQuery) {
@@ -979,7 +1007,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
         return;
       }
       if (!showExactSearchPendingState) {
-        void renderSuggestions(localSuggestions, requestQuery);
+        void renderSuggestions([...localSuggestions, ...carriedEngineSuggestions], requestQuery, { pendingRemote: true });
       }
       refreshTabsForSearchContext(() => {});
       const remoteDelay = (requestSearchFirst || immediate)
@@ -1010,6 +1038,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
             void renderSuggestions(localSuggestions, requestQuery);
             return;
           }
+          pageState.lastEngineSuggestionResponse = remoteResponse.suggestions;
           void renderSuggestions(remoteResponse.suggestions, requestQuery);
         });
         if (!remoteRequestSent) {

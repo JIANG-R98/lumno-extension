@@ -20,6 +20,7 @@ import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SITE_SEARCH_STORE from '../shared/search/site-search-store';
 import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
+import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import * as SITE_DISPLAY_NAME from '../domain/site-display-name';
 import * as FEATURE_HINTS from '../shared/ui/feature-hints';
@@ -2658,6 +2659,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     suggestionsContainer: pageState.suggestionsContainer,
     suggestionItems,
     SUGGESTION_NAVIGATION,
+    SUGGESTIONS_HEIGHT_LAYOUT,
     refreshTabsForSearchContext,
     clearSiteSearchTabHint: (...args) => clearSiteSearchTabHint(...args),
     restoreUserAuthoredSearchInput,

@@ -225,6 +225,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     selectedIndex: -1,
     currentSuggestions: [],
     lastSuggestionResponse: [],
+    lastEngineSuggestionResponse: [],
     lastRenderedQuery: '',
     lastRenderedActionContextKey: '',
     overlaySuggestionRequestSeq: 0,

@@ -13,7 +13,9 @@ interface RequestSuggestionsOptions {
 type RequestSuggestions = (query: string, options?: RequestSuggestionsOptions) => unknown;
 
 // Shows the suggestions for the query.
-type RenderSuggestions = (suggestions: Suggestion[], query: string) => unknown;
+// pendingRemote: rows shown while the search engine's suggestions are on
+// their way, which keep the list's height.
+type RenderSuggestions = (suggestions: Suggestion[], query: string, options?: { pendingRemote?: boolean }) => unknown;
 
 // The local scope the input is narrowed to: a typed trigger's, or one
 // picked in the mode menu, which has only its source.
