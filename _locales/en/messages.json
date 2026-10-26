@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "Dismiss rating and community prompt"
   },
+  "graphics_notice_badge": {
+    "message": "Graphics acceleration is off"
+  },
+  "graphics_notice_text": {
+    "message": "Turn it on for smoother pages; it takes a browser restart"
+  },
+  "graphics_notice_link": {
+    "message": "Turn on"
+  },
+  "graphics_notice_close": {
+    "message": "Dismiss graphics acceleration tip"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Show bookmark menu safe triangle"
   },

@@ -2,9 +2,10 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 const { createNoticeLayer } = require('../../src/overlay/notices.ts');
 
-// The overlay notice layer mounts the update and engagement notices beside
-// (above) the overlay panel inside its shadow root, counts one update-notice
-// exposure per mount, and keeps the notices' frame matched to the panel.
+// The overlay notice layer mounts the update, graphics and engagement notices
+// beside (above) the overlay panel inside its shadow root, counts one
+// update-notice exposure per mount, and keeps the notices' frame matched to
+// the panel.
 
 function createPage(options) {
   const settings = options || {};
@@ -50,20 +51,23 @@ function runFrames(frames) {
 {
   const { window, frames, styleRoot, panel } = createPage();
   const update = createNotice(window);
+  const graphics = createNotice(window, false);
   const engagement = createNotice(window);
   const decorated = [];
   const layer = createNoticeLayer(window, {
     getUpdateNotice: () => update,
+    getGraphicsNotice: () => graphics,
     getEngagementNotice: () => engagement,
     getSizePreset: () => ({ width: 760 }),
     decorate: (element) => decorated.push(element)
   });
   layer.mount(panel, styleRoot);
-  assert.deepStrictEqual(Array.from(styleRoot.children), [update.element, engagement.element, panel],
+  assert.deepStrictEqual(Array.from(styleRoot.children), [update.element, graphics.element, engagement.element, panel],
     'notices mount in the shadow root just before the panel, never inside it');
   assert.strictEqual(panel.contains(update.element), false);
   assert.strictEqual(update.exposures, 1, 'mounting counts one exposure');
-  assert.deepStrictEqual(decorated, [update.element, engagement.element]);
+  assert.deepStrictEqual(decorated, [update.element, graphics.element, engagement.element]);
+  assert.strictEqual(graphics.element.style.getPropertyValue('width'), '680px', 'the graphics notice follows the panel too');
   assert.strictEqual(update.element.getAttribute('data-overlay-mounting'), 'true',
     'a visible notice enters with the mounting state');
   runFrames(frames);

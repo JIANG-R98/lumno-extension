@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "Hinweis zu Bewertung und Community schließen"
   },
+  "graphics_notice_badge": {
+    "message": "Grafikbeschleunigung ist aus"
+  },
+  "graphics_notice_text": {
+    "message": "Einschalten für flüssigere Seiten – erfordert einen Browser-Neustart"
+  },
+  "graphics_notice_link": {
+    "message": "Einschalten"
+  },
+  "graphics_notice_close": {
+    "message": "Hinweis zur Grafikbeschleunigung schließen"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Sicherheitsdreieck des Lesezeichenmenüs anzeigen"
   },

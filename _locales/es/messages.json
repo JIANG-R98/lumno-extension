@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "Cerrar el aviso de valoración y comunidad"
   },
+  "graphics_notice_badge": {
+    "message": "La aceleración de gráficos está desactivada"
+  },
+  "graphics_notice_text": {
+    "message": "Actívala para que las páginas vayan más fluidas; requiere reiniciar el navegador"
+  },
+  "graphics_notice_link": {
+    "message": "Activar"
+  },
+  "graphics_notice_close": {
+    "message": "Cerrar aviso de aceleración de gráficos"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Mostrar el triángulo seguro del menú de marcadores"
   },

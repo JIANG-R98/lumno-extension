@@ -303,6 +303,12 @@ body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--update-notice {
   display: none;
 }
 
+/* The graphics acceleration capsule floats free: it points at nothing. */
+.x-lumno-feature-hint.x-lumno-feature-hint--graphics-notice[data-arrow-side]::before,
+.x-lumno-feature-hint.x-lumno-feature-hint--graphics-notice[data-arrow-side]::after {
+  display: none;
+}
+
 .x-lumno-feature-hint[data-arrow-side="top"][data-arrow-align="start"] {
   transform-origin: left top;
 }

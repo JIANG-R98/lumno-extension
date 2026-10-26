@@ -13,6 +13,7 @@ interface PanelLanguageState<Row, Provider, Theme> {
   overlayLanguageMode: string;
   inputModeController: { refreshModeMenuLanguage?(): void } | null;
   overlayUpdateNoticeController: { updateLanguage?(): void } | null;
+  overlayGraphicsNoticeController: { updateLanguage?(): void } | null;
   overlayEngagementNoticeController: { updateLanguage?(): void } | null;
   searchInput: HTMLInputElement | null;
   defaultPlaceholderText: string;
@@ -154,6 +155,10 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
     if (overlayState.overlayUpdateNoticeController &&
         typeof overlayState.overlayUpdateNoticeController.updateLanguage === 'function') {
       overlayState.overlayUpdateNoticeController.updateLanguage();
+    }
+    if (overlayState.overlayGraphicsNoticeController &&
+        typeof overlayState.overlayGraphicsNoticeController.updateLanguage === 'function') {
+      overlayState.overlayGraphicsNoticeController.updateLanguage();
     }
     if (overlayState.overlayEngagementNoticeController &&
         typeof overlayState.overlayEngagementNoticeController.updateLanguage === 'function') {

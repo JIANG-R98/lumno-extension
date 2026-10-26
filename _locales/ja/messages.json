@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "評価とコミュニティの案内を閉じる"
   },
+  "graphics_notice_badge": {
+    "message": "グラフィック アクセラレーションがオフです"
+  },
+  "graphics_notice_text": {
+    "message": "オンにするとページがより滑らかになります（ブラウザの再起動が必要です）"
+  },
+  "graphics_notice_link": {
+    "message": "オンにする"
+  },
+  "graphics_notice_close": {
+    "message": "グラフィック アクセラレーションの案内を閉じる"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "ブックマークの安全範囲を表示"
   },

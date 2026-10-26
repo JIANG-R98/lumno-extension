@@ -52,6 +52,7 @@ interface AppearanceModesState {
   quoteRuntime: Pick<QuoteRuntime, 'updateLanguage'> | null;
   inputModeController: Pick<InputModeController, 'refreshModeMenuLanguage'> | null;
   updateNoticeController: LanguageAware | null;
+  graphicsNoticeController: LanguageAware | null;
   engagementNoticeController: LanguageAware | null;
   webdavFeatureHintController: LanguageAware | null;
   helpCenterAskHintController: LanguageAware | null;
@@ -188,6 +189,9 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
     }
     if (pageState.updateNoticeController) {
       pageState.updateNoticeController.updateLanguage();
+    }
+    if (pageState.graphicsNoticeController) {
+      pageState.graphicsNoticeController.updateLanguage();
     }
     if (pageState.engagementNoticeController) {
       pageState.engagementNoticeController.updateLanguage();

@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "Ignorer l’invitation à noter et à rejoindre la communauté"
   },
+  "graphics_notice_badge": {
+    "message": "L’accélération graphique est désactivée"
+  },
+  "graphics_notice_text": {
+    "message": "Activez-la pour des pages plus fluides ; un redémarrage du navigateur est nécessaire"
+  },
+  "graphics_notice_link": {
+    "message": "Activer"
+  },
+  "graphics_notice_close": {
+    "message": "Fermer l’astuce sur l’accélération graphique"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Afficher le triangle de sécurité du menu des favoris"
   },

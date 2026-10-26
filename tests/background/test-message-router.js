@@ -139,7 +139,7 @@ const EXPECTED_BACKGROUND_ACTIONS = [
   'getLocaleMessages', 'getFileSchemeAccessStatus',
   'openOptionsPage', 'openOnboardingPage', 'openExtensionShortcutsPage', 'openSiteSearchOptionsPage',
   'openReleasePage', 'openBookmarkManager', 'openBookmarkFolderInNewTabGroup', 'createTab', 'openNewTab',
-  'openExtensionDetailsPage', 'probeProgressSeries',
+  'openExtensionDetailsPage', 'openGraphicsSettings', 'probeProgressSeries',
   'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
   'popupGetRecentPin', 'popupToggleRecentPin',
   'resolveFaviconCandidates', 'getFaviconData', 'getShortcutFaviconData', 'resolveSiteThemeColor'
@@ -225,6 +225,11 @@ async function testBackgroundRegistry() {
   await wait(30);
   assert.strictEqual(callCount() - beforeBlockedTabs, 3,
     'typed, bookmarked and browser-page targets opened from the overlay keep working');
+  // The overlay's graphics acceleration notice opens the browser's own setting.
+  const graphicsSettings = await harness.sendMessage({ action: 'openGraphicsSettings' }, webPageSender);
+  assert.strictEqual(graphicsSettings && graphicsSettings.ok, true);
+  assert.ok(harness.calls.some((call) => call.name === 'tabs.create' && call.args[0] &&
+    call.args[0].url === 'chrome://settings/system'), 'it should open the system settings page');
   const fromExtensionPage = harness.sendMessage({ action: 'openBookmarkManager' });
   await wait(30);
   assert.notDeepStrictEqual(JSON.parse(JSON.stringify((await fromExtensionPage) || {})),

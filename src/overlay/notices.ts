@@ -1,4 +1,4 @@
-// What the layer needs of an update or engagement notice controller.
+// What the layer needs of an update, graphics or engagement notice controller.
 interface LayerNotice {
   element: HTMLElement | null;
   // Counts one showing of the update notice.
@@ -7,6 +7,7 @@ interface LayerNotice {
 
 interface NoticeLayerConfig {
   getUpdateNotice?(): LayerNotice | null;
+  getGraphicsNotice?(): LayerNotice | null;
   getEngagementNotice?(): LayerNotice | null;
   // The panel's size preset, for its width before the panel has one.
   getSizePreset?(): { width?: number } | null;
@@ -17,10 +18,10 @@ function getNoticeElement(controller: LayerNotice | null): HTMLElement | null {
   return controller && controller.element ? controller.element : null;
 }
 
-// Hosts the update and engagement notices just above the overlay panel.
-// They mount beside the panel (never inside it, so they take no part in its
-// layout), follow its width, position, viewport scale and theme, and stop
-// listening when the overlay closes.
+// Hosts the update, graphics and engagement notices just above the overlay
+// panel. They mount beside the panel (never inside it, so they take no part
+// in its layout), follow its width, position, viewport scale and theme, and
+// stop listening when the overlay closes.
 function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
   const settings: NoticeLayerConfig = config && typeof config === 'object' ? config : {};
   const doc = win.document;
@@ -28,9 +29,10 @@ function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
   let frameViewport: VisualViewport | null = null;
   let mountTimer: number | null = null;
 
-  function getNotices(): { update: LayerNotice | null; engagement: LayerNotice | null } {
+  function getNotices(): { update: LayerNotice | null; graphics: LayerNotice | null; engagement: LayerNotice | null } {
     return {
       update: typeof settings.getUpdateNotice === 'function' ? settings.getUpdateNotice() : null,
+      graphics: typeof settings.getGraphicsNotice === 'function' ? settings.getGraphicsNotice() : null,
       engagement: typeof settings.getEngagementNotice === 'function'
         ? settings.getEngagementNotice()
         : null
@@ -48,6 +50,7 @@ function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
     const notices = getNotices();
     const elements = [
       getNoticeElement(notices.update),
+      getNoticeElement(notices.graphics),
       getNoticeElement(notices.engagement)
     ].filter((element): element is HTMLElement => element !== null);
     if (elements.length === 0 || !panel) {
@@ -120,9 +123,10 @@ function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
     return !win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
-  // Mounts the update notice (counting one exposure) and then the
-  // engagement notice. A visible update notice blurs in: it carries
-  // data-overlay-mounting for two frames after insertion.
+  // Mounts the update notice (counting one exposure) and then the graphics
+  // and engagement notices, which show themselves once they decide to. A
+  // visible update notice blurs in: it carries data-overlay-mounting for two
+  // frames after insertion.
   function mount(panel: HTMLElement, styleRoot: Node | null): void {
     const notices = getNotices();
     const update = notices.update;
@@ -149,11 +153,13 @@ function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
     } else {
       finishMountAnimation();
     }
-    const engagementNoticeElement = getNoticeElement(notices.engagement);
-    if (engagementNoticeElement && !engagementNoticeElement.parentNode) {
-      insertAbovePanel(engagementNoticeElement, panel, styleRoot);
-      sync(panel);
-    }
+    [notices.graphics, notices.engagement].forEach((notice) => {
+      const element = getNoticeElement(notice);
+      if (element && !element.parentNode) {
+        insertAbovePanel(element, panel, styleRoot);
+        sync(panel);
+      }
+    });
   }
 
   function clearMountTimer(): void {

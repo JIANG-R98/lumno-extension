@@ -288,6 +288,7 @@ interface BackgroundMessages {
   createTab: { request: { url: string; disposition?: OpenDisposition }; reply: OkReply };
   openNewTab: { request: { disposition?: OpenDisposition }; reply: OkReply };
   openExtensionDetailsPage: { request: { disposition?: OpenDisposition }; reply: OkReply & { url: string } };
+  openGraphicsSettings: { request: { disposition?: OpenDisposition }; reply: OkReply };
   resolveFaviconCandidates: {
     request: {
       url: string;

@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "Закрыть предложение оценить и присоединиться к сообществу"
   },
+  "graphics_notice_badge": {
+    "message": "Аппаратное ускорение выключено"
+  },
+  "graphics_notice_text": {
+    "message": "Включите его, чтобы страницы работали плавнее; потребуется перезапуск браузера"
+  },
+  "graphics_notice_link": {
+    "message": "Включить"
+  },
+  "graphics_notice_close": {
+    "message": "Закрыть подсказку об аппаратном ускорении"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Показать безопасный треугольник меню закладок"
   },

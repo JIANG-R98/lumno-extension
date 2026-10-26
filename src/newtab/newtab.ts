@@ -2928,6 +2928,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
 
   const {
     maybeShowFileAccessNotice,
+    createNewtabGraphicsNoticeController,
     createNewtabEngagementNoticeController,
     getHelpCenterLocale,
     openCommunityQrDialog,
@@ -3188,14 +3189,18 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     if (pageState.engagementNoticeController) {
       return;
     }
+    const noticeAnchor = suggestionsSurface.parentNode === document.body
+      ? suggestionsSurface
+      : newtabUpdateNoticeAnchor;
+    pageState.graphicsNoticeController = createNewtabGraphicsNoticeController();
+    if (pageState.graphicsNoticeController && pageState.graphicsNoticeController.element) {
+      document.body.insertBefore(pageState.graphicsNoticeController.element, noticeAnchor);
+    }
     pageState.engagementNoticeController = createNewtabEngagementNoticeController();
     if (!pageState.engagementNoticeController || !pageState.engagementNoticeController.element) {
       return;
     }
-    const engagementNoticeAnchor = suggestionsSurface.parentNode === document.body
-      ? suggestionsSurface
-      : newtabUpdateNoticeAnchor;
-    document.body.insertBefore(pageState.engagementNoticeController.element, engagementNoticeAnchor);
+    document.body.insertBefore(pageState.engagementNoticeController.element, noticeAnchor);
     if (String(inputParts.input.value || '').trim() &&
         typeof pageState.engagementNoticeController.recordMeaningfulUse === 'function') {
       pageState.engagementNoticeController.recordMeaningfulUse();

@@ -107,6 +107,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlaySessionCleanups: overlayLifecycle.createSessionCleanupRegistry(),
     overlayNoticeLayer: OVERLAY_NOTICES.createNoticeLayer(window, {
       getUpdateNotice: () => overlayState.overlayUpdateNoticeController,
+      getGraphicsNotice: () => overlayState.overlayGraphicsNoticeController,
       getEngagementNotice: () => overlayState.overlayEngagementNoticeController,
       getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
       decorate: (element) => applyNoTranslateDeep(element)

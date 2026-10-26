@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "關閉評分與社群提示"
   },
+  "graphics_notice_badge": {
+    "message": "圖形加速未開啟"
+  },
+  "graphics_notice_text": {
+    "message": "開啟後頁面更流暢，需重新啟動瀏覽器才會生效"
+  },
+  "graphics_notice_link": {
+    "message": "前往開啟"
+  },
+  "graphics_notice_close": {
+    "message": "關閉圖形加速提示"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "顯示書籤選單安全三角"
   },

@@ -194,6 +194,7 @@ function createPageState(): NewtabPageState {
     quoteRuntime: null,
     sectionPanelSettings: null,
     updateNoticeController: null,
+    graphicsNoticeController: null,
     engagementNoticeController: null,
     webdavFeatureHintController: null,
     helpCenterAskHintController: null,

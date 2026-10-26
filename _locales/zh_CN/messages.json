@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "关闭评分和加群提示"
   },
+  "graphics_notice_badge": {
+    "message": "图形加速未开启"
+  },
+  "graphics_notice_text": {
+    "message": "开启后页面更流畅，需重启浏览器生效"
+  },
+  "graphics_notice_link": {
+    "message": "去开启"
+  },
+  "graphics_notice_close": {
+    "message": "关闭图形加速提示"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "显示书签菜单安全三角"
   },

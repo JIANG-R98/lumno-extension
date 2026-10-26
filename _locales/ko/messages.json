@@ -1070,6 +1070,18 @@
   "engagement_notice_close": {
     "message": "평가 및 커뮤니티 안내 닫기"
   },
+  "graphics_notice_badge": {
+    "message": "그래픽 가속이 꺼져 있습니다"
+  },
+  "graphics_notice_text": {
+    "message": "켜면 페이지가 더 부드러워집니다. 브라우저를 다시 시작해야 적용됩니다"
+  },
+  "graphics_notice_link": {
+    "message": "켜기"
+  },
+  "graphics_notice_close": {
+    "message": "그래픽 가속 안내 닫기"
+  },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "북마크 메뉴 안전 삼각형 표시"
   },

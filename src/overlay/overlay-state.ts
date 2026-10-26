@@ -171,6 +171,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayKeyRouter: null,
     overlayRevealGate: null,
     overlayUpdateNoticeController: null,
+    overlayGraphicsNoticeController: null,
     overlayEngagementNoticeController: null,
     topActionTooltipController: null,
     overlayCursorTooltipController: null,
