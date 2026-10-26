@@ -96,12 +96,12 @@ function removeSite(map: unknown, siteKey: string): ProgressHistoryMap {
 
 export {
   MAX_VERSIONS,
-  normalizeVersions,
-  normalizeHistoryMap,
-  recordVersion,
-  restoreVersion,
-  removeSite,
+  createProgressId,
   getHistoryId,
-  createProgressId
+  normalizeHistoryMap,
+  normalizeVersions,
+  recordVersion,
+  removeSite,
+  restoreVersion
 };
 export type { ProgressHistoryMap, ProgressVersion };

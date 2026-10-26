@@ -1,4 +1,7 @@
 // Decides whether a page is a later episode, chapter or page of the work a
+import { CJK_NUMERAL, compareTitles, normalizeTitle, readTitle } from './progress-title-compare';
+import { SERIES_PATH_WORDS, UNRELATED_PATH_WORDS, compareUrls, getPathSegments, getQueryEntries, getSiteKey, hasPathWord, isDigits, parseUrl } from './progress-url-compare';
+import type { UrlComparison } from './progress-url-compare';
 // tracked card points to. It never guesses: when neither the URL nor the
 // title proves the two pages belong to the same work, the answer is no.
 
@@ -52,385 +55,6 @@ interface SeriesPageHints {
   seriesName?: string;
 }
 
-interface TitleReading {
-  // Lowercase; '' when the title names no work.
-  workName: string;
-  // NaN when the title marks no episode.
-  episode: number;
-  hasMarker: boolean;
-}
-
-interface NumberChange {
-  from: number;
-  to: number;
-}
-
-interface QueryEntry {
-  key: string;
-  value: string;
-}
-
-// How one path segment or query value changed: not at all (with the work
-// ids it holds), in its numbers only, or in a way that says nothing.
-type UnitComparison =
-  | { kind: 'same'; anchors: number }
-  | { kind: 'numeric'; changes: NumberChange[]; anchorsBeforeChange: number }
-  | { kind: 'opaque' };
-
-type UrlComparison =
-  | { kind: 'same' }
-  | { kind: 'opaque' }
-  | { kind: 'structure-mismatch' }
-  | {
-    kind: 'numeric';
-    // A work id comes before the first changed number.
-    anchored: boolean;
-    firstChange: NumberChange;
-    step: number;
-  };
-
-interface TitleComparison {
-  sameWork: boolean;
-  differentWork: boolean;
-  direction: ProgressDirection;
-}
-
-// Query parameters that carry sharing, tracking or playback offsets rather
-// than which episode is shown.
-const NOISE_QUERY_KEYS: ReadonlySet<string> = new Set([
-  'spm_id_from', 'vd_source', 'from_spmid', 'share_source', 'share_medium',
-  'share_plat', 'share_session_id', 'share_tag', 'share_from', 'unique_k',
-  'fbclid', 'gclid', 'si', 't'
-]);
-const PAGE_SUFFIX_SEPARATORS: ReadonlySet<string> = new Set(['_', '-']);
-const MAX_CHANGED_NUMBERS = 2;
-
-const CJK_NUMERAL = '零〇一二两三四五六七八九十百千';
-const EPISODE_MARKER_PATTERNS: readonly RegExp[] = [
-  new RegExp(`第\\s*([0-9${CJK_NUMERAL}]+)\\s*[集话話章节節回卷部季期篇幕页頁]`, 'g'),
-  /\b(?:ep|episode|chapter|ch|vol|part|p)\.?\s*(\d+)\b/gi,
-  /[（(【[]\s*(\d+)\s*[)）】\]]/g
-];
-const TITLE_SEPARATOR_PATTERN = /\s*[|｜_–—·]\s*|\s+-\s+/;
-const MIN_LATIN_WORK_NAME = 4;
-const MIN_CJK_WORK_NAME = 2;
-
-function parseUrl(value: unknown): URL | null {
-  try {
-    const url = new URL(String(value || '').trim());
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function getSiteKey(url: URL): string {
-  return url.hostname.toLowerCase().replace(/^www\./, '');
-}
-
-// Hash routes (#/… or #!/…) are pages in single-page apps; other hashes are anchors.
-function getPathSegments(url: URL): string[] {
-  const segments = url.pathname.split('/').filter(Boolean);
-  const hash = url.hash || '';
-  const routeMatch = hash.match(/^#!?\/(.*)$/);
-  if (routeMatch) {
-    routeMatch[1].split(/[/?]/).filter(Boolean).forEach((segment) => {
-      segments.push(segment);
-    });
-  }
-  return segments.map((segment) => {
-    try {
-      return decodeURIComponent(segment);
-    } catch (_error) {
-      return segment;
-    }
-  });
-}
-
-function getQueryEntries(url: URL): QueryEntry[] {
-  const entries: QueryEntry[] = [];
-  url.searchParams.forEach((value, key) => {
-    const normalizedKey = key.toLowerCase();
-    if (NOISE_QUERY_KEYS.has(normalizedKey) || normalizedKey.startsWith('utm_')) {
-      return;
-    }
-    if (!entries.some((entry) => entry.key === normalizedKey)) {
-      entries.push({ key: normalizedKey, value });
-    }
-  });
-  return entries;
-}
-
-function tokenize(value: unknown): string[] {
-  return String(value || '').match(/\d+|\D+/g) || [];
-}
-
-function isDigits(token: string): boolean {
-  return /^\d+$/.test(token);
-}
-
-// A token or unit that names the work rather than the episode: a number of
-// three or more digits, or a mixed letter-and-digit id such as a BV id.
-function isIdentifier(value: unknown): boolean {
-  const text = String(value || '');
-  if (/^\d{3,}$/.test(text)) return true;
-  return text.length >= 6 && /\d/.test(text) && /[a-z]/i.test(text);
-}
-
-// Compares one path segment or query value. Returns the changed numbers in
-// order, or marks the change as opaque when the shapes differ.
-function compareUnit(before: string, after: string): UnitComparison {
-  if (before === after) {
-    return { kind: 'same', anchors: tokenize(before).filter(isIdentifier).length +
-      (isIdentifier(before) && !isDigits(before) ? 1 : 0) };
-  }
-  const beforeTokens = tokenize(before);
-  const afterTokens = tokenize(after);
-  if (beforeTokens.length === afterTokens.length) {
-    const changes: NumberChange[] = [];
-    let anchorsBeforeChange = 0;
-    for (let index = 0; index < beforeTokens.length; index += 1) {
-      const a = beforeTokens[index];
-      const b = afterTokens[index];
-      if (a === b) {
-        if (!changes.length && isIdentifier(a)) anchorsBeforeChange += 1;
-        continue;
-      }
-      if (!isDigits(a) || !isDigits(b)) {
-        return { kind: 'opaque' };
-      }
-      changes.push({ from: Number(a), to: Number(b) });
-    }
-    return { kind: 'numeric', changes, anchorsBeforeChange };
-  }
-  // A page suffix such as 72035.html → 72035_2.html.
-  const reversed = beforeTokens.length >= afterTokens.length;
-  const shorter = reversed ? afterTokens : beforeTokens;
-  const longer = reversed ? beforeTokens : afterTokens;
-  if (longer.length === shorter.length + 2) {
-    for (let index = 0; index <= shorter.length; index += 1) {
-      const inserted = longer.slice(index, index + 2);
-      const rest = longer.slice(0, index).concat(longer.slice(index + 2));
-      if (rest.join('\u0000') === shorter.join('\u0000') &&
-          PAGE_SUFFIX_SEPARATORS.has(inserted[0]) && isDigits(inserted[1])) {
-        const page = Number(inserted[1]);
-        const anchorsBeforeChange = shorter.slice(0, index).filter(isIdentifier).length;
-        return {
-          kind: 'numeric',
-          changes: [reversed ? { from: page, to: 1 } : { from: 1, to: page }],
-          anchorsBeforeChange
-        };
-      }
-    }
-  }
-  return { kind: 'opaque' };
-}
-
-// Walks the URL in reading order: path segments, then query parameters.
-function compareUrls(before: URL, after: URL): UrlComparison {
-  const beforeSegments = getPathSegments(before);
-  const afterSegments = getPathSegments(after);
-  if (beforeSegments.length !== afterSegments.length) {
-    return { kind: 'structure-mismatch' };
-  }
-  // The first path segment is usually an account or channel name, so it
-  // never counts as a work id (github.com/<user>/<repo>/issues/<n>).
-  const units: UnitComparison[] = [];
-  for (let index = 0; index < beforeSegments.length; index += 1) {
-    const unit = compareUnit(beforeSegments[index], afterSegments[index]);
-    if (index === 0) {
-      if (unit.kind === 'same') unit.anchors = 0;
-      if (unit.kind === 'numeric') unit.anchorsBeforeChange = 0;
-    }
-    units.push(unit);
-  }
-  const beforeQuery = getQueryEntries(before);
-  const afterQuery = getQueryEntries(after);
-  const keys = beforeQuery.map((entry) => entry.key);
-  afterQuery.forEach((entry) => {
-    if (!keys.includes(entry.key)) keys.push(entry.key);
-  });
-  for (const key of keys) {
-    const a = beforeQuery.find((entry) => entry.key === key);
-    const b = afterQuery.find((entry) => entry.key === key);
-    if (a && b) {
-      units.push(compareUnit(a.value, b.value));
-      continue;
-    }
-    // A numeric parameter that only one side has defaults to 1 (?p=2 vs none).
-    const present = a || b;
-    if (!present || !isDigits(present.value)) {
-      return { kind: 'structure-mismatch' };
-    }
-    units.push({
-      kind: 'numeric',
-      changes: [a ? { from: Number(a.value), to: 1 } : { from: 1, to: Number(present.value) }],
-      anchorsBeforeChange: 0
-    });
-  }
-
-  let anchorsBeforeFirstChange = 0;
-  let firstChange: NumberChange | null = null;
-  let changedNumbers = 0;
-  let opaqueUnits = 0;
-  for (const unit of units) {
-    if (unit.kind === 'same') {
-      if (!firstChange && !opaqueUnits) anchorsBeforeFirstChange += unit.anchors;
-      continue;
-    }
-    if (unit.kind === 'opaque') {
-      opaqueUnits += 1;
-      continue;
-    }
-    if (!firstChange && !opaqueUnits) {
-      anchorsBeforeFirstChange += unit.anchorsBeforeChange;
-      firstChange = unit.changes[0];
-    }
-    changedNumbers += unit.changes.length;
-  }
-  if (opaqueUnits) {
-    return { kind: opaqueUnits === 1 && !changedNumbers ? 'opaque' : 'structure-mismatch' };
-  }
-  if (!firstChange) {
-    return { kind: 'same' };
-  }
-  return {
-    kind: 'numeric',
-    anchored: anchorsBeforeFirstChange > 0 && changedNumbers <= MAX_CHANGED_NUMBERS,
-    firstChange,
-    step: Math.abs(firstChange.to - firstChange.from)
-  };
-}
-
-const CJK_DIGITS: ReadonlyMap<string, number> = new Map([
-  ['零', 0], ['〇', 0], ['一', 1], ['二', 2], ['两', 2], ['三', 3], ['四', 4], ['五', 5], ['六', 6], ['七', 7], ['八', 8], ['九', 9]
-]);
-const CJK_UNITS: ReadonlyMap<string, number> = new Map([['十', 10], ['百', 100], ['千', 1000]]);
-
-function parseCjkNumber(text: string): number {
-  let total = 0;
-  let current = 0;
-  for (const char of text) {
-    const digit = CJK_DIGITS.get(char);
-    const unit = CJK_UNITS.get(char);
-    if (digit !== undefined) {
-      current = digit;
-    } else if (unit !== undefined) {
-      total += (current || 1) * unit;
-      current = 0;
-    } else {
-      return NaN;
-    }
-  }
-  return total + current;
-}
-
-function parseEpisodeNumber(text: string): number {
-  return /^\d+$/.test(text) ? Number(text) : parseCjkNumber(text);
-}
-
-function normalizeTitle(title: unknown): string {
-  return String(title || '').replace(/\s+/g, ' ').trim();
-}
-
-// Splits a page title into the work name and the episode number it names.
-// The work name is what precedes the first episode marker; when the marker
-// leads the title ("第2集 副标题 - 剧名 - 站点"), it is the part after the
-// episode's own part, leaving out a trailing site name.
-function readTitle(title: unknown): TitleReading {
-  const text = normalizeTitle(title);
-  let markerIndex = -1;
-  let episode = NaN;
-  for (const pattern of EPISODE_MARKER_PATTERNS) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(text);
-    if (match && (markerIndex < 0 || match.index < markerIndex)) {
-      markerIndex = match.index;
-      episode = parseEpisodeNumber(match[1]);
-    }
-  }
-  let head = markerIndex >= 0
-    ? text.slice(0, markerIndex)
-    : text.split(TITLE_SEPARATOR_PATTERN)[0];
-  if (markerIndex >= 0 && !head.replace(/[\s|｜_–—·:：\-【[（(]+/g, '')) {
-    const parts = text.split(TITLE_SEPARATOR_PATTERN).filter(Boolean);
-    const rest = parts.slice(1, parts.length >= 3 ? -1 : undefined);
-    head = rest[0] || '';
-  }
-  const workName = head.replace(/[\s|｜_–—·:：\-【[（(]+$/, '').trim().toLowerCase();
-  return { workName, episode, hasMarker: markerIndex >= 0 };
-}
-
-function isMeaningfulWorkName(name: string): boolean {
-  const cjk = (name.match(/[\u3400-\u9fff]/g) || []).length;
-  return cjk >= MIN_CJK_WORK_NAME || name.replace(/[^a-z0-9]/gi, '').length >= MIN_LATIN_WORK_NAME;
-}
-
-// Titles agree when both name the same work and one marks an episode;
-// identical generic titles prove nothing. They disagree when both name a
-// work and the names differ.
-function compareTitles(beforeTitle: unknown, afterTitle: unknown): TitleComparison {
-  const before = readTitle(beforeTitle);
-  const after = readTitle(afterTitle);
-  const differentText = normalizeTitle(beforeTitle) !== normalizeTitle(afterTitle);
-  const bothNamed = isMeaningfulWorkName(before.workName) && isMeaningfulWorkName(after.workName);
-  const sameWork = Boolean(
-    bothNamed && before.workName === after.workName &&
-    (before.hasMarker || after.hasMarker) && differentText
-  );
-  const differentWork = Boolean(bothNamed && differentText && before.workName !== after.workName);
-  let direction: ProgressDirection = 'unknown';
-  if (sameWork && Number.isFinite(before.episode) && Number.isFinite(after.episode) &&
-      before.episode !== after.episode) {
-    direction = after.episode > before.episode ? 'forward' : 'backward';
-  }
-  return { sameWork, differentWork, direction };
-}
-
-// Path words that suggest episodes and chapters, or pages whose numbered
-// neighbours are unrelated (issues, threads, products, search results).
-const SERIES_PATH_WORDS: ReadonlySet<string> = new Set([
-  'play', 'player', 'vodplay', 'watch', 'video', 'videos', 'vod', 'bangumi', 'anime',
-  'episode', 'episodes', 'chapter', 'chapters', 'read', 'reader', 'novel', 'novels',
-  'book', 'books', 'manga', 'comic', 'comics', 'drama', 'series', 'show', 'shows'
-]);
-const UNRELATED_PATH_WORDS: ReadonlySet<string> = new Set([
-  'issue', 'issues', 'pull', 'pulls', 'commit', 'commits', 'blob', 'tree', 'wiki',
-  't', 'thread', 'threads', 'topic', 'topics', 'post', 'posts', 'forum', 'forums',
-  'discussion', 'discussions', 'question', 'questions', 'answer', 'answers',
-  'item', 'items', 'product', 'products', 'goods', 'search', 'tag', 'tags',
-  'user', 'users', 'u', 'profile', 'people', 'status', 'statuses'
-]);
-
-function getPathWords(url: URL): Set<string> {
-  const words = new Set<string>();
-  getPathSegments(url).forEach((segment) => {
-    segment.toLowerCase().split(/[^a-z]+/).filter(Boolean).forEach((word) => words.add(word));
-  });
-  return words;
-}
-
-function hasPathWord(url: URL, wordSet: ReadonlySet<string>): boolean {
-  for (const word of getPathWords(url)) {
-    if (wordSet.has(word)) return true;
-  }
-  return false;
-}
-
-// A URL in the form links and history use for the same page: no anchor
-// hash, no trailing slash, no sharing or tracking parameters.
-function getComparableUrl(value: unknown): string {
-  const url = parseUrl(value);
-  if (!url) return '';
-  const route = /^#!?\//.test(url.hash) ? url.hash : '';
-  const query = getQueryEntries(url)
-    .map(({ key, value: paramValue }) => `${key}=${paramValue}`)
-    .sort()
-    .join('&');
-  const path = url.pathname.replace(/\/+$/, '');
-  return `${getSiteKey(url)}${path}${query ? `?${query}` : ''}${route}`;
-}
-
 function listHas(list: readonly unknown[] | null | undefined, url: unknown): boolean {
   const target = getComparableUrl(url);
   return Boolean(target) && Array.isArray(list) &&
@@ -482,6 +106,103 @@ function result(
 
 // Compares the page a tracked card points to (current) with a page the
 // person is on (candidate).
+type AddFactor = (signal: string, points: number) => void;
+
+// What the pages say about each other: a next or previous link between them
+// settles it, whatever the URLs look like.
+function pageLinkDirection(
+  currentUrl: string,
+  candidateUrl: string,
+  currentHints: ProgressPageHints,
+  candidateHints: ProgressPageHints
+): ProgressDirection {
+  if (listHas(currentHints.nextUrls, candidateUrl) || listHas(candidateHints.prevUrls, currentUrl)) {
+    return 'forward';
+  }
+  if (listHas(currentHints.prevUrls, candidateUrl) || listHas(candidateHints.nextUrls, currentUrl)) {
+    return 'backward';
+  }
+  return 'unknown';
+}
+
+// The number that changed in the URL, and the direction it points.
+function addUrlNumberFactors(urlComparison: UrlComparison, add: AddFactor): ProgressDirection {
+  if (urlComparison.kind !== 'numeric') {
+    return 'unknown';
+  }
+  add(urlComparison.anchored ? 'url-pattern' : 'url-number',
+    urlComparison.anchored ? SCORE.anchoredNumber : SCORE.looseNumber);
+  const { from, to } = urlComparison.firstChange;
+  if (to > from && urlComparison.step > MAX_FORWARD_STEP) add('big-jump', SCORE.bigJump);
+  return to > from ? 'forward' : 'backward';
+}
+
+function addSeriesFactors(
+  currentTitle: string | undefined,
+  currentHints: ProgressPageHints,
+  candidateHints: ProgressPageHints,
+  add: AddFactor
+): void {
+  const currentSeries = normalizeSeriesName(currentHints.seriesName);
+  const candidateSeries = normalizeSeriesName(candidateHints.seriesName);
+  if (currentSeries && candidateSeries) {
+    add(currentSeries === candidateSeries ? 'series-meta' : 'series-meta-mismatch',
+      currentSeries === candidateSeries ? SCORE.sameSeriesMeta : SCORE.differentSeriesMeta);
+  } else if (candidateSeries && readTitle(currentTitle).workName === candidateSeries) {
+    add('series-meta', SCORE.sameTitle);
+  }
+}
+
+function episodeDirection(ctx: ProgressCompareContext, candidateHints: ProgressPageHints): ProgressDirection {
+  const currentEpisode = Number(ctx.currentEpisode);
+  const candidateEpisode = Number(candidateHints.episode);
+  if (Number.isFinite(currentEpisode) && Number.isFinite(candidateEpisode) &&
+      currentEpisode !== candidateEpisode && currentEpisode > 0 && candidateEpisode > 0) {
+    return candidateEpisode > currentEpisode ? 'forward' : 'backward';
+  }
+  return 'unknown';
+}
+
+// How the person got to the page, and what its path says it is.
+function addVisitFactors(ctx: ProgressCompareContext, after: URL, add: AddFactor): void {
+  const transition = String(ctx.transition || '');
+  if (ctx.fromCurrent === true && (!transition || NAVIGATION_TRANSITIONS.has(transition))) {
+    add('navigated-from-card', SCORE.navigatedFromCard);
+  } else if (transition && !NAVIGATION_TRANSITIONS.has(transition)) {
+    add('typed-or-bookmarked', SCORE.typedOrBookmarked);
+  }
+  if (hasPathWord(after, UNRELATED_PATH_WORDS)) {
+    add('unrelated-path', SCORE.unrelatedPathWord);
+  } else if (hasPathWord(after, SERIES_PATH_WORDS)) {
+    add('series-path', SCORE.seriesPathWord);
+  }
+}
+
+function addTitleFactors(titles: ReturnType<typeof compareTitles>, add: AddFactor): void {
+  if (titles.sameWork) add('title-match', SCORE.sameTitle);
+  if (titles.differentWork) add('title-mismatch', SCORE.differentTitle);
+}
+
+// Both URLs parsed, on one site; otherwise the result that rejects them.
+function parseSameSitePages(currentUrl: string, candidateUrl: string): { before: URL; after: URL } | { rejected: ProgressComparison } {
+  const before = parseUrl(currentUrl);
+  const after = parseUrl(candidateUrl);
+  if (!before || !after) return { rejected: result(false, 'none', 'invalid-url') };
+  if (getSiteKey(before) !== getSiteKey(after)) return { rejected: result(false, 'none', 'site-mismatch') };
+  return { before, after };
+}
+
+function firstKnownDirection(directions: readonly ProgressDirection[]): ProgressDirection {
+  return directions.find((direction) => direction !== 'unknown') || 'unknown';
+}
+
+function concludeComparison(factors: ProgressFactor[], direction: ProgressDirection): ProgressComparison {
+  const score = factors.reduce((total, factor) => total + factor.points, 0);
+  if (score < MEDIUM_SCORE) return result(false, 'none', 'insufficient', 'unknown', score, factors);
+  const strongest = factors.reduce((best, factor) => (factor.points > best.points ? factor : best));
+  return result(true, score >= HIGH_SCORE ? 'high' : 'medium', strongest.signal, direction, score, factors);
+}
+
 function compareProgressPages(
   current: ProgressPage | null | undefined,
   candidate: ProgressPage | null | undefined,
@@ -490,82 +211,34 @@ function compareProgressPages(
   const ctx = context && typeof context === 'object' ? context : {};
   const currentUrl = current ? current.url : '';
   const candidateUrl = candidate ? candidate.url : '';
-  const before = parseUrl(currentUrl);
-  const after = parseUrl(candidateUrl);
-  if (!before || !after) return result(false, 'none', 'invalid-url');
-  if (getSiteKey(before) !== getSiteKey(after)) return result(false, 'none', 'site-mismatch');
+  const pages = parseSameSitePages(currentUrl, candidateUrl);
+  if ('rejected' in pages) return pages.rejected;
+  const { before, after } = pages;
 
   const factors: ProgressFactor[] = [];
-  const add = (signal: string, points: number): void => {
+  const add: AddFactor = (signal, points) => {
     factors.push({ signal, points });
   };
-  let direction: ProgressDirection = 'unknown';
-
-  // What the pages say about each other: a next or previous link between
-  // them settles it, whatever the URLs look like.
   const currentHints = ctx.currentHints || {};
   const candidateHints = ctx.candidateHints || {};
-  if (listHas(currentHints.nextUrls, candidateUrl) || listHas(candidateHints.prevUrls, currentUrl)) {
-    add('page-link', SCORE.pageLink);
-    direction = 'forward';
-  } else if (listHas(currentHints.prevUrls, candidateUrl) || listHas(candidateHints.nextUrls, currentUrl)) {
-    add('page-link', SCORE.pageLink);
-    direction = 'backward';
-  }
-  const linked = factors.length > 0;
+  const linkDirection = pageLinkDirection(currentUrl, candidateUrl, currentHints, candidateHints);
+  if (linkDirection !== 'unknown') add('page-link', SCORE.pageLink);
 
   const urlComparison = compareUrls(before, after);
   if (urlComparison.kind === 'same') return result(false, 'none', 'same-page');
-  if (urlComparison.kind === 'structure-mismatch' && !linked) {
+  if (urlComparison.kind === 'structure-mismatch' && linkDirection === 'unknown') {
     return result(false, 'none', 'structure-mismatch');
   }
-  if (urlComparison.kind === 'numeric') {
-    add(urlComparison.anchored ? 'url-pattern' : 'url-number',
-      urlComparison.anchored ? SCORE.anchoredNumber : SCORE.looseNumber);
-    const { from, to } = urlComparison.firstChange;
-    if (to > from && urlComparison.step > MAX_FORWARD_STEP) add('big-jump', SCORE.bigJump);
-    if (direction === 'unknown') direction = to > from ? 'forward' : 'backward';
-  }
+  const urlDirection = addUrlNumberFactors(urlComparison, add);
 
   const titles = compareTitles(current && current.title, candidate && candidate.title);
-  if (titles.sameWork) add('title-match', SCORE.sameTitle);
-  if (titles.differentWork) add('title-mismatch', SCORE.differentTitle);
+  addTitleFactors(titles, add);
+  addSeriesFactors(current ? current.title : undefined, currentHints, candidateHints, add);
+  addVisitFactors(ctx, after, add);
   // Direction: page links, then the URL's numbers, then episode metadata,
   // then the titles.
-
-  const currentSeries = normalizeSeriesName(currentHints.seriesName);
-  const candidateSeries = normalizeSeriesName(candidateHints.seriesName);
-  if (currentSeries && candidateSeries) {
-    add(currentSeries === candidateSeries ? 'series-meta' : 'series-meta-mismatch',
-      currentSeries === candidateSeries ? SCORE.sameSeriesMeta : SCORE.differentSeriesMeta);
-  } else if (candidateSeries && readTitle(current && current.title).workName === candidateSeries) {
-    add('series-meta', SCORE.sameTitle);
-  }
-  const currentEpisode = Number(ctx.currentEpisode);
-  const candidateEpisode = Number(candidateHints.episode);
-  if (direction === 'unknown' && Number.isFinite(currentEpisode) && Number.isFinite(candidateEpisode) &&
-      currentEpisode !== candidateEpisode && currentEpisode > 0 && candidateEpisode > 0) {
-    direction = candidateEpisode > currentEpisode ? 'forward' : 'backward';
-  }
-  if (direction === 'unknown') direction = titles.direction;
-
-  const transition = String(ctx.transition || '');
-  if (ctx.fromCurrent === true && (!transition || NAVIGATION_TRANSITIONS.has(transition))) {
-    add('navigated-from-card', SCORE.navigatedFromCard);
-  } else if (transition && !NAVIGATION_TRANSITIONS.has(transition)) {
-    add('typed-or-bookmarked', SCORE.typedOrBookmarked);
-  }
-
-  if (hasPathWord(after, UNRELATED_PATH_WORDS)) {
-    add('unrelated-path', SCORE.unrelatedPathWord);
-  } else if (hasPathWord(after, SERIES_PATH_WORDS)) {
-    add('series-path', SCORE.seriesPathWord);
-  }
-
-  const score = factors.reduce((total, factor) => total + factor.points, 0);
-  if (score < MEDIUM_SCORE) return result(false, 'none', 'insufficient', 'unknown', score, factors);
-  const strongest = factors.reduce((best, factor) => (factor.points > best.points ? factor : best));
-  return result(true, score >= HIGH_SCORE ? 'high' : 'medium', strongest.signal, direction, score, factors);
+  const direction = firstKnownDirection([linkDirection, urlDirection, episodeDirection(ctx, candidateHints), titles.direction]);
+  return concludeComparison(factors, direction);
 }
 
 // Automatic updates move forward only, so rewatching an earlier episode
@@ -642,15 +315,51 @@ function getProgressSiteKey(value: unknown): string {
   return url ? getSiteKey(url) : '';
 }
 
+// A URL in the form links and history use for the same page: no anchor
+// hash, no trailing slash, no sharing or tracking parameters.
+function getComparableUrl(value: unknown): string {
+  const url = parseUrl(value);
+  if (!url) return '';
+  const route = /^#!?\//.test(url.hash) ? url.hash : '';
+  const query = getQueryEntries(url)
+    .map(({ key, value: paramValue }) => `${key}=${paramValue}`)
+    .sort()
+    .join('&');
+  const path = url.pathname.replace(/\/+$/, '');
+  return `${getSiteKey(url)}${path}${query ? `?${query}` : ''}${route}`;
+}
+
 export {
+  HIGH_SCORE,
+  MAX_FORWARD_STEP,
+  MEDIUM_SCORE,
+  NAVIGATION_TRANSITIONS,
+  SCORE,
+  SERIES_PATH_PATTERNS,
+  SERIES_QUERY_KEYS,
+  SERIES_TITLE_PATTERNS,
+  addSeriesFactors,
+  addTitleFactors,
+  addUrlNumberFactors,
+  addVisitFactors,
   compareProgressPages,
-  shouldAdvance,
-  readTitle,
-  getProgressSiteKey,
+  concludeComparison,
+  episodeDirection,
+  firstKnownDirection,
   getComparableUrl,
-  looksLikeSeriesPage
+  getProgressSiteKey,
+  hasSeriesTitle,
+  hasSeriesUrl,
+  listHas,
+  looksLikeSeriesPage,
+  normalizeSeriesName,
+  pageLinkDirection,
+  parseSameSitePages,
+  result,
+  shouldAdvance
 };
 export type {
+  AddFactor,
   ProgressCompareContext,
   ProgressComparison,
   ProgressConfidence,
@@ -658,6 +367,5 @@ export type {
   ProgressFactor,
   ProgressPage,
   ProgressPageHints,
-  SeriesPageHints,
-  TitleReading
+  SeriesPageHints
 };

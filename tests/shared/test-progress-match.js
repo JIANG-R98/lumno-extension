@@ -1,5 +1,6 @@
 const assert = require('assert');
-const { compareProgressPages, shouldAdvance, readTitle } = require('../../src/domain/progress-match.ts');
+const { compareProgressPages, shouldAdvance } = require('../../src/domain/progress-match.ts');
+const { readTitle } = require('../../src/domain/progress-title-compare.ts');
 
 function check(name, current, candidate, expected) {
   const actual = compareProgressPages(current, candidate);
