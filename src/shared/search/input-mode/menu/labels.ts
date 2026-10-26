@@ -1,6 +1,6 @@
 // The mode menu's copy in the current language: the filter line (a hint,
 // or the typed query marked in its sentence) and the footer hints.
-import type { ModeMenuLabels, ModeMenuMarkedText } from '../../../react/search/mode-menu';
+import type { ModeMenuLabels, ModeMenuMarkedText } from '../mode-menu-model';
 import { formatShortcutReference } from '../../../../domain/shortcut-display';
 import type { NavigatorLike } from '../../../../domain/shortcut-display';
 import type { FormatMessage } from '../types';

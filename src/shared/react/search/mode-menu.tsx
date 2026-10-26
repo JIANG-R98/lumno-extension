@@ -11,7 +11,8 @@ import {
   useSyncExternalStore,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
-  type ReactElement
+  type ReactElement,
+  type RefObject
 } from 'react';
 import * as LumnoSortableDrag from '../../ui/sortable-drag';
 import { followEmptyStateArtTheme } from '../../ui/empty-state-art';
@@ -22,139 +23,16 @@ import { getModeLineIconPaths } from '../../search/input-mode/line-icons';
 import { createRenderStore, type RenderStore } from '../render-store';
 import { FONT_STACK, NO_TRANSLATE, SURFACE_VARS, type ModeSurface } from './mode-surface';
 import type { ModeMenuRange } from '../../search/input-mode/types';
+import { CLOSED_MODEL } from '../../search/input-mode/mode-menu-model';
+import type { ModeMenuHandlers, ModeMenuLabels, ModeMenuModel, ModeMenuTile, ModeMenuTileIcon } from '../../search/input-mode/mode-menu-model';
 import { RemixIcon } from '../remix-icon';
-import type { RemixIconName } from '../../ui/remix-icon';
-
-export interface ModeMenuTileIcon {
-  // A built-in line icon's name; empty for a glyph or a site icon.
-  lineIcon: string;
-  // The Remix icon class shown until the site icon loads, or if it fails.
-  glyphName: RemixIconName;
-  iconUrl: string;
-  // The host whose saved icon may replace iconUrl.
-  iconHost: string;
-}
-
-// A tile's colors, worked out from its mode's theme.
-export interface ModeMenuTileColors {
-  icon: string;
-  selectedBackground: string;
-  focusRing: string;
-}
-
-export interface ModeMenuTile {
-  id: string;
-  label: string;
-  // The group title it sits under; a new title starts where it changes.
-  group: string;
-  // The group's key when groups can move.
-  groupKey: string;
-  checked: boolean;
-  // The order list it drags within; empty when it does not drag.
-  sortList: string;
-  // Left out by the filter.
-  hidden: boolean;
-  // The parts of the label the filter matched.
-  ranges: readonly ModeMenuRange[];
-  icon: ModeMenuTileIcon;
-  colors: ModeMenuTileColors;
-}
-
-// A line of text with one highlighted run: the filter's query in its sentence.
-export interface ModeMenuMarkedText {
-  before: string;
-  mark: string;
-  after: string;
-}
-
-export interface ModeMenuLabels {
-  filter: ModeMenuMarkedText;
-  navigationKey: string;
-  navigation: string;
-  selectKey: string;
-  select: string;
-  inputKey: string;
-  input: string;
-  shortcutKey: string;
-  shortcut: string;
-  empty: string;
-  moveUp: string;
-  moveDown: string;
-}
-
-export interface ModeMenuModel {
-  // Shown at all; the surface motion follows `revealed`.
-  open: boolean;
-  revealed: boolean;
-  busy: boolean;
-  // Keys go to the panel rather than the input.
-  searchActive: boolean;
-  // The input has text, which lifts the panel a little.
-  hasQuery: boolean;
-  filtered: boolean;
-  // The tile that takes Tab focus; empty for none.
-  focusId: string;
-  canMoveGroups: boolean;
-  canReorder: boolean;
-  tiles: readonly ModeMenuTile[];
-  labels: ModeMenuLabels;
-}
-
-export interface ModeMenuHandlers {
-  onSelect(id: string): void;
-  onGroupMove(groupKey: string, delta: number): void;
-  // A tile dragged to a new place among the tiles of its order list,
-  // which are given in their new order.
-  onReorder(id: string, list: string, orderedIds: string[]): void;
-  onKeyDown(event: KeyboardEvent): void;
-  onPointerDown(event: PointerEvent): void;
-  // Shows the full label beside the pointer when the tile cuts it short.
-  bindLabelTooltip(button: HTMLButtonElement, label: HTMLElement): void;
-  // Swaps the image to the site icon's saved copy once there is one.
-  attachIconData(image: HTMLImageElement, iconUrl: string, iconHost: string): void;
-}
 
 export interface ModeMenuSnapshot {
   model: ModeMenuModel;
   handlers: ModeMenuHandlers | null;
 }
 
-export interface ModeMenuView {
-  // Draws the model before returning, so the controller can measure and
-  // focus what it drew.
-  render(model: ModeMenuModel, handlers: ModeMenuHandlers): void;
-}
-
 export type ModeMenuStore = RenderStore<ModeMenuSnapshot>;
-
-const EMPTY_LABELS: ModeMenuLabels = Object.freeze({
-  filter: Object.freeze({ before: '', mark: '', after: '' }),
-  navigationKey: '',
-  navigation: '',
-  selectKey: '',
-  select: '',
-  inputKey: '',
-  input: '',
-  shortcutKey: '',
-  shortcut: '',
-  empty: '',
-  moveUp: '',
-  moveDown: ''
-});
-
-const CLOSED_MODEL: ModeMenuModel = Object.freeze({
-  open: false,
-  revealed: false,
-  busy: false,
-  searchActive: false,
-  hasQuery: false,
-  filtered: false,
-  focusId: '',
-  canMoveGroups: false,
-  canReorder: false,
-  tiles: Object.freeze([]),
-  labels: EMPTY_LABELS
-});
 
 export function createModeMenuStore(): ModeMenuStore {
   return createRenderStore<ModeMenuSnapshot>({ model: CLOSED_MODEL, handlers: null });
@@ -500,28 +378,10 @@ function getGroupTitles(tiles: readonly ModeMenuTile[]): GroupTitleRun[] {
   return titles;
 }
 
-export function ModeMenu({ store, prefixId, surface }: {
-  store: ModeMenuStore;
-  prefixId: string;
-  surface: ModeSurface;
-}) {
-  const { model, handlers } = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const buttons = useRef(new Map<string, HTMLButtonElement>());
-  // The latest model and handlers, for the drag listeners attached once.
-  const latest = useRef({ model, handlers });
-  latest.current = { model, handlers };
-
-  const registerButton = (id: string, button: HTMLButtonElement | null): void => {
-    if (button) {
-      buttons.current.set(id, button);
-    } else {
-      buttons.current.delete(id);
-    }
-  };
-
-  // Dragging a tile reorders it among the tiles of its own order list in
-  // its group (custom searches among custom ones, built-ins among built-ins).
+// Dragging a tile reorders it among the tiles of its own order list in
+// its group (custom searches among custom ones, built-ins among built-ins).
+function useTileReorder(contentRef: RefObject<HTMLDivElement | null>, buttons: RefObject<Map<string, HTMLButtonElement>>,
+  latest: RefObject<ModeMenuSnapshot>): void {
   useEffect(() => {
     const content = contentRef.current;
     if (!content) {
@@ -555,18 +415,17 @@ export function ModeMenu({ store, prefixId, surface }: {
         current.onReorder(tile.id, tile.sortList, ordered);
       }
     });
-  }, []);
+  }, [buttons, contentRef, latest]);
+}
 
-  // Roving focus: only the focused tile takes Tab.
-  useLayoutEffect(() => {
-    buttons.current.forEach((button, id) => {
-      button.tabIndex = id === model.focusId ? 0 : -1;
-    });
-  });
-
+// The tiles, with a group title wherever the group changes.
+function MenuTiles({ model, handlers, registerButton }: {
+  model: ModeMenuModel;
+  handlers: ModeMenuHandlers | null;
+  registerButton(id: string, button: HTMLButtonElement | null): void;
+}) {
   const titles = getGroupTitles(model.tiles);
   const movableTitles = titles.filter((run) => run.groupKey);
-  const visibleCount = model.tiles.filter((tile) => !tile.hidden).length;
   const children: ReactElement[] = [];
   model.tiles.forEach((tile, index) => {
     const run = titles.find((candidate) => candidate.start === index);
@@ -587,6 +446,38 @@ export function ModeMenu({ store, prefixId, surface }: {
     }
     children.push(<Tile handlers={handlers} key={tile.id} registerButton={registerButton} tile={tile} />);
   });
+  return <>{children}</>;
+}
+
+export function ModeMenu({ store, prefixId, surface }: {
+  store: ModeMenuStore;
+  prefixId: string;
+  surface: ModeSurface;
+}) {
+  const { model, handlers } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  // The latest model and handlers, for the drag listeners attached once.
+  const latest = useRef<ModeMenuSnapshot>({ model, handlers });
+  latest.current = { model, handlers };
+  useTileReorder(contentRef, buttons, latest);
+
+  const registerButton = (id: string, button: HTMLButtonElement | null): void => {
+    if (button) {
+      buttons.current.set(id, button);
+    } else {
+      buttons.current.delete(id);
+    }
+  };
+
+  // Roving focus: only the focused tile takes Tab.
+  useLayoutEffect(() => {
+    buttons.current.forEach((button, id) => {
+      button.tabIndex = id === model.focusId ? 0 : -1;
+    });
+  });
+
+  const visibleCount = model.tiles.filter((tile) => !tile.hidden).length;
   return (
     <div
       {...NO_TRANSLATE}
@@ -601,16 +492,8 @@ export function ModeMenu({ store, prefixId, surface }: {
       data-surface={surface}
       hidden={!model.open}
       id={`${prefixId}-menu`}
-      onKeyDown={(event) => {
-        if (handlers) {
-          handlers.onKeyDown(event.nativeEvent);
-        }
-      }}
-      onPointerDown={(event) => {
-        if (handlers) {
-          handlers.onPointerDown(event.nativeEvent);
-        }
-      }}
+      onKeyDown={(event) => handlers?.onKeyDown(event.nativeEvent)}
+      onPointerDown={(event) => handlers?.onPointerDown(event.nativeEvent)}
       role="menu"
       style={getMenuStyle(surface, model.hasQuery)}
       tabIndex={-1}
@@ -622,7 +505,7 @@ export function ModeMenu({ store, prefixId, surface }: {
         ref={contentRef}
         role="presentation"
       >
-        {children}
+        <MenuTiles handlers={handlers} model={model} registerButton={registerButton} />
         {model.tiles.length > 0 ? <EmptyState hidden={visibleCount > 0} text={model.labels.empty} /> : null}
       </div>
       <Footer labels={model.labels} />

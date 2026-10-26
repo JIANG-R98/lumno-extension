@@ -2,7 +2,7 @@
 // the model built here from the menu's state, with the filter's matches,
 // the tiles' icons and colors and the copy. The view reports what the user
 // does through the handlers the menu gives it.
-import type { ModeMenuHandlers, ModeMenuLabels, ModeMenuModel, ModeMenuTile, ModeMenuView } from '../../../react/search/mode-menu';
+import type { ModeMenuHandlers, ModeMenuLabels, ModeMenuModel, ModeMenuTile, ModeMenuView } from '../mode-menu-model';
 import type { ModeMenuEntry } from '../types';
 import type { ModeMenuIcons } from './icons';
 import type { ModeMenuSearchApi } from './search';

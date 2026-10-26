@@ -6,7 +6,7 @@ import { getModeLineIconPaths } from '../line-icons';
 import { getModeMenuTileColors } from '../colors';
 import type { ModeColorOptions } from '../colors';
 import type { ControllerOptions } from '../mode-options';
-import type { ModeMenuTileColors, ModeMenuTileIcon } from '../../../react/search/mode-menu';
+import type { ModeMenuTileColors, ModeMenuTileIcon } from '../mode-menu-model';
 import type { InputModeTheme, ModeMenuItem } from '../types';
 
 type ModeMenuIconOptions = ModeColorOptions &

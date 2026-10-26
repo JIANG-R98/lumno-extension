@@ -6,7 +6,7 @@ import type { EventBus } from '../../../state/events';
 import type { CursorTooltipController } from '../../../ui/cursor-tooltip-model';
 import type { NavigatorLike } from '../../../../domain/shortcut-display';
 import type { PinyinApi } from '../../../../domain/search/pinyin-api';
-import type { ModeMenuView } from '../../../react/search/mode-menu';
+import type { ModeMenuView } from '../mode-menu-model';
 import type { ModeMenuIconOptions } from './icons';
 import { ModeMenuIcons } from './icons';
 import { ModeMenuDrawing } from './drawing';

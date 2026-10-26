@@ -1,7 +1,7 @@
 // The colors a search mode draws with: the mode tag beside the input and
 // the tiles of the mode menu, from the mode's theme, or the surface's text
 // color for the built-in scopes (bookmarks, history and the like).
-import type { ModeMenuTileColors } from '../../react/search/mode-menu';
+import type { ModeMenuTileColors } from './mode-menu-model';
 import { getModeLineIconPaths } from './line-icons';
 import { getAccessibleThemeFocusRingRgb, getAccessibleThemeTextRgb, mixRgb } from './theme-colors';
 import type { ControllerOptions } from './mode-options';

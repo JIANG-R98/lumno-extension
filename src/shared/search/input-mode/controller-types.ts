@@ -4,7 +4,7 @@ import type { ModeMenuConfig } from './menu';
 import type { ModeTagConfig } from './tag';
 import type { ModeTabKeysConfig } from './keys';
 import type { InputModeOwnConfig } from './mode-options';
-import type { ModeMenuView } from '../../react/search/mode-menu';
+import type { ModeMenuView } from './mode-menu-model';
 import type { ModeTagView, TabHintView } from '../../react/search/mode-tag';
 
 // The elements the surface's React view draws for the mode, and the views

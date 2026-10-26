@@ -21,7 +21,8 @@ import { queryHtmlElement, queryHtmlTag, querySvgElement } from '../dom-lookup';
 import { createRenderStore, type RenderStore } from './render-store';
 import { RemixIcon } from './remix-icon';
 import type { RemixIconSpec } from '../ui/remix-icon';
-import { ModeMenu, createModeMenuStore, type ModeMenuStore, type ModeMenuView } from './search/mode-menu';
+import { ModeMenu, createModeMenuStore, type ModeMenuStore } from './search/mode-menu';
+import type { ModeMenuView } from '../search/input-mode/mode-menu-model';
 import {
   ModeTag,
   TabHint,

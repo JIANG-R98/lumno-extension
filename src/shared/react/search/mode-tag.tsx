@@ -190,11 +190,8 @@ function GhostIcon({ ghost }: { ghost: ModeTagGhost }) {
   );
 }
 
-export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: string }) {
-  const { model, handlers } = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  const { lineIcon, showImage, showGlyph } = getIconParts(model.icon, model.iconFailed);
-  const iconUrl = showImage && model.icon ? model.icon.iconUrl : '';
-  const iconHost = model.icon ? model.icon.iconHost : '';
+// Swaps the image to the site icon's saved copy once there is one.
+function useAttachedIcon(iconUrl: string, iconHost: string, handlers: ModeTagHandlers | null) {
   const imageRef = useRef<HTMLImageElement>(null);
   const attach = useRef(handlers ? handlers.attachIconData : null);
   attach.current = handlers ? handlers.attachIconData : null;
@@ -204,35 +201,17 @@ export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: st
       attach.current(image, iconUrl, iconHost);
     }
   }, [iconUrl, iconHost]);
-  const accent = model.colors.accent || undefined;
-  const currentShown = model.currentVisible || model.currentMeasuring;
+  return imageRef;
+}
+
+// The tag's icon: the site's image, a line icon, or a glyph; all three stay
+// in the tag so the controller can measure and animate them.
+function TagIcon({ model, handlers }: { model: ModeTagModel; handlers: ModeTagHandlers | null }) {
+  const { lineIcon, showImage, showGlyph } = getIconParts(model.icon, model.iconFailed);
+  const iconUrl = showImage && model.icon ? model.icon.iconUrl : '';
+  const imageRef = useAttachedIcon(iconUrl, model.icon ? model.icon.iconHost : '', handlers);
   return (
-    <button
-      {...NO_TRANSLATE}
-      aria-controls={`${prefixId}-menu`}
-      aria-expanded={model.expanded ? 'true' : 'false'}
-      aria-haspopup="menu"
-      aria-label={model.ariaLabel || undefined}
-      className="x-lumno-search-input-mode__prefix"
-      data-current-measuring={model.currentMeasuring ? 'true' : 'false'}
-      data-current-visible={model.currentVisible ? 'true' : 'false'}
-      data-menu-open={model.menuOpen ? 'true' : 'false'}
-      data-mode-id={model.modeId || undefined}
-      data-search-input-mode-prefix=""
-      id={prefixId}
-      onClick={(event) => {
-        if (handlers) {
-          handlers.onClick(event.nativeEvent);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (handlers) {
-          handlers.onKeyDown(event.nativeEvent);
-        }
-      }}
-      style={getTagStyle(model)}
-      type="button"
-    >
+    <>
       <span
         className="x-lumno-search-input-mode__prefix-icon-frame"
         data-search-input-mode-prefix-icon-frame=""
@@ -242,11 +221,7 @@ export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: st
           alt=""
           data-search-input-mode-prefix-icon=""
           decoding="async"
-          onError={() => {
-            if (handlers) {
-              handlers.onIconError();
-            }
-          }}
+          onError={() => handlers?.onIconError()}
           ref={imageRef}
           referrerPolicy="no-referrer"
           src={iconUrl || undefined}
@@ -270,55 +245,87 @@ export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: st
           width: '16px',
           height: '16px',
           flex: '0 0 16px',
-          color: accent,
+          color: model.colors.accent || undefined,
           transition: 'none'
         }}
       >
         {lineIcon ? <LinePaths name={lineIcon} /> : null}
       </svg>
-      <span
-        {...NO_TRANSLATE}
-        data-search-input-mode-prefix-text=""
-        style={{
-          all: 'unset',
-          display: 'block',
-          flex: '0 1 auto',
-          minWidth: '0',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          lineHeight: '18px'
-        }}
-      >
+    </>
+  );
+}
+
+const TEXT_STYLE: CSSProperties = {
+  all: 'unset',
+  display: 'block',
+  flex: '0 1 auto',
+  minWidth: '0',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  lineHeight: '18px'
+};
+
+// The "current" label after the mode's name, shown while the mode is the
+// current page's site (or while the controller measures it).
+function TagCurrent({ model }: { model: ModeTagModel }) {
+  return (
+    <span
+      {...NO_TRANSLATE}
+      aria-hidden="true"
+      data-search-input-mode-current=""
+      style={{
+        all: 'unset',
+        display: model.currentVisible || model.currentMeasuring ? 'inline-flex' : 'none',
+        alignItems: 'center',
+        fontSize: '13px',
+        fontWeight: 600,
+        lineHeight: '18px',
+        letterSpacing: '0.04em',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        flex: '0 0 auto',
+        color: model.colors.accent || undefined
+      }}
+    >
+      <span {...NO_TRANSLATE} data-search-input-mode-current-text="" style={{ display: 'inline-block' }}>
+        {model.currentText}
+      </span>
+    </span>
+  );
+}
+
+export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: string }) {
+  const { model, handlers } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  return (
+    <button
+      {...NO_TRANSLATE}
+      aria-controls={`${prefixId}-menu`}
+      aria-expanded={model.expanded ? 'true' : 'false'}
+      aria-haspopup="menu"
+      aria-label={model.ariaLabel || undefined}
+      className="x-lumno-search-input-mode__prefix"
+      data-current-measuring={model.currentMeasuring ? 'true' : 'false'}
+      data-current-visible={model.currentVisible ? 'true' : 'false'}
+      data-menu-open={model.menuOpen ? 'true' : 'false'}
+      data-mode-id={model.modeId || undefined}
+      data-search-input-mode-prefix=""
+      id={prefixId}
+      onClick={(event) => handlers?.onClick(event.nativeEvent)}
+      onKeyDown={(event) => handlers?.onKeyDown(event.nativeEvent)}
+      style={getTagStyle(model)}
+      type="button"
+    >
+      <TagIcon handlers={handlers} model={model} />
+      <span {...NO_TRANSLATE} data-search-input-mode-prefix-text="" style={TEXT_STYLE}>
         {model.text}
       </span>
-      <span
-        {...NO_TRANSLATE}
-        aria-hidden="true"
-        data-search-input-mode-current=""
-        style={{
-          all: 'unset',
-          display: currentShown ? 'inline-flex' : 'none',
-          alignItems: 'center',
-          fontSize: '13px',
-          fontWeight: 600,
-          lineHeight: '18px',
-          letterSpacing: '0.04em',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          flex: '0 0 auto',
-          color: accent
-        }}
-      >
-        <span {...NO_TRANSLATE} data-search-input-mode-current-text="" style={{ display: 'inline-block' }}>
-          {model.currentText}
-        </span>
-      </span>
+      <TagCurrent model={model} />
       <RemixIcon
         data-search-input-mode-prefix-chevron=""
         name="ri-arrow-down-s-line"
         size={16}
-        style={{ display: model.icon ? 'inline-flex' : 'none', flex: '0 0 auto', color: accent }}
+        style={{ display: model.icon ? 'inline-flex' : 'none', flex: '0 0 auto', color: model.colors.accent || undefined }}
       />
       {model.ghost ? <GhostIcon ghost={model.ghost} key={model.ghost.key} /> : null}
     </button>
