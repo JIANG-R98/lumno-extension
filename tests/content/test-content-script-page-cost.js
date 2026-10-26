@@ -68,7 +68,7 @@ function loadPage(options) {
     configurable: true,
     value: { writeText: () => Promise.resolve() }
   });
-  window.eval(bundleScript('hotkey-listener'));
+  window.eval(bundleScript('copy-url-listener'));
   window.eval(bundleScript('shortcut-key-observer'));
   const focusElements = (count) => {
     for (let index = 0; index < count; index += 1) {

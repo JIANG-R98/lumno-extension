@@ -182,7 +182,7 @@ async function testPageToast() {
     i18n: { getMessage: () => '', getUILanguage: () => 'en' }
   };
   Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } });
-  window.eval(bundleScript('hotkey-listener'));
+  window.eval(bundleScript('copy-url-listener'));
   await new Promise((resolve) => setTimeout(resolve, 10));
   await new Promise((resolve) => listeners.forEach((listener) => listener({ action: 'copyCurrentPageUrlFromCommand' }, {}, resolve)));
   await new Promise((resolve) => setTimeout(resolve, 50));

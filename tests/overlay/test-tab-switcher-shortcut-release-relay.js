@@ -74,17 +74,17 @@ window.eval(moduleScript('src/content/shortcut-key-observer.ts'));
 assert.strictEqual(
   keydownHandlers.size,
   1,
-  'reinjection after an extension reload should replace the stale keydown listener'
+  'a second injection into a frame that already observes should add no keydown listener'
 );
 assert.strictEqual(
   keyupHandlers.size,
   1,
-  'reinjection after an extension reload should replace the stale keyup listener'
+  'a second injection into a frame that already observes should add no keyup listener'
 );
 assert.strictEqual(
   runtimeMessageListeners.size,
   1,
-  'reinjection after an extension reload should replace the stale runtime listener'
+  'a second injection into a frame that already observes should add no runtime listener'
 );
 const documentStartMessages = runtimeMessages.filter((message) =>
   message && message.action === 'notifyTopFrameDocumentStarted'
@@ -92,12 +92,12 @@ const documentStartMessages = runtimeMessages.filter((message) =>
 assert.strictEqual(
   documentStartMessages.length,
   1,
-  'the committed top-frame Document should be announced once; a reinjected observer runs in a started page'
+  'the committed top-frame Document should be announced once'
 );
 assert.strictEqual(
   shortcutResponseCallbacks.length,
-  2,
-  'a replacement made before the shortcut arrived should ask for it again, since the answer reaches the old observer'
+  1,
+  'the observer already running should ask for the shortcut once; a second injection leaves it to it'
 );
 documentStartMessages.forEach((message) => {
   assert.deepStrictEqual(

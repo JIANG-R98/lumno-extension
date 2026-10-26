@@ -107,10 +107,6 @@ function testBrowserProfileRuntimeWiring() {
     runsBefore(getPageScripts('newtab.html'), 'src/platform/browser-profile.ts', 'src/newtab/newtab.ts'),
     'newtab should load browser-profile before its page entry'
   );
-  assert(
-    runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/platform/browser-profile.ts', 'src/overlay/search-panel.ts'),
-    'onboarding preview should load browser-profile before overlay search'
-  );
 }
 
 // New Tab's keyword suggestions ("ext " opens the extensions page) should

@@ -26,7 +26,7 @@ assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['b
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert.deepStrictEqual(
   getBundleFiles('selection-quick-actions').sort(),
-  ['src/content/selection-quick-actions.ts', 'src/domain/selection-action-icons.ts', 'src/domain/selection-intent.ts', 'src/domain/settings.ts', 'src/platform/boot-handoff.ts', 'src/platform/messaging.ts', 'src/platform/settings-storage.ts', 'src/shared/ui/toast.ts'],
+  ['src/content/selection-quick-actions.ts', 'src/domain/selection-action-icons.ts', 'src/domain/selection-intent.ts', 'src/domain/settings.ts', 'src/platform/boot-handoff.ts', 'src/platform/content-registry.ts', 'src/platform/messaging.ts', 'src/platform/settings-storage.ts', 'src/shared/ui/toast.ts'],
   'the toolbar bundle should carry provider-aware settings, the selection classifier and the shared Toast, and nothing else'
 );
 assert.strictEqual(selectionTarget.DEFAULT_GROUP_TITLE, 'AI Search',

@@ -11,7 +11,7 @@ const path = require('path');
 const esbuild = require('esbuild');
 const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 const { execFileSync } = require('child_process');
-const { BUILD_DIRECTORY, getEntry } = require('../../scripts/build/entries');
+const { ENTRIES, entryOutputPath, getEntry } = require('../../scripts/build/entries');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -57,8 +57,8 @@ function getBundleFiles(name) {
 // A loaded path: a built entry expands into its modules, anything else stays
 // as is.
 function expandScriptPath(repoPath) {
-  const match = repoPath.match(new RegExp(`^${BUILD_DIRECTORY}/([\\w-]+)\\.js$`));
-  return match ? getBundleFiles(match[1]) : [repoPath];
+  const entry = ENTRIES.find((candidate) => entryOutputPath(candidate) === repoPath);
+  return entry ? getBundleFiles(entry.name) : [repoPath];
 }
 
 function readScriptTags(html) {

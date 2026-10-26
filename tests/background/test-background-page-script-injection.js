@@ -1,19 +1,20 @@
 const assert = require('assert');
 const { loadBackground, wait } = require('../helpers/background-harness');
+const { injectedModules } = require('../helpers/injected-modules');
 
 // What the background injects into ordinary web pages, and when: the copy-URL
 // listener only on the first copy command in a tab, and the shortcut observer
 // into already-open tabs only after an install, reload or update, a few tabs
 // at a time.
 
-const COPY_URL_FILES = ['build/hotkey-listener.js'];
+const COPY_URL_FILES = ['build/injected/copy-url-listener.js'];
 const OBSERVER_FILES = ['build/shortcut-key-observer.js'];
 
 function executeScriptCalls(harness, files) {
   return harness.calls
     .filter((call) => call.name === 'scripting.executeScript')
     .map((call) => call.args[0])
-    .filter((options) => JSON.stringify(options.files) === JSON.stringify(files));
+    .filter((options) => JSON.stringify(options.files || injectedModules(options)) === JSON.stringify(files));
 }
 
 async function testCopyUrlInjectsItsListenerOnFirstUse() {
@@ -34,7 +35,7 @@ async function testCopyUrlInjectsItsListenerOnFirstUse() {
   };
   const nativeExecuteScript = harness.chrome.scripting.executeScript;
   harness.chrome.scripting.executeScript = (options, callback) => {
-    if (JSON.stringify(options.files) === JSON.stringify(COPY_URL_FILES)) {
+    if (JSON.stringify(injectedModules(options)) === JSON.stringify(COPY_URL_FILES)) {
       listenerInstalled = true;
     }
     return nativeExecuteScript(options, callback);

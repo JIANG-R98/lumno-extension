@@ -2,17 +2,35 @@
 
 // The recording step of runtime-scripts.js's getInjectedScripts: run as a
 // child process, it boots the real background, makes it inject each of its
-// in-page scripts into a fresh web tab and prints the file lists it passed to
-// chrome.scripting.executeScript, as JSON keyed by list name.
+// in-page scripts into a fresh web tab and prints what it passed to
+// chrome.scripting.executeScript, as JSON keyed by list name: the files of a
+// file injection, or the module URLs an injected function imports (see
+// src/platform/injection.ts), as extension paths.
 
+const path = require('path');
 const { loadBackground, wait } = require('./background-harness');
+
+const repoRoot = path.resolve(__dirname, '..', '..');
 
 const WEB_TAB = { id: 7, windowId: 1, index: 0, active: true, url: 'https://page.example.test/', title: 'Page', status: 'complete' };
 
+// What an executeScript call loads: its files, or the URLs its function
+// imports, as extension paths.
+function loadedFiles(details) {
+  if (Array.isArray(details.files)) {
+    return Array.from(details.files);
+  }
+  const urls = Array.isArray(details.args) && Array.isArray(details.args[0]) ? details.args[0] : [];
+  return urls.map((url) => String(url)
+    .replace(/^chrome-extension:\/\/[^/]+\//, '')
+    .replace(`${repoRoot}${path.sep}`, '')
+    .split(path.sep).join('/'));
+}
+
 function injectedFiles(harness, predicate) {
   const call = harness.calls.find((entry) => entry.name === 'scripting.executeScript' &&
-    Array.isArray(entry.args[0].files) && predicate(entry.args[0]));
-  return call ? Array.from(call.args[0].files) : null;
+    loadedFiles(entry.args[0]).length > 0 && predicate(loadedFiles(entry.args[0]), entry.args[0]));
+  return call ? loadedFiles(call.args[0]) : null;
 }
 
 async function record() {
@@ -42,27 +60,27 @@ async function record() {
 
   harness.chrome.commands.onCommand.dispatch('show-search');
   await wait(300);
-  lists.overlay = injectedFiles(harness, (options) => options.files.some((file) => file === 'build/overlay.js'));
+  lists.overlay = injectedFiles(harness, (files) => files.includes('build/injected/overlay.js'));
 
   harness.chrome.tabs.onActivated.dispatch({ tabId: WEB_TAB.id, windowId: 1 });
   await wait(20);
   harness.calls.length = 0;
   harness.chrome.commands.onCommand.dispatch('show-tab-switcher');
   await wait(600);
-  lists.shortcutObserver = injectedFiles(harness, (options) => options.target && options.target.allFrames === true);
-  lists.tabSwitcher = injectedFiles(harness, (options) => options.files.includes('build/tab-switcher.js'));
+  lists.shortcutObserver = injectedFiles(harness, (files, options) => options.target && options.target.allFrames === true);
+  lists.tabSwitcher = injectedFiles(harness, (files) => files.includes('build/injected/tab-switcher.js'));
 
   harness.calls.length = 0;
   harness.chrome.commands.onCommand.dispatch('show-search-prefill-v');
   await wait(300);
-  lists.copyUrlListener = injectedFiles(harness, (options) => options.files.includes('build/hotkey-listener.js'));
+  lists.copyUrlListener = injectedFiles(harness, (files) => files.includes('build/injected/copy-url-listener.js'));
 
   harness.calls.length = 0;
   await harness.sendMessage({ action: 'openDocumentPipPicker' }, { tab: Object.assign({}, WEB_TAB), url: WEB_TAB.url }, 600);
   // The picker is injected once no other tab turns out to be playing
   // picture-in-picture.
   await wait(600);
-  lists.documentPipPicker = injectedFiles(harness, (options) => options.files.includes('build/document-pip-picker.js'));
+  lists.documentPipPicker = injectedFiles(harness, (files) => files.includes('build/injected/pip-picker.js'));
 
   return lists;
 }

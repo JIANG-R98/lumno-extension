@@ -23,6 +23,8 @@ import type { NewtabPreviewItem } from './react/newtab-preview';
 import type { SiteSearchTheme } from './react/site-search-demo';
 import type { VisualSurfaceRenderModel } from './react/visual-surface';
 import * as LumnoMessaging from '../platform/messaging';
+import { INJECTED_APP_PATHS } from '../domain/injected-commands';
+import type { OverlayToggleCommand } from '../domain/injected-commands';
 
 type RuntimeMiscKey = keyof OnboardingRuntimeCopy['misc'];
 type SiteSearchCase = OnboardingRuntimeCopy['siteSearchDemo']['cases'][number];
@@ -484,19 +486,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
   }
 
+  // The demo overlay is the overlay the worker injects into web pages: the
+  // page imports it the same way and sends it the same toggle.
   function triggerOnboardingSearchOverlay(): void {
-    const toggleOverlay = window._x_extension_toggleSearchOverlay_2026_unique_;
-    if (typeof toggleOverlay !== 'function') {
+    const chromeApi = getChromeApi();
+    const runtime = chromeApi && chromeApi.runtime;
+    if (!runtime || typeof runtime.getURL !== 'function') {
       return;
     }
+    const overlayUrl = runtime.getURL(INJECTED_APP_PATHS.overlay);
     getCurrentOnboardingTab((tab) => {
       const currentTabId = tab && typeof tab.id === 'number' ? tab.id : null;
       getOnboardingTabZoomFactor(currentTabId, (tabZoomFactor) => {
         getOnboardingOverlayTabs(currentTabId, (tabs, responseCurrentTabId) => {
-          toggleOverlay(tabs, {
-            tabZoomFactor,
-            currentTabId: typeof responseCurrentTabId === 'number' ? responseCurrentTabId : currentTabId,
-            currentTabUrl: window.location && window.location.href ? window.location.href : ''
+          const command: OverlayToggleCommand = {
+            type: 'toggle',
+            tabs,
+            context: {
+              tabZoomFactor,
+              currentTabId: typeof responseCurrentTabId === 'number' ? responseCurrentTabId : currentTabId,
+              currentTabUrl: window.location && window.location.href ? window.location.href : ''
+            }
+          };
+          import(overlayUrl).then((overlay: unknown) => {
+            const run: unknown = overlay && typeof overlay === 'object' ? Reflect.get(overlay, 'run') : null;
+            if (typeof run === 'function') {
+              Reflect.apply(run, overlay, [command]);
+            }
+          }).catch((error: unknown) => {
+            console.warn('[Lumno] The demo overlay could not load.', error);
           });
         });
       });

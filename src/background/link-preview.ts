@@ -26,6 +26,8 @@ import type {
   PageRequest
 } from '../domain/messages';
 import type { StorageItems } from '../domain/storage-port';
+import { createInjectedAppRun } from '../platform/injection';
+import type { StartCommand } from '../domain/injected-commands';
 
 type Rule = chrome.declarativeNetRequest.Rule;
 type HeaderInfo = chrome.declarativeNetRequest.HeaderInfo;
@@ -131,8 +133,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
 
-// The surface draws through the overlay bundle's React, injected first.
-const UI_FILES = Object.freeze(['build/overlay-islands.js', 'build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
 // be framed (a page that sends both is judged by frame-ancestors). While a
 // tab's preview is open, its subframes from the previewed site lose
@@ -514,10 +514,15 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
     if (!scripting || typeof scripting.executeScript !== 'function') {
       return Promise.resolve(false);
     }
-    return callback<unknown>((done) => scripting.executeScript({
-      target: { tabId, frameIds: [0] },
-      files: UI_FILES.slice()
-    }, done)).then(Boolean);
+    const runtime = chromeApi && chromeApi.runtime;
+    if (!runtime) {
+      return Promise.resolve(false);
+    }
+    const start: StartCommand = { type: 'start' };
+    return callback<unknown>((done) => scripting.executeScript(
+      createInjectedAppRun(runtime, { tabId, frameIds: [0] }, ['link-preview'], start),
+      done
+    )).then(Boolean);
   }
 
   function sendToSurface<A extends SurfaceAction>(tabId: number, message: PageRequest<A>): Promise<PageReply<A> | null> {
@@ -1062,7 +1067,6 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
 }
 
 export {
-  UI_FILES,
   FRAME_BLOCKING_HEADERS,
   WORKER_RULE_ID,
   PREPARED_TTL_MS,

@@ -8,6 +8,7 @@ import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../do
 import * as LumnoMessaging from '../platform/messaging';
 import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
 import type { ListenerTarget } from '../platform/page-navigation';
+import { claimContentScript } from '../platform/content-registry';
 
 interface PrepareOptions {
   // Shift held over the link, before any press.
@@ -47,17 +48,11 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   // preview's own frame it tells the preview surface that a real page loaded
   // there (a page refused for framing shows Chrome's error page, where no
   // content script runs) and passes Escape up so the preview can close.
-  const RUNTIME_KEY = '_x_extension_link_preview_trigger_2026_unique_';
   const PREVIEW_FRAME_NAME = 'lumno-link-preview';
-  // Left by an earlier injection, possibly of an older extension version.
-  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
-  const cleanupPrevious = isRecord(previousRuntime) ? previousRuntime.cleanup : null;
-  if (typeof cleanupPrevious === 'function') {
-    try {
-      Reflect.apply(cleanupPrevious, previousRuntime, []);
-    } catch (_error) {
-      // A listener from the previous extension context may already be invalid.
-    }
+  // The manifest runs this in every frame, and the worker injects the same
+  // script again into frames that may already run it; the first one listens.
+  if (!claimContentScript('link-preview-trigger')) {
+    return;
   }
 
   const cleanups: Array<() => void> = [];
@@ -873,5 +868,4 @@ function isElement(value: EventTarget | null | undefined): value is Element {
     setupTrigger(PREVIEW_HANDLERS);
   }
 
-  Reflect.set(window, RUNTIME_KEY, { cleanup });
 })();

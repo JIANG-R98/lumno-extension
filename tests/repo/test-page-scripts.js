@@ -21,7 +21,7 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json
 const pages = [
   { page: 'newtab.html', entry: 'newtab', preloads: ['newtab-preload', 'cjk-font-faces', 'wallpaper-effect-preload'] },
   { page: 'src/options/options.html', entry: 'options', preloads: ['options-preload', 'cjk-font-faces'] },
-  { page: 'src/onboarding/onboarding.html', entry: 'onboarding', preloads: ['onboarding-preload', 'cjk-font-faces', 'overlay-islands', 'overlay'] },
+  { page: 'src/onboarding/onboarding.html', entry: 'onboarding', preloads: ['onboarding-preload', 'cjk-font-faces'] },
   { page: 'src/popup/popup.html', entry: 'popup', preloads: ['cjk-font-faces', 'popup-preload'] }
 ];
 
@@ -41,7 +41,7 @@ pages.forEach(({ page, entry, preloads }) => {
   assert.deepStrictEqual(
     scripts.filter((script) => script.type !== 'module').map((script) => script.getAttribute('src')),
     preloads.map((name) => `../../build/${name}.js`),
-    `${page} should load only its preloads (and onboarding its demo overlay) as classic scripts`
+    `${page} should load only its preloads as classic scripts`
   );
   assert(scripts.every((script) => !/^https?:\/\//i.test(script.getAttribute('src') || '')),
     `${page} should not load scripts from outside the extension`);

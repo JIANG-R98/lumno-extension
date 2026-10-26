@@ -15,6 +15,10 @@
 //   classic  a self-contained classic script: the service worker, content
 //            scripts, scripts the worker injects or imports, and small page
 //            scripts.
+//   injected an ES module the worker imports into a web page's isolated world
+//            and calls run() on, built into build/injected/. Injected entries
+//            are built together, so they share chunks (React) through
+//            imports, in build/injected/chunks/.
 //   module   an ES module code imports by URL on first use, under a fixed
 //            name.
 //
@@ -44,23 +48,23 @@ const ENTRIES = [
   { name: 'popup-preload', kind: 'preload', source: 'src/popup/popup-theme-preload.ts' },
   { name: 'popup', kind: 'page', source: 'src/popup/popup-page.ts' },
 
-  // Shared by the pages and the overlay
+  // Shared by the pages
   { name: 'cjk-font-faces', kind: 'classic', source: 'src/shared/cjk-font-faces.ts' },
 
-  // Injected into web pages
-  { name: 'icon-font-preload', kind: 'classic', source: 'src/shared/icon-font-preload.ts' },
-  { name: 'overlay-islands', kind: 'classic', source: 'src/overlay/react/react-islands-entry.ts' },
-  { name: 'overlay', kind: 'classic', source: 'src/overlay/overlay-entry.ts' },
-  { name: 'tab-switcher', kind: 'classic', source: 'src/shared/tab-switcher/tab-switcher.ts' },
-  { name: 'document-pip-picker', kind: 'classic', source: 'src/content/document-pip-picker.ts' },
-  { name: 'hotkey-listener', kind: 'classic', source: 'src/content/hotkey-listener.ts' },
-  { name: 'page-shortcut-toast', kind: 'classic', source: 'src/content/page-shortcut-toast.ts' },
+  // Injected into web pages by the worker, which imports them in the page
+  // (src/platform/injection.ts, src/domain/injected-commands.ts)
+  { name: 'icon-font-preload', kind: 'injected', source: 'src/shared/icon-font-preload.ts' },
+  { name: 'overlay', kind: 'injected', source: 'src/overlay/overlay-app.ts' },
+  { name: 'tab-switcher', kind: 'injected', source: 'src/shared/tab-switcher/tab-switcher-app.ts' },
+  { name: 'link-preview', kind: 'injected', source: 'src/content/link-preview.ts' },
+  { name: 'pip-picker', kind: 'injected', source: 'src/content/document-pip-picker.ts' },
+  { name: 'page-shortcut-toast', kind: 'injected', source: 'src/content/page-shortcut-toast.ts' },
+  { name: 'copy-url-listener', kind: 'injected', source: 'src/content/hotkey-listener.ts' },
   { name: 'selection-quick-actions', kind: 'classic', source: 'src/content/selection-quick-actions.ts' },
-  { name: 'link-preview', kind: 'classic', source: 'src/content/link-preview.ts' },
 
   // Manifest content scripts
   { name: 'shortcut-key-observer', kind: 'classic', source: 'src/content/shortcut-key-observer-entry.ts' },
-  { name: 'site-auto-pip', kind: 'classic', source: 'src/content/site-auto-pip-entry.ts' },
+  { name: 'site-auto-pip', kind: 'classic', source: 'src/content/site-auto-pip.ts' },
   { name: 'youtube-auto-pip', kind: 'classic', source: 'src/content/youtube-auto-pip.ts' },
 
   // Registered by the background in the page's main world
@@ -72,7 +76,7 @@ const ENTRIES = [
   { name: 'pinyin-data', kind: 'classic', source: 'src/background/pinyin-data.ts' }
 ];
 
-const ENTRY_KINDS = ['page', 'preload', 'classic', 'module'];
+const ENTRY_KINDS = ['page', 'preload', 'classic', 'injected', 'module'];
 
 // Where the entries are built, inside the extension.
 const BUILD_DIRECTORY = 'build';
@@ -86,6 +90,13 @@ ENTRIES.forEach((entry) => {
   }
 });
 
+// Where an entry's script is built, inside the extension.
+function entryOutputPath(entry) {
+  return entry.kind === 'injected'
+    ? `${BUILD_DIRECTORY}/injected/${entry.name}.js`
+    : `${BUILD_DIRECTORY}/${entry.name}.js`;
+}
+
 function getEntry(name) {
   const entry = ENTRIES.find((candidate) => candidate.name === name);
   if (!entry) {
@@ -94,4 +105,4 @@ function getEntry(name) {
   return entry;
 }
 
-module.exports = { BUILD_DIRECTORY, ENTRIES, ENTRY_KINDS, getEntry };
+module.exports = { BUILD_DIRECTORY, ENTRIES, ENTRY_KINDS, entryOutputPath, getEntry };

@@ -12,6 +12,8 @@ import { documentPipEnabledReady, isDocumentPipEnabled, logHotkeyDebug } from '.
 import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service';
 import type { HandlersFor, MessageSender, RejectionReply } from './message-router';
 import type { PipMainWorldReply } from '../domain/messages';
+import { createInjectedAppRun } from '../platform/injection';
+import type { PipPickerCommand } from '../domain/injected-commands';
 
 // The page-world helpers a content script asks the background to run.
 type PipMainWorldMethod =
@@ -179,64 +181,30 @@ function openDocumentPipPickerOnReadyTab(activeTab: chrome.tabs.Tab | null | und
     return;
   }
   const injectAndInvoke = (invokeMode: PickerMode): void => {
-    chrome.scripting.executeScript({
-      target: { tabId: activeTabId },
-      // The clip window's dock draws through the overlay bundle's React.
-      files: [
-        'build/overlay-islands.js',
-        'build/document-pip-picker.js'
-      ]
-    }, () => {
+    const command: PipPickerCommand = invokeMode === 'conflict-toast' ? { type: 'conflict-toast' } : { type: 'toggle' };
+    chrome.scripting.executeScript(createInjectedAppRun(
+      chrome.runtime,
+      { tabId: activeTabId },
+      ['pip-picker'],
+      command
+    ), (results) => {
       if (chrome.runtime.lastError) {
         logHotkeyDebug('document-pip-inject-failed', {
-          step: 'build/document-pip-picker.js',
+          step: 'pip-picker',
           tabId: activeTab.id,
           error: chrome.runtime.lastError.message || 'unknown',
-          source: source || ''
+          source: source || '',
+          mode: invokeMode || 'toggle'
         });
         openExtensionOptionsPage();
         return;
       }
-      chrome.scripting.executeScript({
-        target: { tabId: activeTabId },
-        // Runs in the page, where the picker script left its controller.
-        func: (mode: PickerMode): unknown => {
-          const controller: unknown = '__lumnoDocumentPiPPicker2026' in window ? window.__lumnoDocumentPiPPicker2026 : null;
-          if (!controller || typeof controller !== 'object') {
-            return { ok: false, reason: 'picker-missing' };
-          }
-          const toggle = 'toggle' in controller ? controller.toggle : null;
-          if (typeof toggle !== 'function') {
-            return { ok: false, reason: 'picker-missing' };
-          }
-          if (mode === 'conflict-toast') {
-            const notify = 'notifyVideoPiPConflict' in controller ? controller.notifyVideoPiPConflict : null;
-            if (typeof notify === 'function') {
-              return notify.call(controller);
-            }
-            return { ok: false, reason: 'picker-conflict-handler-missing' };
-          }
-          return toggle.call(controller);
-        },
-        args: [invokeMode]
-      }, (results) => {
-        if (chrome.runtime.lastError) {
-          logHotkeyDebug('document-pip-toggle-failed', {
-            step: 'toggle',
-            tabId: activeTab.id,
-            error: chrome.runtime.lastError.message || 'unknown',
-            source: source || '',
-            mode: invokeMode || 'toggle'
-          });
-          return;
-        }
-        const result = Array.isArray(results) && results[0] ? results[0].result : null;
-        logHotkeyDebug('document-pip-toggle', {
-          tabId: activeTab.id,
-          source: source || '',
-          mode: invokeMode || 'toggle',
-          result: result && typeof result === 'object' ? result : {}
-        });
+      const result = Array.isArray(results) && results[0] ? results[0].result : null;
+      logHotkeyDebug('document-pip-toggle', {
+        tabId: activeTab.id,
+        source: source || '',
+        mode: invokeMode || 'toggle',
+        result: result && typeof result === 'object' ? result : {}
       });
     });
   };

@@ -5,7 +5,6 @@ const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 // what it reads and asks for on first open, how it restores a draft carried
 // over from the previous Document, and how it keeps the open-tab list.
 
-const OPEN_FLAG = '_x_extension_search_overlay_open_2026_unique_';
 const OPEN_TABS_VISIBLE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
 const FIRST_OPEN_KEYS = [
   '_x_extension_language_2024_unique_',
@@ -43,17 +42,17 @@ async function testFirstOpenReadsPreferencesOnceAndAsksForTabsOnce() {
   });
   await page.waitFor(() => root.textContent.includes('Alpha docs'), 'the open tabs should render');
   assert.strictEqual(tabRequests(page).length, 1, 'the first open should ask for the open tabs once');
-  assert.strictEqual(page.window[OPEN_FLAG], true);
+  assert.strictEqual(page.window.__lumnoContent.overlayOpen, true);
 
   page.toggle({ ensureOpen: true });
   await page.settle();
   assert.ok(page.host(), 'reopening with ensureOpen should keep the overlay open, not toggle it closed');
-  assert.strictEqual(page.window[OPEN_FLAG], true);
+  assert.strictEqual(page.window.__lumnoContent.overlayOpen, true);
 
   page.press('Escape');
   await page.settle(30);
   assert.strictEqual(page.host(), null);
-  assert.strictEqual(page.window[OPEN_FLAG], false, 'closing should clear the open flag the worker reads back');
+  assert.strictEqual(page.window.__lumnoContent.overlayOpen, false, 'closing should clear the open flag the worker reads back');
   assert.ok(page.messages.some((message) => message.action === 'notifyOverlayClosed'),
     'a deliberate close should tell the worker, so a page load does not bring the overlay back');
   page.close();
@@ -84,9 +83,10 @@ async function testCallerSnapshotIsNotShownBeforeFreshTabs() {
       return undefined;
     }
   });
-  page.window._x_extension_toggleSearchOverlay_2026_unique_([{ id: 9, title: 'Stale snapshot tab', url: 'https://stale.example.test/' }], {
-    currentTabId: 1,
-    currentTabUrl: page.window.location.href
+  page.window.LumnoTestOverlayApp.run({
+    type: 'toggle',
+    tabs: [{ id: 9, title: 'Stale snapshot tab', url: 'https://stale.example.test/' }],
+    context: { currentTabId: 1, currentTabUrl: page.window.location.href }
   });
   await page.waitFor(() => page.root() && page.root().activeElement === page.input(), 'the overlay should open');
   await page.settle(40);

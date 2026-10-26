@@ -6,16 +6,7 @@ import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import type { KeyDescriptor, ShortcutSpec } from '../domain/shortcut-key-matcher';
 import type { PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
-
-// What an observer hands the one replacing it.
-interface ObserverState {
-  showSearchShortcut: string;
-  showSearchShortcutRefreshedAt: number;
-  showSearchShortcutResolved: boolean;
-  armedReleaseKeys: string[];
-  trustedKeydowns: Array<[string, number]>;
-  trustedReleases: Array<[string, number]>;
-}
+import { claimContentScript } from '../platform/content-registry';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -26,31 +17,12 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 (function() {
-  const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';
-  // Left by an earlier injection, possibly of an older extension version.
-  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
-  // The background injects this script again into frames that may already run
-  // it: on every tab switcher command and after an extension reload or update.
-  // The replacement takes over the running observer's state, so a modifier
-  // release buffered moments before still commits the switcher, and it asks
-  // the worker nothing the previous observer already knew.
-  let inheritedState: unknown = null;
-  if (isRecord(previousRuntime)) {
-    const { exportState: exportPrevious, cleanup: cleanupPrevious } = previousRuntime;
-    try {
-      inheritedState = typeof exportPrevious === 'function'
-        ? Reflect.apply(exportPrevious, previousRuntime, [])
-        : null;
-    } catch (_error) {
-      inheritedState = null;
-    }
-    if (typeof cleanupPrevious === 'function') {
-      try {
-        Reflect.apply(cleanupPrevious, previousRuntime, []);
-      } catch (_error) {
-        // A listener from the previous extension context may already be invalid.
-      }
-    }
+  // The manifest runs this in every frame, and the worker injects it again
+  // into frames that may already run it (on tab switcher commands, and into
+  // tabs opened before an install); the first one keeps observing, with what
+  // it already knows.
+  if (!claimContentScript('shortcut-key-observer')) {
+    return;
   }
   // The configured shortcut lives in chrome.commands, which a content script
   // cannot read or observe, so it is fetched from the background. Asking on
@@ -106,43 +78,6 @@ function isFiniteNumber(value: unknown): value is number {
     } catch (_error) {
       // Ignore an extension context invalidated while this Document commits.
     }
-  }
-
-  function adoptEventTimes(entries: unknown, eventsByKey: Map<string, number>): void {
-    (Array.isArray(entries) ? entries : []).forEach((entry: unknown) => {
-      if (Array.isArray(entry) && typeof entry[0] === 'string' && isFiniteNumber(entry[1])) {
-        eventsByKey.set(entry[0], entry[1]);
-      }
-    });
-  }
-
-  // Takes over what the previous observer knew; its shape is read field by field.
-  function adoptInheritedState(state: unknown): void {
-    if (!isRecord(state)) {
-      return;
-    }
-    if (state.showSearchShortcutResolved === true && typeof state.showSearchShortcut === 'string') {
-      applyShowSearchShortcut(state.showSearchShortcut);
-      if (isFiniteNumber(state.showSearchShortcutRefreshedAt)) {
-        showSearchShortcutRefreshedAt = state.showSearchShortcutRefreshedAt;
-      }
-    }
-    if (Array.isArray(state.armedReleaseKeys)) {
-      armedReleaseKeys = state.armedReleaseKeys.map(normalizeReleaseKey).filter(Boolean);
-    }
-    adoptEventTimes(state.trustedKeydowns, recentTrustedKeydownAtByKey);
-    adoptEventTimes(state.trustedReleases, recentTrustedReleaseAtByKey);
-  }
-
-  function exportState(): ObserverState {
-    return {
-      showSearchShortcut: showSearchShortcutRaw,
-      showSearchShortcutRefreshedAt,
-      showSearchShortcutResolved,
-      armedReleaseKeys: armedReleaseKeys.slice(),
-      trustedKeydowns: Array.from(recentTrustedKeydownAtByKey.entries()),
-      trustedReleases: Array.from(recentTrustedReleaseAtByKey.entries())
-    };
   }
 
   function applyShowSearchShortcut(shortcut: unknown): void {
@@ -442,11 +377,10 @@ function isFiniteNumber(value: unknown): value is number {
     }
   };
 
-  adoptInheritedState(inheritedState);
   // Only the observer a Document starts with reports that start and
-  // registers the overlay's faces; a replacement, or a sweep of tabs open
-  // before an install, runs in a page that is already showing.
-  if (!previousRuntime && document.readyState === 'loading') {
+  // registers the overlay's faces; a sweep of tabs open before an install
+  // runs in a page that is already showing.
+  if (document.readyState === 'loading') {
     notifyTopFrameDocumentStarted();
     registerOverlayFontFaces();
   }
@@ -462,22 +396,4 @@ function isFiniteNumber(value: unknown): value is number {
   window.addEventListener('focus', refreshShowSearchShortcutOnFocus);
   window.addEventListener('pageshow', refreshShowSearchShortcutOnPageShow);
   document.addEventListener('visibilitychange', refreshShowSearchShortcutOnVisibility, true);
-  Reflect.set(window, RUNTIME_KEY, Object.freeze({
-    exportState,
-    cleanup() {
-      window.removeEventListener('keydown', relayShowSearchShortcut, true);
-      window.removeEventListener('keyup', notifyTabSwitcherShortcutModifierReleased, true);
-      window.removeEventListener('focus', refreshShowSearchShortcutOnFocus);
-      window.removeEventListener('pageshow', refreshShowSearchShortcutOnPageShow);
-      document.removeEventListener('visibilitychange', refreshShowSearchShortcutOnVisibility, true);
-      if (chrome && chrome.runtime && chrome.runtime.onMessage &&
-          typeof chrome.runtime.onMessage.removeListener === 'function') {
-        try {
-          chrome.runtime.onMessage.removeListener(runtimeMessageListener);
-        } catch (_error) {
-          // Ignore a listener that belongs to an invalidated extension context.
-        }
-      }
-    }
-  }));
 })();

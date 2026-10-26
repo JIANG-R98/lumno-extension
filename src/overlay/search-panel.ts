@@ -58,12 +58,11 @@ import type { NumberShortcutOptions } from '../shared/search/suggestion-navigati
 import * as LumnoOverlayRuntime from './runtime';
 import * as LumnoOverlaySiteFixes from './site-fixes';
 import * as LumnoMessaging from '../platform/messaging';
+import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-registry';
 
-window._x_extension_search_overlay_runtime_version_2026_unique_ =
-  '2026-10-20-search-title-units-v17';
-window._x_extension_search_overlay_open_2026_unique_ = false;
-
-window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, overlayContext) {
+// Opens or closes the search overlay with the window's tabs and the context
+// it was opened with, both read as untrusted.
+function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): void {
   const overlayLifecycle = LumnoOverlayLifecycle;
   const overlayRuntime = LumnoOverlayRuntime;
   if (!overlayRuntime.STORAGE_KEYS) {
@@ -987,7 +986,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     const shouldReplaceExistingOverlay = shouldReplaceClosingOverlay ||
       isStaleOverlay(overlayState.overlay);
     if (ensureOverlayOpen && !shouldReplaceExistingOverlay) {
-      window._x_extension_search_overlay_open_2026_unique_ = true;
+      setOverlayOpenState(true);
       return;
     }
     destroyExistingOverlaySession(overlayState.overlay, {
@@ -1796,7 +1795,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     document.documentElement ||
     document.body;
   overlayMountParent.appendChild(overlayHost);
-  window._x_extension_search_overlay_open_2026_unique_ = true;
+  setOverlayOpenState(true);
   if (typeof overlayHost.showPopover === 'function') {
     try {
       overlayHost.showPopover();
@@ -1810,7 +1809,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       return doc.fullscreenElement || doc.documentElement || doc.body;
     },
     onRestore(restoredHost) {
-      window._x_extension_search_overlay_open_2026_unique_ = true;
+      setOverlayOpenState(true);
       if (typeof restoredHost.showPopover === 'function') {
         try {
           restoredHost.showPopover();
@@ -1821,7 +1820,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       overlayState.overlayViewportSizeSync.apply(overlayState.overlay);
       const restoreFocus = () => {
         if (restoredHost.isConnected &&
-            window._x_extension_search_overlay_open_2026_unique_ === true) {
+            isOverlayOpenState()) {
           focusOverlayInputForReveal();
         }
       };
@@ -1971,7 +1970,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   window.addEventListener('wheel', overlayState.overlayScrollPauseHandler, { passive: true, capture: true });
   window.addEventListener('touchmove', overlayState.overlayScrollPauseHandler, { passive: true, capture: true });
 
-};
+}
 
-// Keep the injected script completion value structured-clonable (Firefox rejects functions).
-void 0;
+export { toggleSearchOverlay };

@@ -81,6 +81,7 @@ import type {
   TabSwitcherItem,
   TabSwitcherThumbnailUpdate
 } from '../domain/messages';
+import { createInjectedAppRun } from '../platform/injection';
 
 // A tab as the switcher's helpers read it: a browser tab, a tab from the
 // recent list with its thumbnail fields, or a payload item.
@@ -1994,14 +1995,14 @@ function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem
     return;
   }
   const runDynamicSwitcherScript = (switcherContext: TabSwitcherContext): void => {
-    chrome.scripting.executeScript({
-      target: { tabId: hostTabId },
-      files: [
-        'build/icon-font-preload.js',
-        'build/overlay-islands.js',
-        'build/tab-switcher.js'
-      ]
-    }, () => {
+    // The icon font preload loads alongside the switcher, so the font starts
+    // loading before the switcher's larger modules have parsed.
+    chrome.scripting.executeScript(createInjectedAppRun(
+      chrome.runtime,
+      { tabId: hostTabId },
+      ['icon-font-preload', 'tab-switcher'],
+      { type: 'toggle', context: switcherContext }
+    ), (results) => {
       const injectError = chrome.runtime && chrome.runtime.lastError;
       if (injectError) {
         const errorMessage = injectError.message || 'unknown';
@@ -2014,52 +2015,24 @@ function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem
         finishOpen(false, errorMessage);
         return;
       }
-      chrome.scripting.executeScript({
-        target: { tabId: hostTabId },
-        // Runs in the page on its own.
-        func: (pageContext: TabSwitcherContext): unknown => {
-          const toggle: unknown = Reflect.get(window, '_x_extension_toggleTabSwitcher_2026_unique_');
-          if (typeof toggle !== 'function') {
-            console.warn('Lumno: tab switcher helper not available.');
-            return { ok: false, reason: 'tab_switcher_missing' };
-          }
-          const result: unknown = Reflect.apply(toggle, window, [pageContext]);
-          return result && typeof result === 'object'
-            ? result
-            : { ok: true };
-        },
-        args: [switcherContext]
-      }, (results) => {
-        const runError = chrome.runtime && chrome.runtime.lastError;
-        if (runError) {
-          const errorMessage = runError.message || 'unknown';
-          logHotkeyDebug('tab-switcher-run-failed', {
-            tabId: hostTab.id,
-            error: errorMessage,
-            source: context && context.source ? context.source : ''
-          });
-          finishOpen(false, errorMessage);
-          return;
-        }
-        const result = readScriptResults(results)[0];
-        if (result && result.ok === false) {
-          const failure = String(result.reason || '');
-          logHotkeyDebug('tab-switcher-run-failed', {
-            tabId: hostTabId,
-            error: failure || 'unknown',
-            source: context && context.source ? context.source : ''
-          });
-          finishOpen(false, failure || 'run-failed');
-          return;
-        }
-        logHotkeyDebug('tab-switcher-opened', {
-          tabId: hostTab.id,
-          itemCount: tabItems.length,
-          source: context && context.source ? context.source : '',
-          path: 'executeScript'
+      const result = readScriptResults(results)[0];
+      if (result && result.ok === false) {
+        const failure = String(result.reason || '');
+        logHotkeyDebug('tab-switcher-run-failed', {
+          tabId: hostTabId,
+          error: failure || 'unknown',
+          source: context && context.source ? context.source : ''
         });
-        finishOpen(true, 'executeScript');
+        finishOpen(false, failure || 'run-failed');
+        return;
+      }
+      logHotkeyDebug('tab-switcher-opened', {
+        tabId: hostTab.id,
+        itemCount: tabItems.length,
+        source: context && context.source ? context.source : '',
+        path: 'executeScript'
       });
+      finishOpen(true, 'executeScript');
     });
   };
   const runSwitcherScript = (tabZoomFactor: number): void => {

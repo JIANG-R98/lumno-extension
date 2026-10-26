@@ -9,6 +9,7 @@ import {
   readPipPageBridgeResponse
 } from '../domain/pip-page-bridge';
 import type { PipPageBridgeRequest } from '../domain/pip-page-bridge';
+import { isDocumentPipActiveState } from '../platform/content-registry';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply, PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
 import type * as LumnoSettingsStorage from '../platform/settings-storage';
@@ -79,7 +80,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
-const DOCUMENT_PIP_ACTIVE_FLAG = '__lumno_document_pip_active_2026__';
 const MAIN_WORLD_EXIT_TIMEOUT_MS = 760;
 const PAGE_BRIDGE_EXIT_TIMEOUT_MS = 520;
 const MIN_DEFERRED_ENTER_DELAY_MS = 40;
@@ -108,9 +108,9 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
     state.autoPipEnabled = normalizeAutoPipEnabled(value);
   }
 
-  // The document picture-in-picture picker sets this flag on the page's window.
+  // The page clip picker marks its Picture-in-Picture session in the content registry.
   function isDocumentPiPActive(): boolean {
-    return Reflect.get(window, DOCUMENT_PIP_ACTIVE_FLAG) === true;
+    return isDocumentPipActiveState();
   }
 
   // Resolves with the response, or with { ok: false, reason } on any

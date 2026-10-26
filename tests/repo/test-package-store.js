@@ -74,9 +74,9 @@ assert(
 );
 // Every entry ships, minified, in place of the files it is built from, and
 // so does every chunk the page entries share.
-const { ENTRIES } = require('../../scripts/build/entries');
-const builtScripts = ENTRIES.map((entry) => `build/${entry.name}.js`)
-  .concat(entries.filter((entry) => /^build\/chunks\/.+\.js$/.test(entry)));
+const { ENTRIES, entryOutputPath } = require('../../scripts/build/entries');
+const builtScripts = ENTRIES.map(entryOutputPath)
+  .concat(entries.filter((entry) => /^build\/(?:injected\/)?chunks\/.+\.js$/.test(entry)));
 builtScripts.forEach((bundlePath) => {
   assert(entries.includes(bundlePath), `store package should include ${bundlePath}`);
   assert(!entries.includes(`${bundlePath}.map`), `store package should not include the ${bundlePath} source map`);

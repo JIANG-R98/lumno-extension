@@ -1,12 +1,7 @@
 // Values scripts hand each other on globalThis.
 import type { FeatureHintViewApi, TooltipViewApi } from './view-apis';
-import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } from './content-apis';
 import type { ShortcutRule } from '../domain/messages';
 import type * as SearchSourceOrder from '../domain/search/search-source-order';
-import type { createLinkPreviewViewApi } from '../shared/react/link-preview-view';
-import type { createPipDockViewApi } from '../shared/react/pip-dock-view';
-import type { createTabSwitcherViewApi } from '../shared/react/tab-switcher';
-import type { TabSwitcherReply } from '../shared/tab-switcher/host';
 import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
@@ -78,24 +73,24 @@ declare global {
     focusResumeTransition?: HeldViewTransition | null;
   }
   var __lumnoBoot: LumnoBootHandoff | undefined;
+  // What the extension's scripts in a page's isolated world share; read and
+  // written only through src/platform/content-registry.ts, and read by the
+  // worker's injected functions.
+  interface LumnoContentRegistry {
+    // The classic content scripts that already run in this world.
+    claimed: Record<string, true>;
+    // Whether the search overlay is open; absent until the overlay loads.
+    overlayOpen?: boolean;
+    // Whether the page clip picker has the page in its PiP window.
+    documentPipActive?: boolean;
+  }
+  var __lumnoContent: LumnoContentRegistry | undefined;
   // Set by the React islands entry of each page that has React.
   var LumnoTooltipView: TooltipViewApi | undefined;
   var LumnoFeatureHintView: FeatureHintViewApi | undefined;
-  // Left by content scripts once they have run in a page.
-  var __lumnoAutoPipBlacklist2026: AutoPipBlacklist | undefined;
-  var __lumnoPageShortcutToast2026: Readonly<PageShortcutToastApi> | undefined;
-  var __lumnoDocumentPiPPicker2026: Readonly<DocumentPipPickerApi> | undefined;
   // assets/data/shortcut-rules.json, once a search surface loaded it.
   var _x_extension_shortcut_rules_2024_unique_: ShortcutRule[] | undefined;
   var _x_extension_shortcut_rules_promise_2024_unique_: Promise<ShortcutRule[]> | undefined;
-  // Whether this page's search overlay is open, for the next toggle.
-  var _x_extension_search_overlay_open_2026_unique_: boolean | undefined;
-  // The overlay script's build, which the worker compares before reusing it.
-  var _x_extension_search_overlay_runtime_version_2026_unique_: string | undefined;
-  // Opens or closes the search overlay with the window's tabs and the open
-  // context the worker sends, both read as untrusted; set by
-  // src/overlay/search-panel.ts.
-  var _x_extension_toggleSearchOverlay_2026_unique_: ((tabs: unknown, context: unknown) => void) | undefined;
   // Site themes and favicon data the overlay resolved, kept across openings
   // in the same page; the new tab page keeps the theme caches the same way.
   var _x_extension_theme_color_cache_2024_unique_: Map<string, ThemeVariant> | undefined;
@@ -110,11 +105,6 @@ declare global {
   // Set by the overlay's React islands entry.
   var LumnoOverlayShell: ReturnType<typeof createOverlayShellApi> | undefined;
   var LumnoOverlaySuggestionsView: ReturnType<typeof createSuggestionsViewApi> | undefined;
-  var LumnoOverlayTabSwitcherView: ReturnType<typeof createTabSwitcherViewApi> | undefined;
-  // Set by the overlay React bundle, which the link preview is injected after.
-  var LumnoLinkPreviewView: ReturnType<typeof createLinkPreviewViewApi> | undefined;
-  // Set by the overlay React bundle, which the page clip picker is injected after.
-  var LumnoPipDockView: ReturnType<typeof createPipDockViewApi> | undefined;
   // Set by the popup's React islands entry.
   var LumnoPopupReact: ReturnType<typeof createPopupApi> | undefined;
   // Set by the options page's React islands entry.
@@ -149,8 +139,5 @@ declare global {
   var LumnoNewtabQuoteLine: ReturnType<typeof createQuoteLineViewApi> | undefined;
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
   var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;
-  // Opens the tab switcher with the context the worker sends, read as
-  // untrusted; set by src/shared/tab-switcher/tab-switcher.ts.
-  var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;
 }
 

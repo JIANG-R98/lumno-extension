@@ -1,6 +1,5 @@
 const assert = require('assert');
 const {
-  CONTEXT_TOKEN_KEY,
   createOverlayPage,
   openAndSettle,
   waitFor
@@ -18,7 +17,7 @@ function assertReleased(page, baselineDocumentListeners, message) {
     `${message}: no chrome.storage.onChanged listeners should remain`);
   assert.strictEqual(page.mediaListeners.size, 0,
     `${message}: no color-scheme listeners should remain`);
-  assert.strictEqual(page.window._x_extension_search_overlay_open_2026_unique_, false,
+  assert.strictEqual(page.window.__lumnoContent.overlayOpen, false,
     `${message}: the overlay should report itself closed`);
 }
 
@@ -70,7 +69,7 @@ async function testExitReleasesInputAtOnce() {
     page.press('Escape');
     const panel = findPanel(page);
     assert.strictEqual(panel.getAttribute('data-lumno-overlay-exit'), 'running');
-    assert.strictEqual(page.window._x_extension_search_overlay_open_2026_unique_, false,
+    assert.strictEqual(page.window.__lumnoContent.overlayOpen, false,
       'the open flag should clear when the exit starts, not when it ends');
     assert.strictEqual(panel.inert, true, 'a closing overlay should not take focus or clicks');
     assert.notStrictEqual(page.root().activeElement, page.input(), 'the input should lose focus when the exit starts');
@@ -104,7 +103,7 @@ async function testPressDuringExitReopens() {
       assert.strictEqual(page.hostCount(), 1, `a press during the ${startClose} exit should leave one overlay`);
       assert.notStrictEqual(page.host(), closingHost, `the ${startClose} exit should give way to a fresh overlay`);
       assert.strictEqual(findPanel(page).hasAttribute('data-lumno-overlay-exit'), false);
-      assert.strictEqual(page.window._x_extension_search_overlay_open_2026_unique_, true);
+      assert.strictEqual(page.window.__lumnoContent.overlayOpen, true);
       await page.settle(300);
       assert.strictEqual(page.hostCount(), 1, `the dropped ${startClose} exit must not close the new overlay`);
       page.toggle({ ensureOpen: true });
@@ -136,21 +135,6 @@ async function testCloseWithoutMotionIsImmediate() {
   }
 }
 
-async function testToggleCloseAfterReinjection() {
-  const page = await createOverlayPage();
-  try {
-    const baseline = page.ledger.snapshot();
-    await openAndSettle(page);
-    page.reinjectSearchPanel();
-    page.toggle();
-    await waitForClosed(page, 'the reinjected helper should close the open overlay');
-    assert.strictEqual(page.hostCount(), 0, 'the reinjected helper should close the open overlay');
-    assertReleased(page, baseline, 'closing after reinjection');
-  } finally {
-    page.window.close();
-  }
-}
-
 async function testStaleReplacementThenClose() {
   const page = await createOverlayPage();
   try {
@@ -158,9 +142,9 @@ async function testStaleReplacementThenClose() {
     const firstHost = await openAndSettle(page);
     const listenersWhileOpen = page.ledger.snapshot();
     const storageListenersWhileOpen = page.sessionStorageListenerCount();
-    // A different context token marks the mounted overlay as stale, so the
-    // next invocation replaces it instead of toggling it closed.
-    page.window[CONTEXT_TOKEN_KEY] = 'replacement-context';
+    // A token from another context marks the mounted overlay as stale, so
+    // the next invocation replaces it instead of toggling it closed.
+    page.markOverlayFromOtherContext();
     const secondHost = await openAndSettle(page);
     assert.notStrictEqual(secondHost, firstHost, 'the stale overlay should be replaced');
     assert.strictEqual(firstHost.isConnected, false, 'the stale overlay host should be removed');
@@ -217,7 +201,6 @@ async function testMountGuardRestoresHostUntilClose() {
   await testExitReleasesInputAtOnce();
   await testPressDuringExitReopens();
   await testMountGuardRestoresHostUntilClose();
-  await testToggleCloseAfterReinjection();
   await testStaleReplacementThenClose();
   await testEscapeCloseReleasesListeners();
   console.log('overlay session teardown tests passed');

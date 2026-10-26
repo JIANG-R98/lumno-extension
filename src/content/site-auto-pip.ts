@@ -4,6 +4,8 @@
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
+import { isAutoPipBlacklistedHost } from './auto-pip-blacklist';
+import { claimContentScript } from '../platform/content-registry';
 
 // How auto PiP finds and enters a site's player.
 interface SitePlayerProfile {
@@ -36,11 +38,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 (function () {
-  const RUNNING_FLAG = '_x_lumno_site_auto_pip_2026_unique_';
-  if (Reflect.get(window, RUNNING_FLAG)) {
+  if (!claimContentScript('site-auto-pip')) {
     return;
   }
-  Reflect.set(window, RUNNING_FLAG, true);
 
   if (window.top !== window.self) {
     return;
@@ -115,12 +115,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const maybeExitPiP = core.maybeExitPiP;
 
   core.syncAutoPipEnabledSetting();
-  const autoPipBlacklist = window.__lumnoAutoPipBlacklist2026;
-  if (host && autoPipBlacklist && Array.isArray(autoPipBlacklist.hostRules)) {
-    const isBlacklisted = autoPipBlacklist.hostRules.some((rule) => rule.test(host));
-    if (isBlacklisted) {
-      return;
-    }
+  if (host && isAutoPipBlacklistedHost(host)) {
+    return;
   }
 
   const IQIYI_PLAYER_PROFILE: Omit<SitePlayerProfile, 'test'> = {

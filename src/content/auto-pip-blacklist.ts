@@ -1,21 +1,17 @@
 // The sites where automatic picture-in-picture stays off (shopping and
 // social feeds play muted previews there), for site-auto-pip.ts.
-(function () {
-  if (window.__lumnoAutoPipBlacklist2026) {
-    return;
-  }
+const AUTO_PIP_BLACKLIST_HOST_RULES: readonly RegExp[] = Object.freeze([
+  /(^|\.)jd\.com$/,
+  /(^|\.)360buy\.com$/,
+  /(^|\.)taobao\.com$/,
+  /(^|\.)x\.com$/,
+  /(^|\.)twitter\.com$/,
+  /(^|\.)weibo\.com$/,
+  /(^|\.)weibo\.cn$/
+]);
 
-  const hostRules = [
-    /(^|\.)jd\.com$/,
-    /(^|\.)360buy\.com$/,
-    /(^|\.)taobao\.com$/,
-    /(^|\.)x\.com$/,
-    /(^|\.)twitter\.com$/,
-    /(^|\.)weibo\.com$/,
-    /(^|\.)weibo\.cn$/
-  ];
+function isAutoPipBlacklistedHost(host: string): boolean {
+  return AUTO_PIP_BLACKLIST_HOST_RULES.some((rule) => rule.test(host));
+}
 
-  window.__lumnoAutoPipBlacklist2026 = {
-    hostRules: hostRules
-  };
-})();
+export { AUTO_PIP_BLACKLIST_HOST_RULES, isAutoPipBlacklistedHost };

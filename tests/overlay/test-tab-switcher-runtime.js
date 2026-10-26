@@ -235,14 +235,12 @@ async function testRuntimeMessagesReuseTheInjectedSwitcher() {
   await page.settle();
   assert.deepStrictEqual(lastSwitch(page), { action: 'switchToTab', tabId: 2, windowId: 1 });
 
-  page.reinject();
-  page.reinject();
   assert.strictEqual(page.runtimeMessages.listeners.length, 1,
-    'a reinjected runtime should replace its previous message listener');
+    'the switcher module should listen for messages once');
   assert.deepStrictEqual(
     { ...page.message({ action: 'openTabSwitcherFromCommand', context: { tabs: switcherTabs(2) } }) },
     { ok: true },
-    'the replacement runtime should still open the switcher'
+    'a message should open the switcher again'
   );
   page.close();
 }
@@ -322,13 +320,6 @@ function testJoinsTheTopLayerAboveModalsAndFullscreen() {
   legacy.close();
 }
 
-function testFailsCleanlyWithoutTheReactView() {
-  const page = createTabSwitcherPage();
-  delete page.window.LumnoOverlayTabSwitcherView;
-  assert.deepStrictEqual({ ...page.open({ tabs: switcherTabs(2) }) }, { ok: false, reason: 'react-view-unavailable' });
-  assert.strictEqual(page.host(), null, 'a failed open should not leave a host behind');
-  page.close();
-}
 
 async function testThemeFollowsThePageThenTheSetting() {
   const stored = createTabSwitcherPage({ storage: { [THEME_STORAGE_KEY]: 'dark' } });
@@ -536,7 +527,6 @@ function testStylesheetKeepsTheLayoutRules() {
   await testRuntimeMessagesReuseTheInjectedSwitcher();
   testOpeningAgainAdvancesOrCloses();
   testJoinsTheTopLayerAboveModalsAndFullscreen();
-  testFailsCleanlyWithoutTheReactView();
   await testThemeFollowsThePageThenTheSetting();
   testScaleCompensatesForZoomAndRoomyViewports();
   await testPointerSelectsAndOutsideClicksClose();

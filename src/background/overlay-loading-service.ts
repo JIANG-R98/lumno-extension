@@ -11,7 +11,6 @@ import { ignoreExpectedChromeError, logHotkeyDebug } from './worker-context';
 import { canOpenOverlayOnUrl, getResolvedTabUrl } from './browser-urls-service';
 import {
   OVERLAY_HOST_ID,
-  OVERLAY_RUNTIME_VERSION,
   openOverlayOnTab
 } from './overlay-open-service';
 import type { OpenOverlayOptions, TargetTab } from './overlay-open-service';
@@ -630,21 +629,23 @@ function probeOverlayLoadingState(
   chrome.scripting.executeScript({
     target: { tabId },
     injectImmediately: true,
-    // Runs in the page on its own.
-    func: (runtimeVersion: string, hostId: string): unknown => {
-      const rawOpenState: unknown = Reflect.get(window, '_x_extension_search_overlay_open_2026_unique_');
+    // Runs in the page on its own: reads the overlay's state from the content
+    // registry (src/platform/content-registry.ts) without loading it.
+    func: (hostId: string): unknown => {
+      const registry: unknown = Reflect.get(globalThis, '__lumnoContent');
+      const rawOpenState: unknown = registry && typeof registry === 'object'
+        ? Reflect.get(registry, 'overlayOpen')
+        : undefined;
       const host = document.getElementById(hostId);
       return {
-        runtimeReady:
-          Reflect.get(window, '_x_extension_search_overlay_runtime_version_2026_unique_') === runtimeVersion &&
-          typeof Reflect.get(window, '_x_extension_toggleSearchOverlay_2026_unique_') === 'function',
+        runtimeReady: typeof rawOpenState === 'boolean',
         overlayOpenState: rawOpenState === true
           ? 'open'
           : (rawOpenState === false ? 'closed' : 'unknown'),
         overlayConnected: Boolean(host && host.isConnected)
       };
     },
-    args: [OVERLAY_RUNTIME_VERSION, OVERLAY_HOST_ID]
+    args: [OVERLAY_HOST_ID]
   }, callback);
 }
 

@@ -392,6 +392,45 @@ async function lazyModules({ browser }) {
   assert.deepStrictEqual(worker, { pinyin: 'function', vendorGlobal: false });
 }
 
+// The onboarding page's demo overlay is the overlay the worker injects into
+// web pages: the search shortcut on the onboarding page imports it there and
+// opens it.
+async function onboardingOverlay({ browser }) {
+  const onboarding = await browser.openPage(browser.extensionUrl('src/onboarding/onboarding.html'));
+  await focusTab(browser, onboarding);
+  await onboarding.waitFor(`Boolean(document.getElementById('onboarding-root'))`, { message: 'onboarding did not render' });
+  await dispatchCommand(browser, 'show-search');
+  await onboarding.waitFor(`Boolean(document.getElementById('${OVERLAY_HOST_ID}'))`, {
+    timeout: 5000,
+    message: 'the search shortcut did not open the demo overlay'
+  });
+}
+
+// The worker injects the copy-URL listener into a page the first time the
+// command runs there; the page then confirms with its toast.
+async function copyUrl({ browser, fixtures }) {
+  const web = await browser.openPage(fixtures.url('/page.html'));
+  await focusTab(browser, web);
+  await dispatchCommand(browser, 'show-search-prefill-v');
+  await web.waitFor(`Boolean(document.getElementById('_x_extension_page_toast_2026_unique_'))`, {
+    message: 'the copy-URL command did not show its toast in the page'
+  });
+}
+
+// The page menu's "Add to Lumno New Tab" shows the injected toast in the page.
+async function pageShortcutToast({ browser, fixtures }) {
+  const web = await browser.openPage(fixtures.url('/page.html'));
+  await focusTab(browser, web);
+  const href = await web.evaluate('location.href');
+  await browser.worker.evaluate(`(async () => {
+    const [tab] = (await chrome.tabs.query({})).filter((candidate) => candidate.url === ${JSON.stringify(href)});
+    chrome.contextMenus.onClicked.dispatch({ menuItemId: 'lumno-add-page-shortcut', pageUrl: ${JSON.stringify(href)} }, tab);
+  })()`);
+  await web.waitFor(`Boolean(document.getElementById('__lumno_page_shortcut_toast_2026__'))`, {
+    message: 'adding the page did not show the toast in it'
+  });
+}
+
 module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
@@ -401,5 +440,8 @@ module.exports = {
   'link-preview': linkPreview,
   diagnostics,
   'pip-page-bridge': pipPageBridge,
-  'lazy-modules': lazyModules
+  'lazy-modules': lazyModules,
+  'onboarding-overlay': onboardingOverlay,
+  'copy-url': copyUrl,
+  'page-shortcut-toast': pageShortcutToast
 };

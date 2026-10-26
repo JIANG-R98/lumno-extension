@@ -3,6 +3,7 @@
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import type { PageTheme } from '../shared/page-color-scheme';
 import * as SETTINGS from '../domain/settings';
+import { readStartCommand } from '../domain/injected-commands';
 import type { LocaleMessage, PageReply } from '../domain/messages';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
@@ -20,21 +21,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 (function() {
-  // The background injects this script on the first copy-URL command in a tab
-  // and again after an extension reload or update, when the earlier copy
-  // belongs to a context that can no longer answer; the newest copy listens.
-  const RUNTIME_KEY = '_x_extension_hotkey_listener_2024_unique_';
-  // Left by an earlier injection, possibly of an older extension version.
-  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
-  const cleanupPrevious = isRecord(previousRuntime) ? previousRuntime.cleanup : null;
-  if (typeof cleanupPrevious === 'function') {
-    try {
-      Reflect.apply(cleanupPrevious, previousRuntime, []);
-    } catch (_error) {
-      // A listener from the previous extension context may already be invalid.
-    }
-  }
-
+  // The background imports this module on the first copy-URL command in a
+  // tab (src/platform/injection.ts); the browser keeps one instance per page
+  // and extension context, so it listens once.
   const PAGE_TOAST_ID = '_x_extension_page_toast_2026_unique_';
   const PAGE_TOAST_FONT_FACE_STYLE_ID = '_x_extension_page_toast_font_face_2026_unique_';
   const PAGE_TOAST_SHOW_DURATION_MS = 2000;
@@ -480,24 +469,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   if (chrome && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(runtimeMessageListener);
   }
-  Reflect.set(window, RUNTIME_KEY, Object.freeze({
-    cleanup() {
-      if (pageToastTimer) {
-        window.clearTimeout(pageToastTimer);
-        pageToastTimer = null;
-      }
-      if (pageToastParts && pageToastParts.host) {
-        pageToastParts.host.remove();
-        pageToastParts = null;
-      }
-      if (chrome && chrome.runtime && chrome.runtime.onMessage &&
-          typeof chrome.runtime.onMessage.removeListener === 'function') {
-        try {
-          chrome.runtime.onMessage.removeListener(runtimeMessageListener);
-        } catch (_error) {
-          // Ignore a listener that belongs to an invalidated extension context.
-        }
-      }
-    }
-  }));
 })();
+
+// Confirms the listener is in place.
+function run(command: unknown): { ok: boolean; reason?: string } {
+  return readStartCommand(command) ? { ok: true } : { ok: false, reason: 'invalid-command' };
+}
+
+export { run };

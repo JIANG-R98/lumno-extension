@@ -7,6 +7,9 @@
 // while this file loads, because the services import one another.
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
+import { createInjectedAppRun } from '../platform/injection';
+import { OVERLAY_HOST_ID } from '../domain/injected-commands';
+import type { OverlayToggleCommand } from '../domain/injected-commands';
 import { openBrowserNewtabFallback, openNewtabFallback, openNewtabFallbackForUrl } from './newtab-fallback';
 import {
   getRestrictedAction,
@@ -69,8 +72,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const OVERLAY_OPENING_GUARD_MS = 5000;
-export const OVERLAY_RUNTIME_VERSION = '2026-10-20-search-title-units-v17';
-export const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
+export { OVERLAY_HOST_ID };
 export const overlayOpeningByTabId = new Map<number, OverlayOpening>();
 let tabOverlayFetchSeq = 0;
 
@@ -165,8 +167,9 @@ export function openOverlayOnTab(
   const openOptions: OpenOverlayOptions = options && typeof options === 'object' ? options : {};
   const overlayOpenStartedAt = Date.now();
   // The entry motion budget measures how long the user has waited on the
-  // renderer, so a tab's one-time runtime injection restarts it below.
-  let overlayEntryMotionStartedAt = overlayOpenStartedAt;
+  // renderer; the overlay restarts it once its modules have loaded in a tab
+  // for the first time (overlay-app.ts).
+  const overlayEntryMotionStartedAt = overlayOpenStartedAt;
   let overlayOpening: OverlayOpening | null = null;
   let didFinishOpenAttempt = false;
   let shouldRetryPreCompleteFailure = false;
@@ -253,11 +256,6 @@ export function openOverlayOnTab(
   }
   const overlayLoadingRecord = rememberOverlayLoadingRecord({ ...activeTab, id: tabId }, source, openOptions);
   shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
-  const overlayInjectionFiles = [
-    'build/icon-font-preload.js',
-    'build/overlay-islands.js',
-    'build/overlay.js'
-  ];
   const runOverlayScript = (tabZoomFactor: number): void => {
       const prefillQuery = getOverlayPrefillQueryForSource(activeTab, source);
       const prioritizeCurrentPageMatch = source === 'page-hotkey-prefill';
@@ -283,68 +281,57 @@ export function openOverlayOnTab(
           scheduleSiteSearchProviderIconWarmup(providers, '');
         })
         .catch(() => {});
-      chrome.scripting.executeScript({
-            target: {tabId},
-            injectImmediately: true,
-            // Runs in the page on its own.
-            func: (overlayTabs: readonly TargetTab[], overlayPanelContext: OverlayOpenContext, overlayHostId: string): unknown => {
-              const toggleOverlay: unknown = Reflect.get(window, '_x_extension_toggleSearchOverlay_2026_unique_');
-              if (typeof toggleOverlay !== 'function') {
-                console.warn('Lumno: overlay search panel helper not available.');
-                return { ok: false, reason: 'search_panel_missing' };
-              }
-              Reflect.apply(toggleOverlay, window, [overlayTabs, overlayPanelContext]);
-              const overlayHost = document.getElementById(overlayHostId);
-              return {
-                ok: true,
-                overlayOpen:
-                  Reflect.get(window, '_x_extension_search_overlay_open_2026_unique_') === true &&
-                  Boolean(overlayHost && overlayHost.isConnected)
-              };
-            },
-            args: [tabs, overlayContext, OVERLAY_HOST_ID]
-          }, function(results) {
-            const lastError = chrome.runtime.lastError;
-            if (lastError) {
-              logHotkeyDebug('inject-failed', {
-                step: 'build/overlay.js',
-                tabId,
-                error: lastError.message || 'unknown',
-                source: source || ''
-              });
-              if (openOptions.loadingRecovery !== true &&
-                  !overlayLoadingRecordsByTabId.has(tabId)) {
-                openOverlayInjectionFallback(activeTab, activeUrl, source);
-              }
-              finishOpenAttempt(false);
-              return;
-            }
-            const mainResult = OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results);
-            const result = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
-            if (result && result.ok === false) {
-              logHotkeyDebug('inject-failed', {
-                step: 'build/overlay.js',
-                tabId,
-                error: String(result.reason || '') || 'unknown',
-                source: source || ''
-              });
-              if (openOptions.loadingRecovery !== true &&
-                  !overlayLoadingRecordsByTabId.has(tabId)) {
-                openOverlayInjectionFallback(activeTab, activeUrl, source);
-              }
-              finishOpenAttempt(false);
-              return;
-            }
-            updateOverlayLoadingRecordFromInvocation(activeTab, results);
-            logHotkeyDebug('overlay-opened', {
-              tabId,
-              tabCount: Array.isArray(tabs) ? tabs.length : 0,
-              source: source || '',
-              tabZoomFactor: tabZoomFactor,
-              siteSearchProviderCount: Array.isArray(siteSearchProviders) ? siteSearchProviders.length : 0
-            });
-            finishOpenAttempt(Boolean(result && result.overlayOpen === true));
+      const overlayCommand: OverlayToggleCommand = { type: 'toggle', tabs, context: overlayContext };
+      // The icon font preload loads alongside the overlay, so the font starts
+      // loading before the overlay's larger modules have parsed.
+      chrome.scripting.executeScript(createInjectedAppRun(
+        chrome.runtime,
+        { tabId },
+        ['icon-font-preload', 'overlay'],
+        overlayCommand,
+        { injectImmediately: true }
+      ), function(results) {
+        const lastError = chrome.runtime.lastError;
+        if (lastError) {
+          logHotkeyDebug('inject-failed', {
+            step: 'overlay',
+            tabId,
+            error: lastError.message || 'unknown',
+            source: source || ''
           });
+          if (openOptions.loadingRecovery !== true &&
+              !overlayLoadingRecordsByTabId.has(tabId)) {
+            openOverlayInjectionFallback(activeTab, activeUrl, source);
+          }
+          finishOpenAttempt(false);
+          return;
+        }
+        const mainResult = OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results);
+        const result = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
+        if (result && result.ok === false) {
+          logHotkeyDebug('inject-failed', {
+            step: 'overlay',
+            tabId,
+            error: String(result.reason || '') || 'unknown',
+            source: source || ''
+          });
+          if (openOptions.loadingRecovery !== true &&
+              !overlayLoadingRecordsByTabId.has(tabId)) {
+            openOverlayInjectionFallback(activeTab, activeUrl, source);
+          }
+          finishOpenAttempt(false);
+          return;
+        }
+        updateOverlayLoadingRecordFromInvocation(activeTab, results);
+        logHotkeyDebug('overlay-opened', {
+          tabId,
+          tabCount: Array.isArray(tabs) ? tabs.length : 0,
+          source: source || '',
+          tabZoomFactor: tabZoomFactor,
+          siteSearchProviderCount: Array.isArray(siteSearchProviders) ? siteSearchProviders.length : 0
+        });
+        finishOpenAttempt(Boolean(result && result.overlayOpen === true));
+      });
   };
   const runOverlayWithResolvedZoom = (): void => {
     if (chrome.tabs && typeof chrome.tabs.getZoom === 'function') {
@@ -358,60 +345,7 @@ export function openOverlayOnTab(
     }
     runOverlayScript(1);
   };
-  const injectOverlayRuntime = (): void => {
-    logHotkeyDebug('inject-start', { tabId, file: overlayInjectionFiles.join(','), source: source || '' });
-    chrome.scripting.executeScript({
-      target: {tabId},
-      injectImmediately: true,
-      files: overlayInjectionFiles
-    }, function() {
-      const lastError = chrome.runtime.lastError;
-      if (lastError) {
-        logHotkeyDebug('inject-failed', {
-          step: overlayInjectionFiles.join(','),
-          tabId,
-          error: lastError.message || 'unknown',
-          source: source || ''
-        });
-        if (openOptions.loadingRecovery !== true &&
-            !overlayLoadingRecordsByTabId.has(tabId)) {
-          openOverlayInjectionFallback(activeTab, activeUrl, source);
-        }
-        finishOpenAttempt(false);
-        return;
-      }
-      // Parsing about 1.5MB of scripts can exceed the whole budget on slower
-      // Windows machines, which used to drop every first open's motion.
-      overlayEntryMotionStartedAt = Date.now();
-      runOverlayWithResolvedZoom();
-    });
-  };
-  chrome.scripting.executeScript({
-    target: {tabId},
-    injectImmediately: true,
-    // Runs in the page on its own.
-    func: (runtimeVersion: string): boolean => {
-      return Reflect.get(window, '_x_extension_search_overlay_runtime_version_2026_unique_') === runtimeVersion &&
-        typeof Reflect.get(window, '_x_extension_toggleSearchOverlay_2026_unique_') === 'function';
-    },
-    args: [OVERLAY_RUNTIME_VERSION]
-  }, (results) => {
-    const probeError = chrome.runtime.lastError;
-    const runtimeReady = !probeError &&
-      Array.isArray(results) &&
-      results[0] &&
-      results[0].result === true;
-    if (runtimeReady) {
-      logHotkeyDebug('runtime-reused', {
-        tabId,
-        source: source || '',
-        version: OVERLAY_RUNTIME_VERSION
-      });
-      runOverlayWithResolvedZoom();
-      return;
-    }
-    injectOverlayRuntime();
-  });
+  runOverlayWithResolvedZoom();
 }
 
 export type { OpenOverlayOptions, OverlayOpening, TargetTab };

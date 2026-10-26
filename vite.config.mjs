@@ -4,9 +4,10 @@ import entries from './scripts/build/entries.js';
 import { extensionOutputPath } from './scripts/build/extension-output.js';
 
 // The build of every entry in scripts/build/entries.js, one Vite build per
-// output: the page entries together, as ES modules that share chunks; each
-// module entry on its own, as an ES module; each preload and classic entry
-// on its own, as a self-contained classic script. scripts/build/build.js runs
+// output: the page entries together, and the injected entries together, as
+// ES modules that share chunks; each module entry on its own, as an ES
+// module; each preload and classic entry on its own, as a self-contained
+// classic script. scripts/build/build.js runs
 // them all.
 
 const { BUILD_DIRECTORY, ENTRIES } = entries;
@@ -65,6 +66,27 @@ function pagesConfig(options) {
   return config;
 }
 
+// The scripts the worker injects into web pages: ES modules that share
+// chunks with each other (never with the pages, which run in another origin).
+function injectedConfig(options) {
+  const config = baseConfig(options);
+  const injected = ENTRIES.filter((entry) => entry.kind === 'injected');
+  config.build.rolldownOptions = {
+    input: Object.fromEntries(injected.map((entry) => [entry.name, resolve(repoRoot, entry.source)])),
+    // The worker calls each one's run().
+    preserveEntrySignatures: 'exports-only',
+    output: {
+      format: 'es',
+      entryFileNames: 'injected/[name].js',
+      chunkFileNames: 'injected/chunks/[name].js',
+      codeSplitting: {
+        groups: [{ debugName: 'lumno-injected-chunks', name: pageChunkName }]
+      }
+    }
+  };
+  return config;
+}
+
 function moduleConfig(entry, options) {
   const config = baseConfig(options);
   config.build.rolldownOptions = {
@@ -102,6 +124,7 @@ export function createBuildConfigs(options = {}) {
   };
   return [
     pagesConfig(resolved),
+    injectedConfig(resolved),
     ...ENTRIES.filter((entry) => entry.kind === 'module').map((entry) => moduleConfig(entry, resolved)),
     ...ENTRIES.filter((entry) => entry.kind === 'preload' || entry.kind === 'classic')
       .map((entry) => classicConfig(entry, resolved))

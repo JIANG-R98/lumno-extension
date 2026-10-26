@@ -4,13 +4,12 @@
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
+import { claimContentScript } from '../platform/content-registry';
 
 (function () {
-  const RUNNING_FLAG = '_x_lumno_youtube_auto_pip_2026_unique_';
-  if (Reflect.get(window, RUNNING_FLAG)) {
+  if (!claimContentScript('youtube-auto-pip')) {
     return;
   }
-  Reflect.set(window, RUNNING_FLAG, true);
 
   if (window.top !== window.self) {
     return;

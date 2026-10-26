@@ -105,13 +105,6 @@ interface MotionWindow {
   matchMedia?: (query: string) => { matches: boolean };
 }
 
-declare global {
-  // One provider storage runtime per extension API object, kept on the page:
-  // the background re-injects content bundles with fresh module instances,
-  // which should still reuse the runtime (and its storage listener).
-  var __lumnoProviderStorageRuntimes: WeakMap<object, ProviderStorageRuntime> | undefined;
-}
-
 function errorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error) {
     return String(error.message || error);
@@ -652,8 +645,9 @@ function createStorageReadBatch(area: StorageAreaLike | null | undefined): Stora
   });
 }
 
-const providerStorageRuntimes: WeakMap<object, ProviderStorageRuntime> = globalThis.__lumnoProviderStorageRuntimes ||
-  (globalThis.__lumnoProviderStorageRuntimes = new WeakMap());
+// One provider storage runtime (and storage listener) per extension API
+// object in each script.
+const providerStorageRuntimes = new WeakMap<object, ProviderStorageRuntime>();
 
 // Reading the local-primary flag picks the area every setting comes from,
 // so a failed read is retried instead of silently choosing browser sync.

@@ -145,7 +145,7 @@ function testShortcutObserverRegistersWhileTheTopFrameLoads() {
   shown.window.close();
 
   const frame = load({ readyState: 'loading', subframe: true });
-  assert.ok(frame.window._x_extension_shortcut_key_observer_2026_unique_, 'the observer should run in the subframe');
+  assert.ok(frame.window.__lumnoContent.claimed['shortcut-key-observer'], 'the observer should run in the subframe');
   assert.strictEqual(frame.added.size, 0, 'a subframe should register nothing');
   frame.window.top.close();
 }

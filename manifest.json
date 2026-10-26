@@ -127,6 +127,7 @@
         "assets/data/shortcut-rules.json",
         "build/pinyin.js",
         "build/han-variants.js",
+        "build/injected/*",
         "assets/remixicon/fonts/remixicon.css",
         "assets/remixicon/fonts/remixicon.woff2",
         "assets/remixicon/icons/*.svg",

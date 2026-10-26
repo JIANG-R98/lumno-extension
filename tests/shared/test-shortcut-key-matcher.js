@@ -107,8 +107,14 @@ assert(
 async function testOnboardingMatchesTheShortcut() {
   const page = await createOnboardingPage({});
   await page.settle(300);
+  // Opening imports the overlay the worker injects into web pages; counting
+  // the URLs it asks for counts the opens.
   let opened = 0;
-  page.window._x_extension_toggleSearchOverlay_2026_unique_ = () => { opened += 1; };
+  const getURL = page.window.chrome.runtime.getURL;
+  page.window.chrome.runtime.getURL = (resource) => {
+    if (resource === 'build/injected/overlay.js') opened += 1;
+    return getURL(resource);
+  };
   const press = (init) => page.document.body.dispatchEvent(new page.window.KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, init)));
   press({ key: 'J', code: 'KeyJ', metaKey: true, shiftKey: true });
   await page.settle(100);

@@ -1,11 +1,10 @@
 const assert = require('assert');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { createFakeTabPages } = require('../helpers/fake-tab-pages');
-const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
 // The search shortcut on web pages, against the real worker and pages that
 // keep what was injected into them until they navigate: opening, reusing
-// the overlay runtime, and keeping an overlay opened during a page load open
+// the overlay module, and keeping an overlay opened during a page load open
 // in the Document that replaces it.
 
 const PAGE_URL = 'https://page.example.test/a';
@@ -19,12 +18,13 @@ function boot(tab, options) {
     configureChrome: pages.install
   }, config));
   const press = () => harness.chrome.commands.onCommand.dispatch('show-search');
-  const injections = () => pages.log.filter((entry) => entry.kind === 'files');
-  const invocations = () => pages.log.filter((entry) => entry.kind === 'func' && entry.args.length === 3);
-  return { harness, pages, press, injections, invocations };
+  // Each toggle the worker sends imports the overlay's modules and runs it.
+  const invocations = () => pages.log.filter((entry) => entry.kind === 'import' &&
+    entry.files.includes('build/injected/overlay.js'));
+  return { harness, pages, press, invocations };
 }
 
-async function testOpensAtOnceAndReusesTheRuntime() {
+async function testOpensAtOnceAndReusesTheOverlay() {
   const session = boot({ url: PAGE_URL, status: 'complete' });
   await wait(30);
   session.harness.calls.length = 0;
@@ -32,37 +32,23 @@ async function testOpensAtOnceAndReusesTheRuntime() {
   await wait(300);
   const queries = session.harness.calls.filter((call) => call.name === 'tabs.query');
   assert.strictEqual(queries.length, 1, 'an injectable page should open without querying other tabs first');
-  assert.strictEqual(session.pages.log[0].kind, 'func', 'the worker should first ask the page whether it already runs the overlay');
-  assert.deepStrictEqual(session.injections().map((entry) => entry.files),
-    [['build/icon-font-preload.js', 'build/overlay-islands.js', 'build/overlay.js']]);
+  assert.deepStrictEqual(session.pages.log.map((entry) => entry.files),
+    [['build/injected/icon-font-preload.js', 'build/injected/overlay.js']],
+    'opening should load the icon font preload alongside the overlay and toggle it in one injection');
   assert.ok(session.pages.log.every((entry) => entry.injectImmediately),
-    'probing, injecting and opening should all run without waiting for document_idle');
+    'opening should run without waiting for document_idle');
   assert.strictEqual(session.pages.page(7).overlayOpen, true);
-  assert.ok(session.pages.page(7).invocations[0].context.openedAt >= session.injections()[0].at,
-    'the one-time runtime injection should not count against the entry motion budget');
+  assert.strictEqual(session.invocations()[0].command.type, 'toggle');
 
   session.press();
   await wait(300);
   assert.strictEqual(session.pages.page(7).overlayOpen, false, 'the shortcut again should close the overlay');
   session.press();
   await wait(300);
-  assert.strictEqual(session.injections().length, 1, 'a page that already runs the overlay should not be injected again');
+  assert.deepStrictEqual(session.pages.page(7).loadedModules,
+    ['build/injected/icon-font-preload.js', 'build/injected/overlay.js'],
+    'a page that already runs the overlay should keep the one instance it loaded');
   assert.strictEqual(session.pages.page(7).overlayOpen, true);
-}
-
-// The worker reuses an overlay already in the page only when its runtime
-// version matches; a mismatch would reinject on every press.
-async function testWorkerAndOverlayAgreeOnTheRuntimeVersion() {
-  const session = boot({ url: PAGE_URL, status: 'complete' });
-  await wait(30);
-  session.press();
-  await wait(300);
-  const page = await createOverlayPage();
-  const injectedVersion = page.window._x_extension_search_overlay_runtime_version_2026_unique_;
-  page.close();
-  assert.ok(injectedVersion, 'the injected overlay should publish its runtime version');
-  assert.strictEqual(session.pages.probedVersion(), injectedVersion,
-    'the worker should look for the version the injected overlay publishes');
 }
 
 async function testConcurrentPressesOpenOnce() {
@@ -72,8 +58,7 @@ async function testConcurrentPressesOpenOnce() {
   await wait(5);
   session.press();
   await wait(400);
-  assert.strictEqual(session.injections().length, 1, 'a second press while the first is still opening should not inject again');
-  assert.strictEqual(session.invocations().length, 1);
+  assert.strictEqual(session.invocations().length, 1, 'a second press while the first is still opening should not toggle again');
 }
 
 async function testOverlayOpenedWhileLoadingSurvivesTheNextDocument() {
@@ -149,7 +134,7 @@ async function testShortcutDuringAProvisionalNavigationWaitsForThePage() {
   await wait(30);
   session.press();
   await wait(300);
-  assert.deepStrictEqual(session.injections(), [], 'nothing can be injected before the destination page commits');
+  assert.deepStrictEqual(session.invocations(), [], 'nothing can be injected before the destination page commits');
   assert.ok(!session.harness.calls.some((call) => call.name === 'tabs.create'), 'no fallback tab should open');
   session.harness.tabs[0].pendingUrl = '';
   session.pages.navigate(session.harness, 7, 'https://page.example.test/typed');
@@ -227,8 +212,7 @@ async function testOverlayTabListIsProjected() {
 }
 
 (async () => {
-  await testOpensAtOnceAndReusesTheRuntime();
-  await testWorkerAndOverlayAgreeOnTheRuntimeVersion();
+  await testOpensAtOnceAndReusesTheOverlay();
   await testConcurrentPressesOpenOnce();
   await testOverlayOpenedWhileLoadingSurvivesTheNextDocument();
   await testAFailedInjectionDuringLoadIsRetried();

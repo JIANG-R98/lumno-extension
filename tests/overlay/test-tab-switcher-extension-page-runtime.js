@@ -79,24 +79,7 @@ window.chrome = {
 window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
 window.eval(moduleScript('src/shared/ui/toast.ts', 'LumnoToast'));
 window.eval(moduleScript('src/shared/page-color-scheme.ts', 'LumnoPageColorScheme'));
-window.eval(moduleScript('src/shared/tab-switcher/tab-switcher.ts'));
-
-const unavailableResult =
-  window._x_extension_toggleTabSwitcher_2026_unique_({
-    tabs: [{ id: 1, title: 'Before React' }]
-  });
-assert.deepStrictEqual(
-  { ...unavailableResult },
-  { ok: false, reason: 'react-view-unavailable' },
-  'the switcher runtime should fail cleanly while the page React API is unavailable'
-);
-assert.strictEqual(
-  window.document.getElementById('_x_extension_tab_switcher_host_2026_unique_'),
-  null,
-  'a missing React API should not leave a partial switcher host behind'
-);
-
-window.LumnoOverlayTabSwitcherView = {
+const tabSwitcherViewStub = {
   createTabSwitcherView(options) {
     createViewCalls += 1;
     latestViewOptions = options;
@@ -127,9 +110,14 @@ window.LumnoOverlayTabSwitcherView = {
     };
   }
 };
+// The switcher draws through this stand-in for its React view.
+window.LumnoTabSwitcherViewModule = { createTabSwitcherViewApi: () => tabSwitcherViewStub };
+window.eval(moduleScript('src/shared/tab-switcher/tab-switcher.ts', 'LumnoTabSwitcher', null, {
+  'src/shared/react/tab-switcher.tsx': 'LumnoTabSwitcherViewModule'
+}));
 
 const readyResult =
-  window._x_extension_toggleTabSwitcher_2026_unique_({
+  window.LumnoTabSwitcher.toggleTabSwitcher({
     tabs: [
       { id: 1, title: 'After React' },
       { id: 2, title: 'Custom shortcut target' }
@@ -219,7 +207,7 @@ assert.strictEqual(
 );
 
 runtimeMessages.length = 0;
-window._x_extension_toggleTabSwitcher_2026_unique_({
+window.LumnoTabSwitcher.toggleTabSwitcher({
   tabs: [
     { id: 1, title: 'Relay source' },
     { id: 2, title: 'Relay target' }
@@ -259,7 +247,7 @@ assert.strictEqual(
 );
 
 runtimeMessages.length = 0;
-window._x_extension_toggleTabSwitcher_2026_unique_({
+window.LumnoTabSwitcher.toggleTabSwitcher({
   tabs: [{ id: 1, title: 'Trusted pointer target' }],
   shortcut: 'Alt+Q'
 });

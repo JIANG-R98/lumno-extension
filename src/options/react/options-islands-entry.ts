@@ -6,7 +6,6 @@ import { createBlacklistTabApi } from './blacklist-tab';
 import { createSettingsNavigationApi } from './settings-navigation';
 import { createSettingsControlsApi } from './settings-controls';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
-import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
 declare global {
   var LumnoOptionsReactBootstrap: {
@@ -19,7 +18,6 @@ declare global {
       settingsControls: ReturnType<typeof createSettingsControlsApi>;
       shortcutsTab: ReturnType<typeof createShortcutsTabApi>;
       toast: ReturnType<typeof createToastApi>;
-      tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
 }
 
@@ -35,8 +33,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const shortcutsTabApi = createShortcutsTabApi();
   const toastApi = createToastApi();
   const tooltipViewApi = createTooltipViewApi();
-  const tabSwitcherApi =
-    runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
   runtime.LumnoOptionsAccountTab = accountTabApi;
   runtime.LumnoOptionsBlacklistTab = blacklistTabApi;
@@ -46,15 +42,13 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsToast = toastApi;
   runtime.LumnoTooltipView = tooltipViewApi;
   runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
-  runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({
     accountTab: accountTabApi,
     blacklistTab: blacklistTabApi,
     settingsNavigation: settingsNavigationApi,
     settingsControls: settingsControlsApi,
     shortcutsTab: shortcutsTabApi,
-    toast: toastApi,
-    tabSwitcher: tabSwitcherApi
+    toast: toastApi
   });
 
   if (bootstrapState) {

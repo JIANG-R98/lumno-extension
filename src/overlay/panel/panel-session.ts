@@ -12,6 +12,7 @@ import type { UpdateNoticeController } from '../../shared/update-notice';
 import type * as OverlayLifecycle from '../lifecycle';
 import type { createNoticeLayer } from '../notices';
 import type { StorageChangeListeners } from './types';
+import { setOverlayOpenState } from '../../platform/content-registry';
 
 interface PanelSessionState {
   overlayContextToken: string;
@@ -74,6 +75,9 @@ function isBlurrable(element: Element): element is Element & HTMLOrSVGElement {
   return 'blur' in element && typeof element.blur === 'function';
 }
 
+// Made once per loaded overlay module.
+const OVERLAY_CONTEXT_TOKEN = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
+
 function createPanelSession(deps: PanelSessionDeps) {
   const {
     pauseOverlayAntiTranslateObserverForScroll,
@@ -89,30 +93,17 @@ function createPanelSession(deps: PanelSessionDeps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  const OVERLAY_CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
   const OVERLAY_CONTEXT_TOKEN_ATTRIBUTE = 'data-lumno-overlay-context-token';
 
   function stopOverlayViewportSizeSync(): void {
     overlayState.overlayViewportSizeSync.stop();
   }
 
-  // This content script's token, kept on its global across invocations.
+  // This overlay's token: one per loaded overlay module, so an overlay a
+  // reloaded extension left in the page (from another isolated world) reads
+  // as stale.
   function getOrCreateOverlayContextToken(): string {
-    try {
-      const storedToken: unknown = Reflect.get(window, OVERLAY_CONTEXT_TOKEN_KEY);
-      if (typeof storedToken === 'string' && storedToken) {
-        return storedToken;
-      }
-    } catch (_error) {
-      // Fall through to a fresh token when the isolated world cannot persist it.
-    }
-    const nextToken = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
-    try {
-      Reflect.set(window, OVERLAY_CONTEXT_TOKEN_KEY, nextToken);
-    } catch (_error) {
-      // The returned token is still useful for this invocation.
-    }
-    return nextToken;
+    return OVERLAY_CONTEXT_TOKEN;
   }
 
   // The element the panel is mounted under: the shell's host, the shadow
@@ -363,7 +354,7 @@ function createPanelSession(deps: PanelSessionDeps) {
     // The overlay is closed as far as the worker and the user are concerned;
     // it only stays mounted to animate out. It stops taking keys, focus and
     // clicks, so Enter pressed during the exit cannot still run a search.
-    window._x_extension_search_overlay_open_2026_unique_ = false;
+    setOverlayOpenState(false);
     if (overlayState.overlayKeyRouter) {
       overlayState.overlayKeyRouter.stop();
     }
@@ -404,7 +395,7 @@ function createPanelSession(deps: PanelSessionDeps) {
       overlayExitTimer = null;
     }
     closingOverlayElement = null;
-    window._x_extension_search_overlay_open_2026_unique_ = false;
+    setOverlayOpenState(false);
     if (removalOptions.preserveLoadingIntent !== true) {
       notifyOverlayClosed();
     }
@@ -497,7 +488,7 @@ function createPanelSession(deps: PanelSessionDeps) {
       : !(overlayElement && overlayElement.isConnected);
     if (destroyed || (overlayElement &&
         overlayElement.getAttribute('data-lumno-overlay-exit') === 'running')) {
-      window._x_extension_search_overlay_open_2026_unique_ = false;
+      setOverlayOpenState(false);
       return;
     }
     // An overlay from a runtime that predates session teardown: remove its

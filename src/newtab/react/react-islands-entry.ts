@@ -21,7 +21,6 @@ import { createWallpaperViewApi } from './wallpaper-view';
 import { createSearchInputApi } from '../../shared/react/search-input';
 import { createFeatureHintViewApi } from '../../shared/react/feature-hint-view';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
-import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
 declare global {
   var LumnoNewtabReactBootstrap: {
@@ -46,7 +45,6 @@ declare global {
       pageNotice: ReturnType<typeof createPageNoticeApi>;
       bookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi>;
       wallpaperView: ReturnType<typeof createWallpaperViewApi>;
-      tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
 }
 
@@ -75,8 +73,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const searchInputApi = createSearchInputApi();
   const featureHintViewApi = createFeatureHintViewApi();
   const tooltipViewApi = createTooltipViewApi();
-  const tabSwitcherApi =
-    runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
   runtime.LumnoNewtabLiquidSurfaces = { create: createLiquidSurfaces };
   runtime.LumnoNewtabBookmarksView = bookmarksApi;
@@ -102,7 +98,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoFeatureHintView = featureHintViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
   runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
-  runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime._x_extension_createSearchInput_2024_unique_ =
     searchInputApi.createSearchInput;
   runtime.LumnoNewtabReactIslands = Object.freeze({
@@ -123,8 +118,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     bookmarksTopbar: bookmarksTopbarApi,
     pageNotice: pageNoticeApi,
     bookmarkCascadeView: bookmarkCascadeViewApi,
-    wallpaperView: wallpaperViewApi,
-    tabSwitcher: tabSwitcherApi
+    wallpaperView: wallpaperViewApi
   });
 
   if (bootstrapState) {

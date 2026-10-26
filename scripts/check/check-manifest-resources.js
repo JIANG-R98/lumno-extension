@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const { BUILD_DIRECTORY, ENTRIES } = require('../build/entries');
+const { BUILD_DIRECTORY, ENTRIES, entryOutputPath } = require('../build/entries');
 const { EXTENSION_OUTPUT, extensionOutputPath } = require('../build/extension-output');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const missing = [];
-const entryNames = new Set(ENTRIES.map((entry) => entry.name));
+const entryOutputPaths = new Set(ENTRIES.map(entryOutputPath));
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,12 +21,14 @@ function manifestResourcePatternMatchesPath(value, candidate) {
   return pattern.test(normalizeManifestResourcePath(candidate));
 }
 
-function manifestResourcePatternHasMatch(value) {
+// Whether a resource pattern matches a file, under root (the repository by
+// default).
+function manifestResourcePatternHasMatch(value, root = '') {
   if (!value.includes('*')) {
     return false;
   }
   const wildcardIndex = value.indexOf('*');
-  const prefixDirectory = path.dirname(value.slice(0, wildcardIndex));
+  const prefixDirectory = path.join(root, path.dirname(value.slice(0, wildcardIndex)));
   if (!prefixDirectory || !fs.existsSync(prefixDirectory)) {
     return false;
   }
@@ -42,7 +44,7 @@ function manifestResourcePatternHasMatch(value) {
     });
   };
   visit(prefixDirectory);
-  return candidates.some((candidate) => manifestResourcePatternMatchesPath(value, candidate));
+  return candidates.some((candidate) => manifestResourcePatternMatchesPath(value, root ? path.relative(root, candidate) : candidate));
 }
 
 function checkPath(value) {
@@ -52,10 +54,17 @@ function checkPath(value) {
   if (/^(https?:|chrome:|__MSG_)/.test(value)) {
     return;
   }
-  // Built scripts are build output: a reference needs an entry of that name.
-  const entry = normalizeManifestResourcePath(value).match(new RegExp(`^${BUILD_DIRECTORY}/([\\w-]+)\\.js$`));
-  if (entry) {
-    if (!entryNames.has(entry[1])) {
+  // Built scripts are build output: a reference needs an entry built there,
+  // and a pattern under build/ needs a match in the development build.
+  const normalized = normalizeManifestResourcePath(value);
+  if (normalized.startsWith(`${BUILD_DIRECTORY}/`)) {
+    if (normalized.includes('*')) {
+      if (!manifestResourcePatternHasMatch(normalized, extensionOutputPath(''))) {
+        missing.push(value);
+      }
+      return;
+    }
+    if (!entryOutputPaths.has(normalized) && !fs.existsSync(extensionOutputPath(normalized))) {
       missing.push(value);
     }
     return;

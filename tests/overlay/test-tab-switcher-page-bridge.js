@@ -111,9 +111,8 @@ async function testPortRequestsDriveTheSwitcher() {
   assert.strictEqual(request(port, { action: 'commitOpenTabSwitcherFromShortcutRelease' }).committed, false,
     'committing with no switcher open should report nothing committed');
 
-  delete page.window.LumnoOverlayTabSwitcherView;
-  const failed = request(port, { action: 'openTabSwitcherFromCommand', context: { tabs: switcherTabs(2) } });
-  assert.deepStrictEqual([failed.ok, failed.reason], [false, 'react-view-unavailable'],
+  const failed = request(port, { action: 'openTabSwitcherFromCommand', context: { tabs: [] } });
+  assert.deepStrictEqual([failed.ok, failed.reason], [false, 'empty'],
     'a failed open should reach the background so it can fall back');
   page.close();
 }

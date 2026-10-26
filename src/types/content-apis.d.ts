@@ -2,10 +2,6 @@
 // injected functions (and each other) to find.
 
 // Sites where automatic picture-in-picture stays off.
-export interface AutoPipBlacklist {
-  hostRules: RegExp[];
-}
-
 export interface PageShortcutToastOptions {
   error?: boolean;
   duration?: number;

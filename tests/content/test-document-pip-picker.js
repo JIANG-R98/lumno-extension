@@ -1,12 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const fs = require('fs');
 const { bundleScript } = require('../helpers/module-script');
-const { extensionFilePath } = require('../../scripts/build/extension-output');
-
-// The background injects the overlay bundle first: the clip window's dock
-// draws through its React.
-const overlayIslandsSource = fs.readFileSync(extensionFilePath('build/overlay-islands.js'), 'utf8');
 
 // The web clip picker, injected into a page with a fake Document
 // Picture-in-Picture API: pick an element, open it in the floating window and
@@ -73,9 +67,13 @@ function createPage() {
     },
     i18n: { getMessage: () => '' }
   };
-  window.eval(overlayIslandsSource);
-  window.eval(bundleScript('document-pip-picker'));
-  return { window, document: window.document, card, events, messages, pipWindows, shadowRoots };
+  // The module's run() is left on a global, for the picker below to call as
+  // the worker does.
+  window.eval(bundleScript('pip-picker', { 'src/content/document-pip-picker.ts': 'LumnoTestPipPicker' }));
+  const picker = {
+    toggle: () => window.LumnoTestPipPicker.run({ type: 'toggle' })
+  };
+  return { window, document: window.document, card, events, messages, pipWindows, shadowRoots, picker };
 }
 
 function press(window, key) {
@@ -84,7 +82,7 @@ function press(window, key) {
 
 async function testPickedElementOpensBeforeAnyRoundTrip() {
   const page = createPage();
-  const picker = page.window.__lumnoDocumentPiPPicker2026;
+  const picker = page.picker;
   assert.deepStrictEqual(JSON.parse(JSON.stringify(picker.toggle())), { ok: true, state: 'started' });
 
   const toastShadow = page.shadowRoots.find((entry) => entry.root.querySelector('.x-lumno-toast'));
@@ -142,7 +140,7 @@ async function testLinksInTheCopy(page) {
 }
 
 async function testTogglingClosesTheClip(page) {
-  const picker = page.window.__lumnoDocumentPiPPicker2026;
+  const picker = page.picker;
   assert.deepStrictEqual(JSON.parse(JSON.stringify(picker.toggle())), { ok: true, state: 'closed' });
   assert.ok(page.events.includes('pipClose'), 'toggling with a clip open should close its window');
   await wait(10);
@@ -152,7 +150,7 @@ async function testTogglingClosesTheClip(page) {
 
 async function testEscapeCancelsAndMediaIsRefused() {
   const page = createPage();
-  const picker = page.window.__lumnoDocumentPiPPicker2026;
+  const picker = page.picker;
   picker.toggle();
   press(page.window, 'Escape');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(picker.toggle())), { ok: true, state: 'started' },

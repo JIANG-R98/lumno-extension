@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { createEvent, loadBackground, wait } = require('../helpers/background-harness');
+const { injectedModules } = require('../helpers/injected-modules');
 
 // Boots the real background and presses the tab switcher shortcut
 // (chrome.commands "show-tab-switcher"), answering the messages it sends to
@@ -207,13 +208,12 @@ async function testFallsBackToInjectingTheSwitcher() {
   session.press();
   await wait(400);
   const scripts = session.scripts().filter((script) => script.target.tabId === 11 && !script.target.allFrames);
-  const files = scripts.find((script) => script.files && script.files.includes('build/tab-switcher.js'));
-  assert.deepStrictEqual(files && files.files,
-    ['build/icon-font-preload.js', 'build/overlay-islands.js', 'build/tab-switcher.js'],
-    'a page without the runtime should get the React islands before the switcher');
-  const run = scripts.find((script) => typeof script.func === 'function' && script.args && script.args[0] && Array.isArray(script.args[0].tabs));
-  assert.ok(run, 'the injected switcher should then be opened with the same context');
-  assert.ok(scripts.indexOf(files) < scripts.indexOf(run));
+  const switcher = scripts.find((script) => injectedModules(script).includes('build/injected/tab-switcher.js'));
+  assert.deepStrictEqual(switcher && injectedModules(switcher),
+    ['build/injected/icon-font-preload.js', 'build/injected/tab-switcher.js'],
+    'a page without the switcher should load it, with the icon font preload alongside');
+  assert.ok(Array.isArray(switcher.args[1].context.tabs) && switcher.args[1].type === 'toggle',
+    'the same injection should open the switcher with the command\'s context');
 }
 
 async function testRepeatsWhileOpeningAreIgnored() {

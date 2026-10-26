@@ -10,6 +10,8 @@ import { callStorage, isRecord } from '../platform/storage-call';
 import type { ProviderStorageRuntime } from '../platform/settings-storage';
 import type { LocaleMessage, PageShortcutResult } from '../domain/messages';
 import type { StorageItems, StorageKeys } from '../domain/storage-port';
+import { createInjectedAppRun } from '../platform/injection';
+import type { PageShortcutToastCommand } from '../domain/injected-commands';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;
@@ -57,7 +59,6 @@ interface PageShortcutMenu {
 const MENU_ITEM_ID = 'lumno-add-page-shortcut';
 // Shortcuts hold http and https pages; browser pages never show the menu.
 const DOCUMENT_URL_PATTERNS: readonly string[] = Object.freeze(['http://*/*', 'https://*/*']);
-const TOAST_FILES: readonly string[] = Object.freeze(['build/page-shortcut-toast.js']);
 const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab shortcuts';
 
 function createController(options?: PageShortcutMenuOptions | null): PageShortcutMenu {
@@ -236,17 +237,16 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
     if (!chromeApi.scripting || typeof tabId !== 'number' || !toast || !toast.message) return false;
     const themeMode = themeStorageKey ? await readProviderValue(themeStorageKey) : '';
     try {
-      await chromeApi.scripting.executeScript({ target: { tabId }, files: TOAST_FILES.slice() });
-      const results = await chromeApi.scripting.executeScript({
-        target: { tabId },
-        // Runs in the page, where the toast script left its API on window.
-        func: (message: string, toastOptions: { error: boolean; duration: number | undefined; themeMode: string }) => {
-          const toastApi: unknown = '__lumnoPageShortcutToast2026' in window ? window.__lumnoPageShortcutToast2026 : null;
-          const show = toastApi && typeof toastApi === 'object' && 'show' in toastApi ? toastApi.show : null;
-          return typeof show === 'function' && Boolean(show.call(toastApi, message, toastOptions));
-        },
-        args: [toast.message, { error: toast.error === true, duration: toast.duration, themeMode: String(themeMode || 'system') }]
-      });
+      const command: PageShortcutToastCommand = {
+        type: 'show',
+        message: toast.message,
+        error: toast.error === true,
+        duration: toast.duration,
+        themeMode: String(themeMode || 'system')
+      };
+      const results = await chromeApi.scripting.executeScript(
+        createInjectedAppRun(chromeApi.runtime, { tabId }, ['page-shortcut-toast'], command)
+      );
       return Boolean(Array.isArray(results) && results[0] && results[0].result === true);
     } catch (_error) {
       return false;

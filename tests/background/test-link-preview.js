@@ -17,7 +17,7 @@ function createChromeMock(options) {
   const calls = { rules: [], captures: 0, injected: [], sent: [], created: [] };
   const sessionRules = new Map();
   const chromeApi = {
-    runtime: { lastError: null },
+    runtime: { lastError: null, getURL: (path) => `chrome-extension://lumno-test/${path}` },
     declarativeNetRequest: {
       updateSessionRules(update, callback) {
         calls.rules.push(update);

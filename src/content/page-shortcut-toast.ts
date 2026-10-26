@@ -1,12 +1,9 @@
 import * as TOAST from '../shared/ui/toast';
 import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
 import type { PageShortcutToastOptions } from '../types/content-apis';
+import { readPageShortcutToastCommand } from '../domain/injected-commands';
 
-(function() {
-  if (window.__lumnoPageShortcutToast2026) {
-    return;
-  }
-
+const toast = (function() {
   // Tells the page what the "Add to Lumno New Tab" menu item did. The shared
   // Toast lives in its own shadow root so page styles cannot reach it.
   const TOAST_HOST_ID = '__lumno_page_shortcut_toast_2026__';
@@ -101,5 +98,18 @@ import type { PageShortcutToastOptions } from '../types/content-apis';
     return true;
   }
 
-  window.__lumnoPageShortcutToast2026 = Object.freeze({ show });
+  return Object.freeze({ show });
 })();
+
+// The worker loads this module once per page (src/platform/injection.ts) and
+// calls run() with each toast; resolves to whether it showed.
+function run(command: unknown): boolean {
+  const request = readPageShortcutToastCommand(command);
+  return Boolean(request && toast.show(request.message, {
+    error: request.error,
+    duration: request.duration,
+    themeMode: request.themeMode
+  }));
+}
+
+export { run };

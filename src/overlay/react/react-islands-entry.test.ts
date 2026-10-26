@@ -10,7 +10,6 @@ afterEach(() => {
   Reflect.deleteProperty(runtime, 'LumnoSearchInputUI');
   Reflect.deleteProperty(runtime, 'LumnoFeatureHintView');
   Reflect.deleteProperty(runtime, 'LumnoOverlaySuggestionsView');
-  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
   Reflect.deleteProperty(runtime, '_x_extension_createSearchInput_2024_unique_');
   vi.resetModules();
 });
@@ -32,14 +31,10 @@ describe('Overlay React islands entry', () => {
     expect(runtime.LumnoOverlayReactIslands).toEqual({
       searchInput: runtime.LumnoSearchInputUI,
       shell: runtime.LumnoOverlayShell,
-      suggestions: runtime.LumnoOverlaySuggestionsView,
-      tabSwitcher: runtime.LumnoOverlayTabSwitcherView
+      suggestions: runtime.LumnoOverlaySuggestionsView
     });
     expect(
       runtime.LumnoOverlaySuggestionsView?.implementation
-    ).toBe('react');
-    expect(
-      runtime.LumnoOverlayTabSwitcherView?.implementation
     ).toBe('react');
   });
 
@@ -58,9 +53,6 @@ describe('Overlay React islands entry', () => {
     );
     expect(runtime.LumnoOverlayReactIslands?.suggestions).toBe(
       firstIslands?.suggestions
-    );
-    expect(runtime.LumnoOverlayReactIslands?.tabSwitcher).toBe(
-      firstIslands?.tabSwitcher
     );
     expect(runtime.LumnoOverlayShell).toBe(firstShell);
   });

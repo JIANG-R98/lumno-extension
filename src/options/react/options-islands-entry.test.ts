@@ -12,7 +12,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutsTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
-  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
 }
 
 afterEach(() => {
@@ -35,15 +34,13 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsSettingsNavigation?.implementation).toBe('react');
     expect(runtime.LumnoOptionsSettingsControls?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToast?.implementation).toBe('react');
-    expect(runtime.LumnoOverlayTabSwitcherView?.implementation).toBe('react');
     expect(runtime.LumnoOptionsReactIslands).toEqual({
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,
       settingsControls: runtime.LumnoOptionsSettingsControls,
       accountTab: runtime.LumnoOptionsAccountTab,
       shortcutsTab: runtime.LumnoOptionsShortcutsTab,
-      toast: runtime.LumnoOptionsToast,
-      tabSwitcher: runtime.LumnoOverlayTabSwitcherView
+      toast: runtime.LumnoOptionsToast
     });
   });
 });

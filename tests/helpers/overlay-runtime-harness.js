@@ -5,17 +5,18 @@ const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { getInjectedFiles } = require('./runtime-scripts');
+const { ENTRIES, entryOutputPath } = require('../../scripts/build/entries');
 const { recordAllListeners, startSelectorEngine, trackListeners } = require('./trusted-events');
 const { trackPageTimers } = require('./page-timers');
 
-// Loads the unmodified production overlay injection bundle (the same file
-// list background.js injects) into a JSDOM page with a fake chrome API, so
-// tests can drive the real toggle helper end to end.
+// Loads the overlay's injected modules (the same list background.js imports
+// into a page) into a JSDOM page with a fake chrome API, so tests can send
+// the real overlay the worker's toggle command end to end.
 
 const repoRoot = path.resolve(__dirname, '../..');
 const injectionFiles = getInjectedFiles('overlay');
 const HOST_ID = '_x_extension_overlay_host_2026_unique_';
-const CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
+const CONTEXT_TOKEN_ATTRIBUTE = 'data-lumno-overlay-context-token';
 
 async function waitFor(condition, message, errors) {
   const deadline = Date.now() + 5000;
@@ -224,10 +225,14 @@ async function createOverlayPage(options) {
     return { ok: true, json: async () => JSON.parse(resource), text: async () => resource };
   };
 
+  // An injected module runs as the browser would load it; the overlay's
+  // exports are left on globals, so tests reach the run() the worker calls.
   const evalFile = (file) => {
-    const bundle = file.match(/^build\/([\w-]+)\.js$/);
-    const source = bundle
-      ? bundleScript(bundle[1], bundle[1] === 'overlay' ? { 'src/overlay/runtime.ts': 'LumnoOverlayRuntime' } : null)
+    const entry = ENTRIES.find((candidate) => entryOutputPath(candidate) === file);
+    const source = entry
+      ? bundleScript(entry.name, entry.name === 'overlay'
+        ? { 'src/overlay/runtime.ts': 'LumnoOverlayRuntime', 'src/overlay/overlay-app.ts': 'LumnoTestOverlayApp' }
+        : null)
       : fs.readFileSync(extensionFilePath(file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
   };
@@ -310,21 +315,25 @@ async function createOverlayPage(options) {
         .filter((listener) => !baselineStorageListeners.has(listener)).length;
     },
     mediaListeners,
-    reinjectSearchPanel() {
-      // Background re-runs the injection list when it cannot reuse the
-      // runtime, which replaces the toggle helper while an overlay is open.
-      evalFile('build/overlay.js');
-    },
     // context.tabs is the open-tab list the background passes along.
     toggle(context) {
       const { tabs, ...rest } = context || {};
-      window._x_extension_toggleSearchOverlay_2026_unique_(tabs || [], Object.assign({
-        currentTabId: 1,
-        currentTabUrl: window.location.href
-      }, rest));
+      return window.LumnoTestOverlayApp.run({
+        type: 'toggle',
+        tabs: tabs || [],
+        context: Object.assign({ currentTabId: 1, currentTabUrl: window.location.href }, rest)
+      });
     },
     host() {
       return window.document.getElementById(HOST_ID);
+    },
+    // Marks the mounted overlay as one an earlier extension context left in
+    // the page, which the next toggle replaces instead of closing.
+    markOverlayFromOtherContext() {
+      const panel = window.LumnoOverlayShell.findOverlayPanel(window.document);
+      [page.host(), panel].forEach((element) => {
+        if (element) element.setAttribute(CONTEXT_TOKEN_ATTRIBUTE, 'earlier-context');
+      });
     },
     hostCount() {
       return window.document.querySelectorAll(`#${HOST_ID}`).length;
@@ -400,7 +409,6 @@ async function openAndSettle(page) {
 }
 
 module.exports = {
-  CONTEXT_TOKEN_KEY,
   bundledSiteSearchProviders,
   HOST_ID,
   createOverlayPage,

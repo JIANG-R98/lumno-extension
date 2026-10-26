@@ -33,6 +33,8 @@ import {
 import { openOverlayOnTab } from './overlay-open-service';
 import * as LumnoMessaging from '../platform/messaging';
 import type { TargetTab } from './overlay-open-service';
+import { createInjectedAppRun } from '../platform/injection';
+import type { StartCommand } from '../domain/injected-commands';
 
 // The tab a page hotkey came from, for recovering from a New Tab it opened.
 interface PageHotkeyContext {
@@ -492,9 +494,9 @@ export function getConfiguredCopyUrlCommandShortcut(callback: (shortcut: string)
 }
 
 // The copy-URL listener is injected into a tab the first time the command
-// runs there instead of being a content script of every page: it is the only
-// user of these files in a page, and most tabs never copy their URL.
-const COPY_URL_LISTENER_FILES = Object.freeze(['build/hotkey-listener.js']);
+// runs there instead of being a content script of every page: most tabs
+// never copy their URL.
+const COPY_URL_LISTENER_START: StartCommand = Object.freeze({ type: 'start' });
 
 function sendCopyCurrentUrlCommand(tabId: number, callback: (error: string, response?: { ok?: boolean }) => void): void {
   LumnoMessaging.sendTabMessage(chrome.tabs, tabId, { action: 'copyCurrentPageUrlFromCommand' }, (response) => {
@@ -539,10 +541,12 @@ export function triggerCopyCurrentUrlForTab(
       return;
     }
     // No listener in the page yet: install it and ask again.
-    chrome.scripting.executeScript({
-      target: { tabId },
-      files: COPY_URL_LISTENER_FILES.slice()
-    }, () => {
+    chrome.scripting.executeScript(createInjectedAppRun(
+      chrome.runtime,
+      { tabId },
+      ['copy-url-listener'],
+      COPY_URL_LISTENER_START
+    ), () => {
       const injectError = chrome.runtime && chrome.runtime.lastError;
       if (injectError) {
         report(injectError.message || 'unknown');

@@ -83,8 +83,6 @@ async function createOnboardingPage(options) {
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
   const settle = timers.settle;
   run(bundleScript('onboarding-preload'), 'build/onboarding-preload.js');
-  run(bundleScript('overlay-islands'), 'build/overlay-islands.js');
-  run(bundleScript('overlay'), 'build/overlay.js');
   run(bundleScript('onboarding'), 'build/onboarding.js');
   await settle(120);
   return {

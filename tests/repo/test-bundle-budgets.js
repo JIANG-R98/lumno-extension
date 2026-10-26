@@ -33,11 +33,12 @@ const BUILD_DIRECTORY = 'dist/chrome/build';
 const routes = {
   'the New Tab page': ['newtab-preload.js', 'cjk-font-faces.js', 'wallpaper-effect-preload.js', 'newtab.js'],
   'the Options page': ['options-preload.js', 'cjk-font-faces.js', 'options.js'],
-  // Its demo overlay is the injected overlay.
-  'the onboarding page': ['onboarding-preload.js', 'cjk-font-faces.js', 'overlay-islands.js', 'overlay.js', 'onboarding.js'],
+  'the onboarding page': ['onboarding-preload.js', 'cjk-font-faces.js', 'onboarding.js'],
   // The toolbar popup opens on every click.
   'the toolbar popup': ['cjk-font-faces.js', 'popup-preload.js', 'popup.js'],
-  'the injected overlay': ['icon-font-preload.js', 'overlay-islands.js', 'overlay.js'],
+  // Injected into web pages; the onboarding page loads the overlay for its demo too.
+  'the injected overlay': ['injected/icon-font-preload.js', 'injected/overlay.js'],
+  'the injected tab switcher': ['injected/icon-font-preload.js', 'injected/tab-switcher.js'],
   'the service worker': ['background.js']
 };
 
@@ -46,9 +47,10 @@ const routes = {
 const ceilings = {
   'the New Tab page': { uncompressed: 1875, gzip: 565 },
   'the Options page': { uncompressed: 810, gzip: 240 },
-  'the onboarding page': { uncompressed: 1280, gzip: 380 },
+  'the onboarding page': { uncompressed: 415, gzip: 125 },
   'the toolbar popup': { uncompressed: 320, gzip: 100 },
   'the injected overlay': { uncompressed: 875, gzip: 260 },
+  'the injected tab switcher': { uncompressed: 265, gzip: 85 },
   'the service worker': { uncompressed: 570, gzip: 180 }
 };
 

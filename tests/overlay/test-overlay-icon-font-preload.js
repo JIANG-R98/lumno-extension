@@ -140,7 +140,7 @@ assert(
   'existing tabs should start warming the icon font before Overlay React/runtime injection'
 );
 assert(
-  runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.ts', 'src/overlay/react/react-islands-entry.ts'),
+  runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.ts', 'src/shared/tab-switcher/tab-switcher.ts'),
   'the standalone tab switcher should also warm the icon font before rendering'
 );
 const optionsPreload = optionsDocument.querySelector('script[src="../../build/options-preload.js"]');

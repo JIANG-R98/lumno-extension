@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { loadBackground, wait } = require('../helpers/background-harness');
+const { injectedCommand, injectedModules } = require('../helpers/injected-modules');
 
 // Behavior of individual runtime message handlers, exercised through the real
 // background router with a recording chrome stub.
@@ -175,7 +176,7 @@ async function testWebClipFollowsItsSetting() {
 
   const cold = boot({ sync: { [DOCUMENT_PIP_ENABLED_KEY]: true }, storageOptions: { sync: { hold: true } } });
   const pickerInjected = () => cold.calls.some((call) => call.name === 'scripting.executeScript' &&
-    Array.isArray(call.args[0].files) && call.args[0].files.includes('build/document-pip-picker.js'));
+    injectedModules(call.args[0]).includes('build/injected/pip-picker.js'));
   const response = cold.sendMessage({ action: 'openDocumentPipPicker' }, { tab: senderTab }, 2000);
   await wait(100);
   assert.strictEqual(pickerInjected(), false, 'nothing should happen before the stored setting is read');
@@ -191,9 +192,9 @@ async function testWebClipFollowsItsSetting() {
     harness.chrome.commands.onCommand.dispatch('show-search');
     await wait(400);
     const open = harness.calls.find((call) => call.name === 'scripting.executeScript' &&
-      Array.isArray(call.args[0].args) && call.args[0].args[1] && typeof call.args[0].args[1] === 'object');
+      injectedModules(call.args[0]).includes('build/injected/overlay.js'));
     assert.ok(open, 'the search command should open the overlay with a context');
-    assert.strictEqual(open.args[0].args[1].documentPipEnabled, enabled,
+    assert.strictEqual(injectedCommand(open.args[0]).context.documentPipEnabled, enabled,
       'the overlay should be told whether web clip is on');
   }
 }
@@ -229,7 +230,7 @@ async function testPopupWebClipIsNotBlockedByTabsThatNeverAnswer() {
     'frozen and discarded tabs are not asked');
   assert.ok(injected.some((options) => options.target.tabId === silentTab.id), 'other tabs are still checked');
   assert.ok(injected.some((options) => options.target.tabId === senderTab.id &&
-      Array.isArray(options.files) && options.files.includes('build/document-pip-picker.js')),
+      injectedModules(options).includes('build/injected/pip-picker.js')),
     'the picker opens once the check gives up on a tab that never answers');
 }
 

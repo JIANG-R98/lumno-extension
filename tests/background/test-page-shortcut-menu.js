@@ -7,6 +7,7 @@ const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const siteDisplayName = require('../../src/domain/site-display-name.ts');
 const menu = require('../../src/background/page-shortcut-menu.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
+const { injectedModules } = require('../helpers/injected-modules');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const LANGUAGE_KEY = settings.LANGUAGE_STORAGE_KEY;
@@ -89,7 +90,11 @@ function device(initial = {}, options = {}) {
     menuItem: () => menuItems.get(menu.MENU_ITEM_ID),
     click: (info, tab) => controller.handleClick({ menuItemId: menu.MENU_ITEM_ID, ...info }, tab),
     clickListeners,
-    toastArgs: () => scripts.filter((details) => details.func).map((details) => details.args)
+    // The message and options of each toast command the worker sent.
+    toastArgs: () => scripts.filter((details) => details.func).map((details) => {
+      const command = details.args[1];
+      return [command.message, { error: command.error, duration: command.duration, themeMode: command.themeMode }];
+    })
   };
 }
 
@@ -149,7 +154,8 @@ async function run() {
   assert.strictEqual(added.title, 'GitHub');
   assert.strictEqual(added.groupId, 'gwork', 'the page joins the last group');
   assert.deepStrictEqual(state.groups.map((group) => group.id), ['g0', 'gwork'], 'groups are kept');
-  assert.deepStrictEqual(sync.scripts[0].files, ['build/page-shortcut-toast.js']);
+  assert.deepStrictEqual(injectedModules(sync.scripts[0]), ['build/injected/page-shortcut-toast.js']);
+  assert.strictEqual(sync.scripts.length, 1, 'one injection imports the toast and shows it');
   assert.strictEqual(sync.scripts[0].target.tabId, 7);
   assert.deepStrictEqual(sync.toastArgs()[0], ['已添加到 Lumno 新标签页的快捷方式', { error: false, duration: undefined, themeMode: 'dark' }]);
 

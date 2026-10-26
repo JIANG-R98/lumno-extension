@@ -1,5 +1,8 @@
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
+import { createPipDockViewApi } from '../shared/react/pip-dock-view';
+import { readPipPickerCommand } from '../domain/injected-commands';
+import { setDocumentPipActiveState } from '../platform/content-registry';
 import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
 import { allowsPictureInPicture, readDocumentPictureInPicture } from '../platform/document-picture-in-picture';
@@ -125,12 +128,17 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
   return value ? String(value) : '';
 }
 
-(function() {
-  if (window.__lumnoDocumentPiPPicker2026) {
-    return;
-  }
+let pipDockViewApi: ReturnType<typeof createPipDockViewApi> | null = null;
 
-  const STATE_FLAG = '__lumno_document_pip_active_2026__';
+// The React view the clip window's dock draws through, made on first use.
+function getPipDockViewApi(): ReturnType<typeof createPipDockViewApi> {
+  if (!pipDockViewApi) {
+    pipDockViewApi = createPipDockViewApi();
+  }
+  return pipDockViewApi;
+}
+
+const picker = (function() {
   const ROOT_ID = '__lumno_document_pip_picker_root_2026__';
   const TOAST_HOST_ID = '__lumno_document_pip_toast_2026__';
   const HIGHLIGHT_ID = '__lumno_document_pip_highlight_2026__';
@@ -1359,10 +1367,7 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
     visualTheme: VisualTheme;
   }): PiPDock | null {
     const { pipDocument, shell, visualTheme } = pipContext;
-    const viewApi = globalThis.LumnoPipDockView;
-    if (!viewApi) {
-      return null;
-    }
+    const viewApi = getPipDockViewApi();
     const host = pipDocument.createElement('div');
     shell.appendChild(host);
     const view = viewApi.createPipDockView(host, {
@@ -1401,7 +1406,7 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
       return false;
     }
     state.session = null;
-    Reflect.set(window, STATE_FLAG, false);
+    setDocumentPipActiveState(false);
 
     [session.documentObserver, session.contentObserver, session.resizeObserver].forEach((observer) => {
       if (observer) {
@@ -1623,7 +1628,7 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
       state.session = opened;
       syncPiPRootAttributes(opened);
       refreshPiPContent(opened);
-      Reflect.set(window, STATE_FLAG, true);
+      setDocumentPipActiveState(true);
 
     } catch (error) {
       if (session && state.session === session) {
@@ -1875,5 +1880,17 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
       return { ok: false, state: 'blocked-by-video-pip' };
     }
   };
-  window.__lumnoDocumentPiPPicker2026 = pickerApi;
+  return pickerApi;
 })();
+
+// The worker loads this module once per page (src/platform/injection.ts)
+// and calls run() for each page clip command.
+function run(command: unknown): unknown {
+  const request = readPipPickerCommand(command);
+  if (!request) {
+    return { ok: false, reason: 'invalid-command' };
+  }
+  return request.type === 'conflict-toast' ? picker.notifyVideoPiPConflict() : picker.toggle();
+}
+
+export { run };

@@ -2,10 +2,12 @@
 
 // Web pages for the background harness to inject into. Each tab has a
 // Document of its own: chrome.scripting.executeScript runs a `func` in it the
-// way Chrome does (serialized, with JSON-cloned args), and injecting the
-// overlay bundle installs a stand-in overlay runtime that records how the
-// worker opens it. Navigating a tab replaces its Document, so whatever was
-// injected is gone, as after a real page load.
+// way Chrome does (serialized, with JSON-cloned args), and an injected
+// module (src/platform/injection.ts) loads once per Document, as the browser
+// keeps one instance of each; the overlay is a stand-in that records how the
+// worker opens it and publishes its state in the content registry. Navigating
+// a tab replaces its Document, so whatever was injected is gone, as after a
+// real page load.
 //
 //   const pages = createFakeTabPages();
 //   const harness = loadBackground({ tabs, configureChrome: pages.install });
@@ -14,15 +16,11 @@
 const vm = require('vm');
 
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
-const RUNTIME_VERSION_KEY = '_x_extension_search_overlay_runtime_version_2026_unique_';
-const OPEN_FLAG_KEY = '_x_extension_search_overlay_open_2026_unique_';
-const TOGGLE_KEY = '_x_extension_toggleSearchOverlay_2026_unique_';
+const OVERLAY_MODULE = 'build/injected/overlay.js';
 
-function createFakeTabPages(options) {
-  const config = options || {};
+function createFakeTabPages() {
   const documents = new Map();
   const log = [];
-  let lastProbedVersion = '';
   let documentCount = 0;
 
   function createDocument(tabId) {
@@ -32,6 +30,8 @@ function createFakeTabPages(options) {
       tabId,
       overlayOpen: false,
       invocations: [],
+      // The injected modules this Document loaded, by extension path.
+      loadedModules: [],
       // When set, executeScript into this Document fails as for a page that
       // is still being replaced.
       unavailable: false
@@ -52,21 +52,34 @@ function createFakeTabPages(options) {
     return documents.get(tabId) || createDocument(tabId);
   }
 
-  // The overlay bundle's entry point, reduced to what the worker can observe:
-  // whether a host is open and the open flag it reads back.
-  function installOverlayRuntime(page) {
-    const context = page.context;
-    context[RUNTIME_VERSION_KEY] = config.runtimeVersion || lastProbedVersion;
-    context[TOGGLE_KEY] = function(tabs, overlayContext) {
-      const settings = JSON.parse(JSON.stringify(overlayContext || {}));
-      page.invocations.push({ tabs: JSON.parse(JSON.stringify(tabs || [])), context: settings });
-      if (page.overlayOpen && settings.ensureOpen !== true) {
-        page.overlayOpen = false;
-      } else {
-        page.overlayOpen = true;
-      }
-      context[OPEN_FLAG_KEY] = page.overlayOpen;
-    };
+  // The overlay module, reduced to what the worker can observe: whether a
+  // host is open, and the state it publishes in the content registry.
+  function loadOverlay(page) {
+    page.context.__lumnoContent = { claimed: {}, overlayOpen: false };
+  }
+
+  function runOverlay(page, command) {
+    const settings = command && command.context ? command.context : {};
+    page.invocations.push({ tabs: command && command.tabs ? command.tabs : [], context: settings });
+    if (page.overlayOpen && settings.ensureOpen !== true) {
+      page.overlayOpen = false;
+    } else {
+      page.overlayOpen = true;
+    }
+    page.context.__lumnoContent.overlayOpen = page.overlayOpen;
+    return { ok: true, overlayOpen: page.overlayOpen };
+  }
+
+  // The extension path an injected module's URL names.
+  function modulePath(url) {
+    return String(url).replace(/^chrome-extension:\/\/[^/]+\//, '').replace(/^.*?(build\/injected\/)/, '$1');
+  }
+
+  // An injected function that imports modules and calls the last one's run().
+  function readModuleImport(args) {
+    return Array.isArray(args[0]) && args[0].length > 0 && args[0].every((url) => /\.js$/.test(String(url)))
+      ? { paths: args[0].map(modulePath), command: args[1] }
+      : null;
   }
 
   function executeScript(chromeApi, details, callback) {
@@ -88,16 +101,24 @@ function createFakeTabPages(options) {
     }
     if (Array.isArray(details.files)) {
       log.push({ tabId, documentId: page.id, kind: 'files', files: JSON.parse(JSON.stringify(details.files)), injectImmediately: details.injectImmediately === true, at: Date.now() });
-      if (details.files.includes('build/overlay.js')) {
-        installOverlayRuntime(page);
-      }
       finish([{ frameId: 0, documentId: String(page.id), result: undefined }]);
       return;
     }
     if (typeof details.func === 'function') {
       const args = JSON.parse(JSON.stringify(details.args || []));
-      if (typeof args[0] === 'string' && /^\d{4}-\d{2}-\d{2}-/.test(args[0])) {
-        lastProbedVersion = args[0];
+      const moduleImport = readModuleImport(args);
+      if (moduleImport) {
+        const loaded = moduleImport.paths.filter((path) => !page.loadedModules.includes(path));
+        page.loadedModules.push(...loaded);
+        if (loaded.includes(OVERLAY_MODULE)) {
+          loadOverlay(page);
+        }
+        const app = moduleImport.paths[moduleImport.paths.length - 1];
+        const result = app === OVERLAY_MODULE ? runOverlay(page, moduleImport.command) : { ok: true };
+        log.push({ tabId, documentId: page.id, kind: 'import', files: moduleImport.paths, loaded, command: moduleImport.command,
+          injectImmediately: details.injectImmediately === true, at: Date.now(), result });
+        finish([{ frameId: 0, documentId: String(page.id), result: JSON.parse(JSON.stringify(result)) }]);
+        return;
       }
       let result;
       try {
@@ -117,8 +138,6 @@ function createFakeTabPages(options) {
 
   return {
     log,
-    // The probe argument the worker last sent: its OVERLAY_RUNTIME_VERSION.
-    probedVersion: () => lastProbedVersion,
     page: current,
     install(chromeApi, calls) {
       chromeApi.scripting.executeScript = (details, callback) => {

@@ -7,6 +7,7 @@ import type { LocaleMessage } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
 import type { ToastController, ToastShowOptions, ToastStyleGate } from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
+import { claimContentScript } from '../platform/content-registry';
 
 type SelectionClassification = ReturnType<typeof INTENT.classifySelection>;
 
@@ -117,11 +118,9 @@ function isTextControlType(type: string): boolean {
 (function() {
   'use strict';
 
-  const RUNTIME_KEY = '_x_extension_selection_quick_actions_2026_unique_';
-  if (Reflect.get(window, RUNTIME_KEY)) {
+  if (!claimContentScript('selection-quick-actions')) {
     return;
   }
-  Reflect.set(window, RUNTIME_KEY, true);
 
   const ENABLED_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY;
   const LANGUAGE_STORAGE_KEY = SETTINGS.LANGUAGE_STORAGE_KEY;

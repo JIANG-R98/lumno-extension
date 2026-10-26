@@ -1,12 +1,9 @@
 'use strict';
 
-// A web page with the tab switcher the background injects into it: the React
-// overlay islands and the tab-switcher bundle, run in JSDOM with a fake chrome
-// API. Window listeners are tracked so tests can press keys as trusted input,
+// A web page with the tab switcher the background injects into it: its
+// injected module, run in JSDOM with a fake chrome API. Window listeners are tracked so tests can press keys as trusted input,
 // and the switcher's closed shadow root is kept so tests can read its cards.
 
-const fs = require('fs');
-const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript, moduleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
@@ -16,7 +13,6 @@ const { parseCss } = require('./css-rules');
 const HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
 const PANEL_ID = '_x_extension_tab_switcher_panel_2026_unique_';
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const overlayIslandsSource = fs.readFileSync(extensionFilePath('build/overlay-islands.js'), 'utf8');
 
 function createChromeEvent() {
   const listeners = [];
@@ -134,8 +130,9 @@ function createTabSwitcherPage(options) {
   const documentEvents = trackListeners(window.document);
 
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
-  run(overlayIslandsSource, 'build/overlay-islands.js');
-  run(bundleScript('tab-switcher'), 'build/tab-switcher.js');
+  // The module's run() is left on a global, for open() to call as the worker does.
+  run(bundleScript('tab-switcher', { 'src/shared/tab-switcher/tab-switcher-app.ts': 'LumnoTestTabSwitcherApp' }),
+    'build/injected/tab-switcher.js');
   if (config.bridge) {
     run(moduleScript('src/shared/tab-switcher/page-bridge.ts'), 'src/shared/tab-switcher/page-bridge.ts');
   }
@@ -160,13 +157,8 @@ function createTabSwitcherPage(options) {
       sync[key] = newValue;
       storageChanged.dispatch({ [key]: { newValue } }, areaName || 'sync');
     },
-    // Runs the injected runtime again, as the background does when it cannot
-    // reuse the one already in the page.
-    reinject() {
-      run(bundleScript('tab-switcher'), 'build/tab-switcher.js');
-    },
     open(context) {
-      return window._x_extension_toggleTabSwitcher_2026_unique_(context);
+      return window.LumnoTestTabSwitcherApp.run({ type: 'toggle', context });
     },
     // Sends a runtime message as the background would and returns the
     // synchronous response the page gave.
