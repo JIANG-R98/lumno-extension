@@ -6,9 +6,15 @@ import { errorCode, errorField, isRecord } from './records';
 import { publish, readRemote, releaseOwnStaleLock, verifiedClient } from './remote';
 import { fail, saveConfig, session, setStatus, storage } from './runtime';
 import { guardedSync, schedule } from './sync-round';
-import type { Captured, ConnectionContext, ConnectionHint, ConnectionStatus, RemoteState, StoredConnection, SyncResult } from './types';
+import type { Captured, ConnectionHint, ConnectionStatus, RemoteState, StoredConnection, SyncResult } from './types';
+import type { Connection } from './connection';
 import type { WebDavClient, WebDavConnection } from '../webdav-client/types';
 import type { WebDavState } from '../../domain/webdav/types';
+import { adoptRemote, mergeInitialWallpapers } from '../../domain/webdav/merge';
+import { equal, sameContent } from '../../domain/webdav/state-base';
+import { normalizeConfig } from '../webdav-client/config';
+import { REVISION, diagnostic as readDiagnostic, error } from '../webdav-client/errors';
+import * as LumnoSettings from '../../domain/settings';
 
 function sameAccount(left: ConnectionHint, right: ConnectionHint): boolean {
   return ACCOUNT_FIELDS.every((key) => left[key] === right[key]);
@@ -18,13 +24,13 @@ function sameCredentials(left: WebDavConnection, right: WebDavConnection): boole
   return CONNECTION_FIELDS.every((key) => left[key] === right[key]);
 }
 
-async function connection(ctx: ConnectionContext, input: unknown): Promise<StoredConnection> {
-  const { config: previous } = await session(ctx);
+async function connection(conn: Connection, input: unknown): Promise<StoredConnection> {
+  const { config: previous } = await session(conn);
   const fields = isRecord(input) ? input : {};
-  const candidate: StoredConnection = ctx.clientApi.normalizeConfig({ ...fields,
+  const candidate: StoredConnection = normalizeConfig({ ...fields,
     password: fields.password || (previous && previous.password) || 'placeholder' });
-  if (!fields.password && (!previous || candidate.endpoint !== previous.endpoint || candidate.username !== previous.username)) fail(ctx, 'missing-credentials');
-  if (previous && previous.clientRevision === ctx.clientApi.REVISION && sameCredentials(candidate, previous)) {
+  if (!fields.password && (!previous || candidate.endpoint !== previous.endpoint || candidate.username !== previous.username)) fail(conn, 'missing-credentials');
+  if (previous && previous.clientRevision === REVISION && sameCredentials(candidate, previous)) {
     candidate.concurrency = previous.concurrency;
     candidate.lockStrategy = previous.lockStrategy;
     candidate.clientRevision = previous.clientRevision;
@@ -35,117 +41,117 @@ async function connection(ctx: ConnectionContext, input: unknown): Promise<Store
 
 // The state a first join starts from: this device's, the server's, or this
 // device's with the server's wallpapers merged in.
-function joinTarget(ctx: ConnectionContext, captured: Captured, remote: RemoteState | null, decision?: string): WebDavState {
-  if (remote && decision === 'remote') return ctx.contract.adoptRemote(captured.state, remote.state);
-  if (remote && decision === 'merge') return ctx.contract.mergeInitialWallpapers(captured.state, remote.state);
+function joinTarget(conn: Connection, captured: Captured, remote: RemoteState | null, decision?: string): WebDavState {
+  if (remote && decision === 'remote') return adoptRemote(captured.state, remote.state);
+  if (remote && decision === 'merge') return mergeInitialWallpapers(captured.state, remote.state);
   return captured.state;
 }
 
 // Saves the joined state as the baseline, applying it here first when it
 // differs from what this device holds.
 async function settleJoinedState(
-  ctx: ConnectionContext,
+  conn: Connection,
   config: StoredConnection,
   target: WebDavState,
   captured: Captured,
   client: WebDavClient
 ): Promise<void> {
-  if (ctx.opts.managed && ctx.contract.equal(target, captured.state) && ctx.runtime.isActiveAreaName('sync')) {
-    if (captured.generation !== ctx.generation) fail(ctx, 'local-changed');
-    await ctx.privateStore.put('session', { config: { ...config, enabled: true }, base: target });
-    await ctx.privateStore.put('recoveryBlocked', false);
-  } else await apply(ctx, target, captured, client, true, { config: { ...config, enabled: true }, base: target });
+  if (conn.ports.managed && equal(target, captured.state) && conn.ports.runtime.isActiveAreaName('sync')) {
+    if (captured.generation !== conn.edits.generation) fail(conn, 'local-changed');
+    await conn.ports.privateStore.put('session', { config: { ...config, enabled: true }, base: target });
+    await conn.ports.privateStore.put('recoveryBlocked', false);
+  } else await apply(conn, target, captured, client, true, { config: { ...config, enabled: true }, base: target });
 }
 
-async function connect(ctx: ConnectionContext, input: unknown, decision?: string): Promise<SyncResult> {
-  const config = await connection(ctx, input);
-  const client = await verifiedClient(ctx, config);
-  const { config: previous, base } = await session(ctx);
+async function connect(conn: Connection, input: unknown, decision?: string): Promise<SyncResult> {
+  const config = await connection(conn, input);
+  const client = await verifiedClient(conn, config);
+  const { config: previous, base } = await session(conn);
   if (previous && sameCredentials(config, previous)) {
     // Persist only capabilities belonging to this exact saved connection.
     // Repeated toggles and worker restarts don't rerun destructive probes.
-    await saveConfig(ctx, { ...config, enabled: previous.enabled });
+    await saveConfig(conn, { ...config, enabled: previous.enabled });
   }
-  if (previous && sameAccount(config, previous)) await releaseOwnStaleLock(ctx, client);
-  const remote = await readRemote(ctx, client);
+  if (previous && sameAccount(config, previous)) await releaseOwnStaleLock(conn, client);
+  const remote = await readRemote(conn, client);
   // Turning the same account back on resumes from the saved baseline.
   if (!decision && previous && base && sameAccount(config, previous)) {
-    await saveConfig(ctx, { ...config, enabled: true });
-    await setStatus(ctx, { enabled: true });
-    schedule(ctx);
-    return guardedSync(ctx);
+    await saveConfig(conn, { ...config, enabled: true });
+    await setStatus(conn, { enabled: true });
+    schedule(conn);
+    return guardedSync(conn);
   }
   if (remote && !INITIAL_DECISIONS.includes(decision)) {
-    await setStatus(ctx, { state: 'choice', conflicts: [], error: null });
+    await setStatus(conn, { state: 'choice', conflicts: [], error: null });
     return { needsChoice: true };
   }
-  const captured = await capture(ctx, INITIAL_DECISIONS.includes(decision));
-  await ctx.privateStore.put('migrationBackup', { captured, savedAt: Date.now() });
-  await ctx.privateStore.put('migrationBackupMeta', { savedAt: Date.now() });
-  const target = joinTarget(ctx, captured, remote, decision);
-  await prepareChrome(ctx, target, captured);
-  if (!remote || decision === 'local' || !ctx.contract.sameContent(target, remote.state)) {
-    await publish(ctx, target, remote, client, captured.generation);
+  const captured = await capture(conn, INITIAL_DECISIONS.includes(decision));
+  await conn.ports.privateStore.put('migrationBackup', { captured, savedAt: Date.now() });
+  await conn.ports.privateStore.put('migrationBackupMeta', { savedAt: Date.now() });
+  const target = joinTarget(conn, captured, remote, decision);
+  await prepareChrome(conn, target, captured);
+  if (!remote || decision === 'local' || !sameContent(target, remote.state)) {
+    await publish(conn, target, remote, client, captured.generation);
   }
-  await settleJoinedState(ctx, config, target, captured, client);
-  await ctx.privateStore.put('conflict', null);
+  await settleJoinedState(conn, config, target, captured, client);
+  await conn.ports.privateStore.put('conflict', null);
   // The server answered every request of a full join, so a later refusal
   // starts again from the shortest wait.
-  await ctx.privateStore.put('throttle', null);
-  await mirrorReporting(ctx);
-  await setStatus(ctx, { state: 'ready', enabled: true, error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
-  schedule(ctx);
+  await conn.ports.privateStore.put('throttle', null);
+  await mirrorReporting(conn);
+  await setStatus(conn, { state: 'ready', enabled: true, error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
+  schedule(conn);
   return { ok: true };
 }
 
 // A failed enable keeps the connection paused but leaves its reason on the
 // card, instead of a transient message that disappears on refresh.
-async function connectReporting(ctx: ConnectionContext, input: unknown, decision?: string): Promise<SyncResult> {
-  try { return await connect(ctx, input, decision); }
+async function connectReporting(conn: Connection, input: unknown, decision?: string): Promise<SyncResult> {
+  try { return await connect(conn, input, decision); }
   catch (cause) {
     const code = errorCode(cause);
-    const diagnostic = ctx.clientApi.diagnostic(errorField(cause, 'diagnostic'));
-    if (code !== 'local-changed') await setStatus(ctx, { error: code || 'sync-failed', diagnostic }).catch(() => {});
-    throw code ? Object.assign(ctx.clientApi.error(code), { diagnostic }) : cause;
+    const diagnostic = readDiagnostic(errorField(cause, 'diagnostic'));
+    if (code !== 'local-changed') await setStatus(conn, { error: code || 'sync-failed', diagnostic }).catch(() => {});
+    throw code ? Object.assign(error(code), { diagnostic }) : cause;
   }
 }
 
-async function pause(ctx: ConnectionContext): Promise<SyncResult> {
-  const { config } = await session(ctx);
-  if (config) await saveConfig(ctx, { ...config, enabled: false });
-  await ctx.privateStore.put('throttle', null);
-  await setStatus(ctx, { state: 'paused', enabled: false, error: null, diagnostic: null });
-  if (ctx.timer) { clearTimeout(ctx.timer); ctx.timer = null; }
-  if (ctx.chromeApi.alarms && typeof ctx.chromeApi.alarms.clear === 'function') await ctx.chromeApi.alarms.clear(ctx.alarmName);
+async function pause(conn: Connection): Promise<SyncResult> {
+  const { config } = await session(conn);
+  if (config) await saveConfig(conn, { ...config, enabled: false });
+  await conn.ports.privateStore.put('throttle', null);
+  await setStatus(conn, { state: 'paused', enabled: false, error: null, diagnostic: null });
+  if (conn.schedule.timer) { clearTimeout(conn.schedule.timer); conn.schedule.timer = null; }
+  if (conn.ports.chrome.alarms && typeof conn.ports.chrome.alarms.clear === 'function') await conn.ports.chrome.alarms.clear(conn.ports.alarmName);
   return { ok: true };
 }
 
-async function useBrowserSync(ctx: ConnectionContext): Promise<SyncResult> {
-  await ctx.runtime.ready;
-  if (!ctx.runtime.isActiveAreaName('local')) return pause(ctx);
-  const capturedGeneration = ctx.generation;
-  const plan = await mirrorChrome(ctx);
-  if (!plan.complete) fail(ctx, 'chrome-capacity');
-  await pause(ctx);
-  if (capturedGeneration !== ctx.generation) fail(ctx, 'local-changed');
-  await storage(ctx, ctx.localPrefsArea, 'set', { [ctx.settings.localPrimary.key]: false });
-  await setStatus(ctx, { state: 'browser', chromeBackup: 'complete' });
+async function useBrowserSync(conn: Connection): Promise<SyncResult> {
+  await conn.ports.runtime.ready;
+  if (!conn.ports.runtime.isActiveAreaName('local')) return pause(conn);
+  const capturedGeneration = conn.edits.generation;
+  const plan = await mirrorChrome(conn);
+  if (!plan.complete) fail(conn, 'chrome-capacity');
+  await pause(conn);
+  if (capturedGeneration !== conn.edits.generation) fail(conn, 'local-changed');
+  await storage(conn, conn.ports.localArea, 'set', { [LumnoSettings.localPrimary.key]: false });
+  await setStatus(conn, { state: 'browser', chromeBackup: 'complete' });
   return { ok: true };
 }
 
-async function status(ctx: ConnectionContext): Promise<ConnectionStatus> {
-  await ctx.runtime.ready;
-  const { config } = await session(ctx);
-  const values = await storage(ctx, ctx.localPrefsArea, 'get', [ctx.statusKey]);
-  const saved = values[ctx.statusKey];
+async function status(conn: Connection): Promise<ConnectionStatus> {
+  await conn.ports.runtime.ready;
+  const { config } = await session(conn);
+  const values = await storage(conn, conn.ports.localArea, 'get', [conn.ports.statusKey]);
+  const saved = values[conn.ports.statusKey];
   return { ...(isRecord(saved) ? saved : { state: 'browser' }),
-    clientRevision: ctx.clientApi.REVISION,
+    clientRevision: REVISION,
     syncRevision: SYNC_REVISION,
-    localPrimary: ctx.runtime.isActiveAreaName('local'), enabled: Boolean(config && config.enabled),
+    localPrimary: conn.ports.runtime.isActiveAreaName('local'), enabled: Boolean(config && config.enabled),
     config: config ? { endpoint: config.endpoint, directory: config.directory, username: config.username,
       concurrency: config.concurrency || 'conditional', hasPassword: true } : null,
-    hasMigrationBackup: Boolean(await ctx.privateStore.get('replacementBackupMeta') || await ctx.privateStore.get('migrationBackupMeta')),
-    needsRecovery: Boolean(await ctx.privateStore.get('recoveryBlocked')) };
+    hasMigrationBackup: Boolean(await conn.ports.privateStore.get('replacementBackupMeta') || await conn.ports.privateStore.get('migrationBackupMeta')),
+    needsRecovery: Boolean(await conn.ports.privateStore.get('recoveryBlocked')) };
 }
 
 export {

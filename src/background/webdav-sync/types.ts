@@ -1,15 +1,10 @@
 // The shapes the WebDAV sync modules share.
-import * as LumnoSettings from '../../domain/settings';
-import type { WebDavClientApi } from '../webdav-client/api';
 import type { StorageItems } from '../../domain/storage-port';
 import type { WebDavRequest } from '../../domain/messages';
 import type { WallpaperRecord, WallpaperRecordInput } from '../../shared/wallpaper-records';
 import type { ConnectionCapabilities, WebDavClientOptions, WebDavConnection, WebDavDiagnostic } from '../webdav-client/types';
 import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
-import type { ShortcutsStoreApi } from '../../domain/shortcuts/api';
 import type { ChromeBackupPlan, ConflictDescription, WebDavState } from '../../domain/webdav/types';
-import type { WebDavContractApi } from '../../domain/webdav/api';
-import * as SettingsStorage from '../../platform/settings-storage';
 
 type StorageMethod = 'get' | 'set' | 'remove';
 type StorageCall =
@@ -145,10 +140,6 @@ type WithLocalWrite = <T>(fn: () => T | Promise<T>) => Promise<T>;
 
 interface ConnectionControllerOptions {
   chrome?: typeof chrome;
-  settings?: typeof LumnoSettings;
-  contract?: WebDavContractApi;
-  shortcuts?: ShortcutsStoreApi;
-  client?: WebDavClientApi;
   crypto?: Crypto;
   privateStore?: PrivateStore;
   wallpaperStore?: SyncWallpaperStore;
@@ -184,73 +175,10 @@ interface WebDavSyncManager {
 }
 
 
-interface ConnectionContext {
-  readonly opts: ConnectionControllerOptions;
-  readonly chromeApi: typeof chrome;
-  readonly settings: typeof LumnoSettings;
-  readonly contract: WebDavContractApi;
-  readonly shortcuts: ShortcutsStoreApi;
-  readonly clientApi: WebDavClientApi;
-  readonly cryptoApi: Crypto;
-  readonly privateStore: PrivateStore;
-  readonly wallpaperStore: SyncWallpaperStore;
-  readonly localPrefsArea: chrome.storage.StorageArea;
-  readonly chromeFallbackArea: chrome.storage.SyncStorageArea | undefined;
-  readonly runtime: SettingsStorage.ProviderStorageRuntime;
-  readonly statusKey: string;
-  readonly alarmName: string;
-  readonly withLocalWrite: WithLocalWrite;
-  readonly probeCache: ProbeCache;
-  readonly keepAliveIntervalMs: number;
-  chain: Promise<unknown>;
-  activeJobs: number;
-  keepAliveTimer: ReturnType<typeof setInterval> | null;
-  generation: number;
-  timer: ReturnType<typeof setTimeout> | null;
-  started: boolean;
-  stopped: boolean;
-  readonly contentionDelays: number[];
-  contention: number;
-  readonly throttleDelays: number[];
-  readonly THROTTLE_MAX_MS: number;
-  readonly clock: () => number;
-  readonly logger: { warn(message: string, detail?: unknown): void; } | Console;
-  readonly watchedKeys: string[];
-  readonly storageRetryDelayMs: number;
-  readonly ownWrites: Map<string, string>;
-  ownWritesTimer: ReturnType<typeof setTimeout> | null;
-  timerKeepsAlive: boolean;
-  // The chrome event listeners, kept so stop() removes the ones start() added.
-  readonly listeners: {
-    storageChanged(changes: Record<string, chrome.storage.StorageChange>, areaName: string): void;
-    alarm(alarm: chrome.alarms.Alarm): void;
-  };
-}
-
-
-interface ManagerContext {
-  readonly opts: ConnectionControllerOptions;
-  readonly chromeApi: typeof chrome;
-  readonly settings: typeof LumnoSettings;
-  readonly cryptoApi: Crypto;
-  readonly store: PrivateStore;
-  readonly wallpaperStore: SyncWallpaperStore;
-  readonly workers: Map<string, Readonly<ConnectionController>>;
-  readonly probeCache: ProbeCache;
-  readonly recordKeys: string[];
-  ids: string[];
-  registryChain: Promise<unknown>;
-  hintChain: Promise<unknown>;
-  localChain: Promise<unknown>;
-  started: boolean;
-  readonly clientApi: WebDavClientApi;
-  ready: Promise<void>;
-}
 
 export type {
   Captured,
   ChromePreparation,
-  ConnectionContext,
   ConnectionController,
   ConnectionControllerOptions,
   ConnectionHint,
@@ -258,7 +186,6 @@ export type {
   DecodedImage,
   HandleResult,
   ImageCheck,
-  ManagerContext,
   ManagerStatus,
   MirrorResult,
   PrivateStore,

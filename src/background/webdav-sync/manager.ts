@@ -3,110 +3,118 @@
 // IndexedDB.
 import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-store';
 import * as LumnoSettings from '../../domain/settings';
-import { WEBDAV_CLIENT_API } from '../webdav-client/api';
 import type { WebDavRequest } from '../../domain/messages';
 import { SYNC_REVISION } from './constants';
-import { configOf, connectionHints, failManager, keyFor, loadConnections, localStorage, notifyRegistry, publishHints, sameConnection, serialRegistry, statusKeyFor, syncStorage, worker } from './manager-registry';
+import {
+  ConnectionRegistry,
+  SerialQueue,
+  connectionHints,
+  failManager,
+  localStorage,
+  notifyRegistry,
+  publishHints,
+  sameConnection,
+  syncStorage,
+  keyFor
+} from './manager-registry';
+import type { ManagerPorts } from './manager-registry';
 import { createPrivateStore, createProbeCache } from './private-store';
 import { isRecord, isRecorded } from './records';
-import type { ConnectionController, ConnectionControllerOptions, ConnectionHint, ConnectionStatus, HandleResult, ManagerContext, ManagerStatus, SyncResult, SyncWallpaperStore, WebDavSyncManager } from './types';
+import type { ConnectionControllerOptions, ConnectionHint, ConnectionStatus, HandleResult, ManagerStatus, SyncResult, WebDavSyncManager } from './types';
 import type { WebDavConnection } from '../webdav-client/types';
+import { normalizeConfig } from '../webdav-client/config';
+import { REVISION } from '../webdav-client/errors';
+
+interface Manager {
+  readonly ports: ManagerPorts;
+  readonly registry: ConnectionRegistry;
+  // Adding and removing connections, one at a time.
+  readonly registryQueue: SerialQueue;
+  readonly hintQueue: SerialQueue;
+  // Settles once the saved connections are loaded and recovered.
+  ready: Promise<void>;
+  started: boolean;
+}
 
 // Two connections to the same account and directory would sync one remote
 // with two independent baselines and treat each other's writes as changes.
-async function assertUnique(ctx: ManagerContext, input: unknown, exceptId?: string): Promise<void> {
+async function assertUnique(manager: Manager, input: unknown, exceptId?: string): Promise<void> {
   let candidate: WebDavConnection;
   const fields = isRecord(input) ? input : {};
-  try { candidate = ctx.clientApi.normalizeConfig({ ...fields, password: fields.password || 'placeholder' }); }
+  try { candidate = normalizeConfig({ ...fields, password: fields.password || 'placeholder' }); }
   catch (_error) { return; }
-  for (const id of ctx.ids) {
+  for (const id of manager.registry.ids) {
     if (id === exceptId) continue;
-    const { config } = await worker(ctx, id).status();
-    if (config && sameConnection(config, candidate)) failManager(ctx, 'duplicate-connection');
+    const { config } = await manager.registry.worker(id).status();
+    if (config && sameConnection(config, candidate)) failManager('duplicate-connection');
   }
 }
 
-async function discard(ctx: ManagerContext, id: string): Promise<void> {
-  await worker(ctx, id).stop();
-  ctx.workers.delete(id);
-  for (const key of ctx.recordKeys) {
-    if (ctx.store.delete) await ctx.store.delete(keyFor(id, key)); else await ctx.store.put(keyFor(id, key), null);
-  }
-  await localStorage(ctx, 'remove', [statusKeyFor(ctx, id)]);
-}
-
-async function hasLocalHistory(ctx: ManagerContext, id: string): Promise<boolean> {
-  for (const key of ['migrationBackup', 'pendingApply', 'recoveryBlocked']) if (await ctx.store.get(keyFor(id, key))) return true;
-  return false;
-}
-
-async function managerStatus(ctx: ManagerContext): Promise<ManagerStatus> {
-  await ctx.ready;
-  const connections = (await Promise.all(ctx.ids.map(async (id) => ({ id, ...await worker(ctx, id).status() })))).filter((item) => item.config);
+async function managerStatus(manager: Manager): Promise<ManagerStatus> {
+  await manager.ready;
+  const connections = (await Promise.all(manager.registry.ids.map(async (id) => ({ id, ...await manager.registry.worker(id).status() })))).filter((item) => item.config);
   return { ...(connections[0] || { state: 'browser', enabled: false, config: null }),
-    clientRevision: ctx.clientApi.REVISION, syncRevision: SYNC_REVISION, connections, suggestions: await suggestions(ctx, connections) };
+    clientRevision: REVISION, syncRevision: SYNC_REVISION, connections, suggestions: await suggestions(manager, connections) };
 }
 
 // Synced connections this device has neither added nor dismissed.
-async function suggestions(ctx: ManagerContext, connections: ReadonlyArray<ConnectionStatus>): Promise<ConnectionHint[]> {
-  const syncKey = ctx.settings.webdavConnections.key;
-  const dismissedKey = ctx.settings.webdavDismissedConnections.key;
+async function suggestions(manager: Manager, connections: ReadonlyArray<ConnectionStatus>): Promise<ConnectionHint[]> {
+  const syncKey = LumnoSettings.webdavConnections.key;
+  const dismissedKey = LumnoSettings.webdavDismissedConnections.key;
   let hints: ConnectionHint[] = [];
   let dismissed: ConnectionHint[] = [];
   try {
-    hints = connectionHints(ctx, (await syncStorage(ctx, 'get', [syncKey]))[syncKey]);
-    dismissed = connectionHints(ctx, (await localStorage(ctx, 'get', [dismissedKey]))[dismissedKey]);
+    hints = connectionHints((await syncStorage(manager.ports.chrome, 'get', [syncKey]))[syncKey]);
+    dismissed = connectionHints((await localStorage(manager.ports.chrome, 'get', [dismissedKey]))[dismissedKey]);
   } catch (_error) { return []; }
   const known: ConnectionHint[] = [...connections.flatMap((item) => (item.config ? [item.config] : [])), ...dismissed];
   return hints.filter((hint) => !known.some((config) => sameConnection(config, hint)));
 }
 
-async function dismissSuggestion(ctx: ManagerContext, input: unknown): Promise<SyncResult> {
-  const key = ctx.settings.webdavDismissedConnections.key;
-  const [hint] = connectionHints(ctx, { version: 1, items: [input] });
-  if (!hint) failManager(ctx, 'connection-missing');
-  const current = connectionHints(ctx, (await localStorage(ctx, 'get', [key]))[key]);
-  await localStorage(ctx, 'set', { [key]: { version: 1, items: connectionHints(ctx, { version: 1, items: [...current, hint] }) } });
+async function dismissSuggestion(manager: Manager, input: unknown): Promise<SyncResult> {
+  const key = LumnoSettings.webdavDismissedConnections.key;
+  const [hint] = connectionHints({ version: 1, items: [input] });
+  if (!hint) failManager('connection-missing');
+  const current = connectionHints((await localStorage(manager.ports.chrome, 'get', [key]))[key]);
+  await localStorage(manager.ports.chrome, 'set', { [key]: { version: 1, items: connectionHints({ version: 1, items: [...current, hint] }) } });
   return { ok: true };
 }
 
-function startManager(ctx: ManagerContext): void {
-  if (ctx.started) return;
-  ctx.started = true;
+function startManager(manager: Manager): void {
+  if (manager.started) return;
+  manager.started = true;
   // Another device withdrawing a connection this one still uses puts it
   // back at once, so a new device never misses it in the meantime.
-  ctx.chromeApi.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== 'sync' || !changes[ctx.settings.webdavConnections.key]) return;
-    ctx.ready.then(async () => publishHints(ctx, [], await Promise.all(ctx.ids.map((id) => configOf(ctx, id))))).catch(() => {});
+  manager.ports.chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'sync' || !changes[LumnoSettings.webdavConnections.key]) return;
+    manager.ready.then(async () => publishHints(manager.ports, manager.hintQueue, [], await Promise.all(manager.registry.ids.map((id) => manager.registry.configOf(id))))).catch(() => {});
   });
-  ctx.ready.then(() => Promise.all(ctx.ids.map(async (id) => {
-    const current = await worker(ctx, id).status();
+  manager.ready.then(() => Promise.all(manager.registry.ids.map(async (id) => {
+    const current = await manager.registry.worker(id).status();
     if (current.enabled) {
-      await worker(ctx, id).handle({ operation: 'schedule' });
-      await worker(ctx, id).handle({ operation: 'sync' });
+      await manager.registry.worker(id).handle({ operation: 'schedule' });
+      await manager.registry.worker(id).handle({ operation: 'sync' });
     }
   }))).catch((cause: unknown) => {
     // A failed round is already on its card; only the rest is logged.
-    if (!cause || !isRecorded(cause)) (ctx.opts.logger || globalThis.console).warn('[Lumno] Could not start WebDAV sync.', cause);
+    if (!cause || !isRecorded(cause)) (manager.ports.options.logger || globalThis.console).warn('[Lumno] Could not start WebDAV sync.', cause);
   });
 }
 
-async function handleManagerRequest(ctx: ManagerContext, request: WebDavRequest): Promise<HandleResult | ManagerStatus | (HandleResult & { id: string })> {
-  await ctx.ready;
-  if (request.operation === 'status') return managerStatus(ctx);
-  if (request.operation === 'dismissSuggestion') return dismissSuggestion(ctx, request.config);
+async function handleManagerRequest(manager: Manager, request: WebDavRequest): Promise<HandleResult | ManagerStatus | (HandleResult & { id: string })> {
+  await manager.ready;
+  if (request.operation === 'status') return managerStatus(manager);
+  if (request.operation === 'dismissSuggestion') return dismissSuggestion(manager, request.config);
   if (request.operation === 'add' || (request.operation === 'test' && !request.id)) {
-    return serialRegistry(ctx, async () => {
-      if (request.operation === 'add') await assertUnique(ctx, request.config);
-      const id = ctx.cryptoApi.randomUUID();
-      const controller = worker(ctx, id);
+    return manager.registryQueue.run(async () => {
+      if (request.operation === 'add') await assertUnique(manager, request.config);
+      const id = manager.ports.crypto.randomUUID();
+      const controller = manager.registry.worker(id);
       let retained = false;
       const retain = async (): Promise<void> => {
-        const nextIds = [...ctx.ids, id];
-        await ctx.store.put('connections', nextIds);
-        ctx.ids = nextIds;
+        await manager.registry.saveIds([...manager.registry.ids, id]);
         retained = true;
-        await notifyRegistry(ctx);
+        await notifyRegistry(manager.ports);
       };
       try {
         let result = await controller.handle({ ...request, operation: request.operation === 'add' ? 'save' : 'test' });
@@ -115,97 +123,79 @@ async function handleManagerRequest(ctx: ManagerContext, request: WebDavRequest)
           // stays in the form instead of becoming a broken connection.
           try { result = await controller.handle({ operation: 'enable' }); }
           catch (cause) {
-            if (await hasLocalHistory(ctx, id)) await retain();
+            if (await manager.registry.hasLocalHistory(id)) await retain();
             throw cause;
           }
         }
         if (request.operation === 'add') {
           await retain();
-          await publishHints(ctx, [], [await configOf(ctx, id)]);
+          await publishHints(manager.ports, manager.hintQueue, [], [await manager.registry.configOf(id)]);
         }
         return { ...result, id };
       } finally {
-        if (!retained) await discard(ctx, id);
+        if (!retained) await manager.registry.discard(id);
       }
     });
   }
-  const id = request.id || (ctx.ids.length === 1 ? ctx.ids[0] : null);
-  if (!id || !ctx.ids.includes(id)) failManager(ctx, 'connection-missing');
+  const id = request.id || (manager.registry.ids.length === 1 ? manager.registry.ids[0] : null);
+  if (!id || !manager.registry.ids.includes(id)) failManager('connection-missing');
   if (request.operation === 'save') {
-    await assertUnique(ctx, request.config, id);
-    const before = await configOf(ctx, id);
-    const result = await worker(ctx, id).handle(request);
-    await publishHints(ctx, [before], [await configOf(ctx, id)]);
+    await assertUnique(manager, request.config, id);
+    const before = await manager.registry.configOf(id);
+    const result = await manager.registry.worker(id).handle(request);
+    await publishHints(manager.ports, manager.hintQueue, [before], [await manager.registry.configOf(id)]);
     return result;
   }
   if (request.operation === 'remove') {
-    return serialRegistry(ctx, async () => {
-      if (!ctx.ids.includes(id)) failManager(ctx, 'connection-missing');
-      await worker(ctx, id).handle({ operation: 'recover' });
-      if (await ctx.store.get(keyFor(id, 'recoveryBlocked'))) failManager(ctx, 'interrupted-apply');
-      const removed = await configOf(ctx, id);
-      await worker(ctx, id).stop();
-      const nextIds = ctx.ids.filter((value) => value !== id);
+    return manager.registryQueue.run(async () => {
+      if (!manager.registry.ids.includes(id)) failManager('connection-missing');
+      await manager.registry.worker(id).handle({ operation: 'recover' });
+      if (await manager.ports.store.get(keyFor(id, 'recoveryBlocked'))) failManager('interrupted-apply');
+      const removed = await manager.registry.configOf(id);
+      await manager.registry.worker(id).stop();
       // Remove the index first: a restart cannot revive this connection.
-      await ctx.store.put('connections', nextIds);
-      ctx.ids = nextIds;
-      await discard(ctx, id);
-      await notifyRegistry(ctx);
-      await publishHints(ctx, [removed], []);
+      await manager.registry.saveIds(manager.registry.ids.filter((value) => value !== id));
+      await manager.registry.discard(id);
+      await notifyRegistry(manager.ports);
+      await publishHints(manager.ports, manager.hintQueue, [removed], []);
       return { ok: true };
     });
   }
-  return worker(ctx, id).handle(request);
+  return manager.registry.worker(id).handle(request);
+}
+
+// Loads the saved connections, then lets connections added before hints
+// existed reach other devices too.
+async function loadConnections(manager: Manager): Promise<void> {
+  await manager.registry.load();
+  await publishHints(manager.ports, manager.hintQueue, [], await Promise.all(manager.registry.ids.map((id) => manager.registry.configOf(id))));
 }
 
 function createController(options?: ConnectionControllerOptions | null): Readonly<WebDavSyncManager> {
   const opts = options || {};
-  const chromeApi = opts.chrome || chrome;
-  const settings = opts.settings || LumnoSettings;
-  const cryptoApi = opts.crypto || globalThis.crypto;
-  const store = opts.privateStore || createPrivateStore(globalThis.indexedDB);
-  const wallpaperStore: SyncWallpaperStore = opts.wallpaperStore ||
-    LumnoNewtabWallpaperLocalStore.createWallpaperLocalStore({ windowObj: globalThis, onChange() {} });
-  const workers = new Map<string, Readonly<ConnectionController>>();
-  const probeCache = opts.probeCache || createProbeCache();
-  const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta',
-    'staleLock', 'snapshotRing', 'throttle', 'sweptAt'];
-  const clientApi = opts.client || WEBDAV_CLIENT_API;
-  // Settles once the saved connections are loaded and recovered.
-  const ctx: ManagerContext = {
-    opts,
-    chromeApi,
-    settings,
-    cryptoApi,
-    store,
-    wallpaperStore,
-    workers,
-    probeCache,
-    recordKeys,
-    ids: [],
-    registryChain: Promise.resolve(),
-    hintChain: Promise.resolve(),
-    localChain: Promise.resolve(),
-    started: false,
-    clientApi,
-    ready: Promise.resolve()
+  const ports: ManagerPorts = {
+    chrome: opts.chrome || chrome,
+    crypto: opts.crypto || globalThis.crypto,
+    store: opts.privateStore || createPrivateStore(globalThis.indexedDB),
+    wallpaperStore: opts.wallpaperStore ||
+      LumnoNewtabWallpaperLocalStore.createWallpaperLocalStore({ windowObj: globalThis, onChange() {} }),
+    probeCache: opts.probeCache || createProbeCache(),
+    options: opts
   };
-  ctx.ready = loadConnections(ctx);
+  const manager: Manager = {
+    ports,
+    registry: new ConnectionRegistry(ports),
+    registryQueue: new SerialQueue(),
+    hintQueue: new SerialQueue(),
+    ready: Promise.resolve(),
+    started: false
+  };
+  manager.ready = loadConnections(manager);
   return Object.freeze({
-    start: () => startManager(ctx),
-    status: () => managerStatus(ctx),
-    handle: (request: WebDavRequest) => handleManagerRequest(ctx, request)
+    start: () => startManager(manager),
+    status: () => managerStatus(manager),
+    handle: (request: WebDavRequest) => handleManagerRequest(manager, request)
   });
 }
 
-export {
-  assertUnique,
-  createController,
-  discard,
-  dismissSuggestion,
-  handleManagerRequest,
-  hasLocalHistory,
-  managerStatus,
-  startManager,
-  suggestions
-};
+export { createController };

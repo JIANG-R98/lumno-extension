@@ -1,32 +1,34 @@
 // A connection's storage calls, status record, keep-alive and job queue.
 import type { StorageItems } from '../../domain/storage-port';
-import { ignoreRejection, isRecord, readSession } from './records';
-import type { ConnectionContext, Session, StatusUpdate, StorageCall, StorageMethod, StoredConnection } from './types';
+import { isRecord, readSession } from './records';
+import type { Session, StatusUpdate, StorageCall, StorageMethod, StoredConnection } from './types';
+import type { Connection } from './connection';
 import * as SettingsStorage from '../../platform/settings-storage';
+import { error } from '../webdav-client/errors';
 
-function fail(ctx: ConnectionContext, code: string): never { throw ctx.clientApi.error(code); }
+function fail(conn: Connection, code: string): never { throw error(code); }
 
-function report(ctx: ConnectionContext, context: string, cause: unknown): void {
-  try { ctx.logger.warn(`[Lumno] ${context}`, cause); } catch (_error) { /* Logging never fails a sync. */ }
+function report(conn: Connection, context: string, cause: unknown): void {
+  try { conn.ports.logger.warn(`[Lumno] ${context}`, cause); } catch (_error) { /* Logging never fails a sync. */ }
 }
 
 // A write refused by the browser sync write quota is retried once, after
 // the quota has had time to refill.
-function runStorage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null | undefined, call: StorageCall, retried = false): Promise<StorageItems | undefined> {
+function runStorage(conn: Connection, area: chrome.storage.StorageArea | null | undefined, call: StorageCall, retried = false): Promise<StorageItems | undefined> {
   return new Promise((resolve, reject) => {
     if (!area) { resolve(call.method === 'get' ? {} : undefined); return; }
     let finished = false;
     const done = (result: StorageItems | undefined, failure?: unknown): void => {
       if (finished) return;
       finished = true;
-      const lastError = failure || (ctx.chromeApi.runtime && ctx.chromeApi.runtime.lastError);
+      const lastError = failure || (conn.ports.chrome.runtime && conn.ports.chrome.runtime.lastError);
       if (!lastError) { resolve(result); return; }
       if (call.method !== 'get' && !retried && SettingsStorage.isStorageRateLimitError(lastError)) {
-        setTimeout(() => runStorage(ctx, area, call, true).then(resolve, reject), ctx.storageRetryDelayMs);
+        setTimeout(() => runStorage(conn, area, call, true).then(resolve, reject), conn.timings.storageRetryDelayMs);
         return;
       }
       const message = isRecord(lastError) && lastError.message ? lastError.message : lastError;
-      reject(Object.assign(ctx.clientApi.error('local-storage-failed'), { reason: String(message) }));
+      reject(Object.assign(error('local-storage-failed'), { reason: String(message) }));
     };
     try {
       // Firefox answers with a promise as well as the callback.
@@ -42,79 +44,43 @@ function runStorage(ctx: ConnectionContext, area: chrome.storage.StorageArea | n
   });
 }
 
-function storage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null | undefined, method: 'get', keys: string[] | null): Promise<StorageItems>;
+function storage(conn: Connection, area: chrome.storage.StorageArea | null | undefined, method: 'get', keys: string[] | null): Promise<StorageItems>;
 
-function storage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null | undefined, method: 'set', items: StorageItems): Promise<void>;
+function storage(conn: Connection, area: chrome.storage.StorageArea | null | undefined, method: 'set', items: StorageItems): Promise<void>;
 
-function storage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null | undefined, method: 'remove', keys: string[]): Promise<void>;
+function storage(conn: Connection, area: chrome.storage.StorageArea | null | undefined, method: 'remove', keys: string[]): Promise<void>;
 
 function storage(
-  ctx: ConnectionContext,
+  conn: Connection,
   area: chrome.storage.StorageArea | null | undefined,
   method: StorageMethod,
   value: string[] | StorageItems | null
 ): Promise<StorageItems | void> {
   if (method === 'get') {
     const keys = Array.isArray(value) ? value : null;
-    return runStorage(ctx, area, { method, keys }).then((result) => result || {});
+    return runStorage(conn, area, { method, keys }).then((result) => result || {});
   }
   if (method === 'set') {
-    return runStorage(ctx, area, { method, items: isRecord(value) && !Array.isArray(value) ? value : {} }).then(() => undefined);
+    return runStorage(conn, area, { method, items: isRecord(value) && !Array.isArray(value) ? value : {} }).then(() => undefined);
   }
-  return runStorage(ctx, area, { method, keys: Array.isArray(value) ? value : [] }).then(() => undefined);
+  return runStorage(conn, area, { method, keys: Array.isArray(value) ? value : [] }).then(() => undefined);
 }
 
-async function setStatus(ctx: ConnectionContext, update: StatusUpdate): Promise<StorageItems> {
-  const old = await storage(ctx, ctx.localPrefsArea, 'get', [ctx.statusKey]);
-  const previous = old[ctx.statusKey];
+async function setStatus(conn: Connection, update: StatusUpdate): Promise<StorageItems> {
+  const old = await storage(conn, conn.ports.localArea, 'get', [conn.ports.statusKey]);
+  const previous = old[conn.ports.statusKey];
   // A planned retry time belongs to the state that announced it.
   const status = { ...(isRecord(previous) ? previous : {}), ...('state' in update ? { retryAt: null } : {}), ...update };
-  await storage(ctx, ctx.localPrefsArea, 'set', { [ctx.statusKey]: status });
+  await storage(conn, conn.ports.localArea, 'set', { [conn.ports.statusKey]: status });
   return status;
 }
 
-// Firefox unloads an idle event page even while its requests are pending
-// (verified: a 60 s fetch never resolves), which strands the shared write
-// lock mid-sync until someone deletes it by hand. An extension API call
-// resets the idle timer in Firefox and Chrome, so tick one while jobs run.
-function holdKeepAlive(ctx: ConnectionContext): void {
-  ctx.activeJobs += 1;
-  if (ctx.keepAliveTimer || !ctx.chromeApi.runtime || typeof ctx.chromeApi.runtime.getPlatformInfo !== 'function') return;
-  ctx.keepAliveTimer = setInterval(() => {
-    try {
-      ignoreRejection(ctx.chromeApi.runtime.getPlatformInfo());
-    } catch (_cause) {
-      // A failed tick only loses this keep-alive beat.
-    }
-  }, ctx.keepAliveIntervalMs);
-}
+async function session(conn: Connection): Promise<Session> { return readSession(await conn.ports.privateStore.get('session')); }
 
-function releaseKeepAlive(ctx: ConnectionContext): void {
-  ctx.activeJobs = Math.max(0, ctx.activeJobs - 1);
-  if (!ctx.activeJobs && ctx.keepAliveTimer) {
-    clearInterval(ctx.keepAliveTimer);
-    ctx.keepAliveTimer = null;
-  }
-}
-
-function exclusive<T>(ctx: ConnectionContext, fn: () => Promise<T>): Promise<T> {
-  holdKeepAlive(ctx);
-  const job = ctx.chain.then(fn);
-  ctx.chain = job.catch(() => {});
-  const release = (): void => releaseKeepAlive(ctx);
-  job.then(release, release);
-  return job;
-}
-
-async function session(ctx: ConnectionContext): Promise<Session> { return readSession(await ctx.privateStore.get('session')); }
-
-async function saveConfig(ctx: ConnectionContext, config: StoredConnection): Promise<void> { await ctx.privateStore.put('session', { ...await session(ctx), config }); }
+async function saveConfig(conn: Connection, config: StoredConnection): Promise<void> { await conn.ports.privateStore.put('session', { ...await session(conn), config }); }
 
 export {
-  exclusive,
   fail,
-  holdKeepAlive,
-  releaseKeepAlive,
   report,
   runStorage,
   saveConfig,
