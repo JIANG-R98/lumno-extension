@@ -70,6 +70,138 @@ function themeFromColor(color: unknown): PageTheme | null {
   return getLuminance(rgb) < 0.42 ? 'dark' : 'light';
 }
 
+const THEME_ATTRIBUTES = [
+  'data-theme',
+  'data-color-scheme',
+  'data-color-mode',
+  'data-mode',
+  'data-appearance',
+  'color-scheme',
+  'theme',
+  'data-bs-theme'
+];
+
+interface PageParts {
+  doc: Document;
+  win: Window;
+  docEl: HTMLElement;
+  body: HTMLElement | null;
+}
+
+function themeFromFlagAttributes({ docEl, body }: PageParts): PageTheme | null {
+  if (docEl.hasAttribute('dark') || (body && body.hasAttribute('dark'))) {
+    return 'dark';
+  }
+  if (docEl.hasAttribute('light') || (body && body.hasAttribute('light'))) {
+    return 'light';
+  }
+  return null;
+}
+
+function themeFromAttributeValue(value: string): PageTheme | null {
+  if (value.includes('dark') || value.includes('night') || value === '1' || value === 'true' || value === 'on') {
+    return 'dark';
+  }
+  if (value.includes('light') || value.includes('day') || value === '0' || value === 'false' || value === 'off') {
+    return 'light';
+  }
+  return null;
+}
+
+function themeFromThemeAttributes({ docEl, body }: PageParts): PageTheme | null {
+  const elements = body ? [docEl, body] : [docEl];
+  for (const element of elements) {
+    for (const name of THEME_ATTRIBUTES) {
+      const value = String(element.getAttribute(name) || '').toLowerCase();
+      const theme = value ? themeFromAttributeValue(value) : null;
+      if (theme) {
+        return theme;
+      }
+    }
+  }
+  return null;
+}
+
+function themeFromYoutubeRoot({ doc }: PageParts): PageTheme | null {
+  return doc.querySelector('ytd-app[dark], ytm-app[dark]') ? 'dark' : null;
+}
+
+function themeFromClassText(classText: string): PageTheme | null {
+  const tokenList = classText.split(/\s+/);
+  if (tokenList.includes('dark')) {
+    return 'dark';
+  }
+  if (tokenList.includes('light')) {
+    return 'light';
+  }
+  if (/(^|[\s_-])(dark|darkmode|dark-theme|theme-dark|night)([\s_-]|$)/.test(classText)) {
+    return 'dark';
+  }
+  if (/(^|[\s_-])(light|lightmode|light-theme|theme-light|day)([\s_-]|$)/.test(classText)) {
+    return 'light';
+  }
+  return null;
+}
+
+function themeFromClasses({ docEl, body }: PageParts): PageTheme | null {
+  const classTokens = [docEl.className || '', body ? body.className || '' : ''];
+  for (const className of classTokens) {
+    const theme = themeFromClassText(String(className || '').toLowerCase());
+    if (theme) {
+      return theme;
+    }
+  }
+  return null;
+}
+
+function themeFromBackground({ win, docEl, body }: PageParts): PageTheme | null {
+  const bodyStyle = body ? win.getComputedStyle(body) : null;
+  const docStyle = win.getComputedStyle(docEl);
+  const bgColor = bodyStyle && themeFromColor(bodyStyle.backgroundColor)
+    ? bodyStyle.backgroundColor
+    : docStyle.backgroundColor;
+  return themeFromColor(bgColor);
+}
+
+function themeFromThemeColorMeta({ doc }: PageParts): PageTheme | null {
+  const themeColorMeta = doc.querySelector('meta[name="theme-color"]');
+  return themeColorMeta ? themeFromColor(String(themeColorMeta.getAttribute('content') || '').trim()) : null;
+}
+
+// A color-scheme naming only one of dark and light.
+function themeFromSchemeText(text: string): PageTheme | null {
+  if (text.includes('dark') && !text.includes('light')) {
+    return 'dark';
+  }
+  if (text.includes('light') && !text.includes('dark')) {
+    return 'light';
+  }
+  return null;
+}
+
+function themeFromColorSchemeMeta({ doc }: PageParts): PageTheme | null {
+  const colorSchemeMeta = doc.querySelector('meta[name="color-scheme"]');
+  return colorSchemeMeta
+    ? themeFromSchemeText(String(colorSchemeMeta.getAttribute('content') || '').toLowerCase())
+    : null;
+}
+
+function themeFromComputedScheme({ win, docEl }: PageParts): PageTheme | null {
+  return themeFromSchemeText((win.getComputedStyle(docEl).colorScheme || '').toLowerCase());
+}
+
+// The signals in the order they are trusted.
+const THEME_SIGNALS: Array<(parts: PageParts) => PageTheme | null> = [
+  themeFromFlagAttributes,
+  themeFromThemeAttributes,
+  themeFromYoutubeRoot,
+  themeFromClasses,
+  themeFromBackground,
+  themeFromThemeColorMeta,
+  themeFromColorSchemeMeta,
+  themeFromComputedScheme
+];
+
 // Guesses whether a web page is light or dark from its theme attributes,
 // classes, background, theme-color and color-scheme, so the surfaces Lumno
 // draws over the page (tab switcher, toasts) can match it. Returns null when
@@ -77,115 +209,15 @@ function themeFromColor(color: unknown): PageTheme | null {
 function detectPageTheme(documentRef?: Document | null, windowRef?: Window | null): PageTheme | null {
   const doc = documentRef || globalThis.document;
   const win = windowRef || globalThis.window;
-  if (!doc || !win) {
+  if (!doc || !win || !doc.documentElement) {
     return null;
   }
-  const docEl = doc.documentElement;
-  const body = doc.body;
-  if (!docEl) {
-    return null;
-  }
-  if (docEl.hasAttribute('dark') || (body && body.hasAttribute('dark'))) {
-    return 'dark';
-  }
-  if (docEl.hasAttribute('light') || (body && body.hasAttribute('light'))) {
-    return 'light';
-  }
-  const attrCandidates = [
-    docEl.getAttribute('data-theme'),
-    docEl.getAttribute('data-color-scheme'),
-    docEl.getAttribute('data-color-mode'),
-    docEl.getAttribute('data-mode'),
-    docEl.getAttribute('data-appearance'),
-    docEl.getAttribute('color-scheme'),
-    docEl.getAttribute('theme'),
-    docEl.getAttribute('data-bs-theme'),
-    body ? body.getAttribute('data-theme') : null,
-    body ? body.getAttribute('data-color-scheme') : null,
-    body ? body.getAttribute('data-color-mode') : null,
-    body ? body.getAttribute('data-mode') : null,
-    body ? body.getAttribute('data-appearance') : null,
-    body ? body.getAttribute('color-scheme') : null,
-    body ? body.getAttribute('theme') : null,
-    body ? body.getAttribute('data-bs-theme') : null
-  ];
-  for (let i = 0; i < attrCandidates.length; i += 1) {
-    const value = String(attrCandidates[i] || '').toLowerCase();
-    if (!value) {
-      continue;
-    }
-    if (value.includes('dark') ||
-        value.includes('night') ||
-        value === '1' ||
-        value === 'true' ||
-        value === 'on') {
-      return 'dark';
-    }
-    if (value.includes('light') ||
-        value.includes('day') ||
-        value === '0' ||
-        value === 'false' ||
-        value === 'off') {
-      return 'light';
-    }
-  }
-  const youtubeDarkRoot = doc.querySelector('ytd-app[dark], ytm-app[dark]');
-  if (youtubeDarkRoot) {
-    return 'dark';
-  }
-  const classTokens = [
-    docEl.className || '',
-    body ? body.className || '' : ''
-  ];
-  for (let i = 0; i < classTokens.length; i += 1) {
-    const classText = String(classTokens[i] || '').toLowerCase();
-    const tokenList = classText.split(/\s+/);
-    if (tokenList.includes('dark')) {
-      return 'dark';
-    }
-    if (tokenList.includes('light')) {
-      return 'light';
-    }
-    if (/(^|[\s_-])(dark|darkmode|dark-theme|theme-dark|night)([\s_-]|$)/.test(classText)) {
-      return 'dark';
-    }
-    if (/(^|[\s_-])(light|lightmode|light-theme|theme-light|day)([\s_-]|$)/.test(classText)) {
-      return 'light';
-    }
-  }
-  const bodyStyle = body ? win.getComputedStyle(body) : null;
-  const docStyle = win.getComputedStyle(docEl);
-  const bgColor = bodyStyle && themeFromColor(bodyStyle.backgroundColor)
-    ? bodyStyle.backgroundColor
-    : docStyle.backgroundColor;
-  const backgroundTheme = themeFromColor(bgColor);
-  if (backgroundTheme) {
-    return backgroundTheme;
-  }
-  const themeColorMeta = doc.querySelector('meta[name="theme-color"]');
-  if (themeColorMeta) {
-    const themeColor = String(themeColorMeta.getAttribute('content') || '').trim();
-    const theme = themeFromColor(themeColor);
+  const parts: PageParts = { doc, win, docEl: doc.documentElement, body: doc.body };
+  for (const signal of THEME_SIGNALS) {
+    const theme = signal(parts);
     if (theme) {
       return theme;
     }
-  }
-  const colorSchemeMeta = doc.querySelector('meta[name="color-scheme"]');
-  if (colorSchemeMeta) {
-    const metaContent = String(colorSchemeMeta.getAttribute('content') || '').toLowerCase();
-    if (metaContent.includes('dark') && !metaContent.includes('light')) {
-      return 'dark';
-    }
-    if (metaContent.includes('light') && !metaContent.includes('dark')) {
-      return 'light';
-    }
-  }
-  const schemeValue = (win.getComputedStyle(docEl).colorScheme || '').toLowerCase();
-  if (schemeValue.includes('dark') && !schemeValue.includes('light')) {
-    return 'dark';
-  }
-  if (schemeValue.includes('light') && !schemeValue.includes('dark')) {
-    return 'light';
   }
   return null;
 }
