@@ -69,6 +69,7 @@ describe('Options General search results section', () => {
   it('binds every setting of the section and attaches the type drag', () => {
     const { changes, orderController } = setUp();
     expect(Array.from(changes.keys()).sort()).toEqual([
+      Settings.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
       Settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
       Settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
       Settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
@@ -140,6 +141,16 @@ describe('Options General search results section', () => {
     });
     expect(writes).toContainEqual({ [Settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: 9 });
     expect(getElement(host, '#_x_extension_search_result_display_limit_setting_row_2026_unique_')).toBeTruthy();
+  });
+
+  it('switches where the overlay opens results', () => {
+    const { host, writes, store } = setUp();
+    const buttons = () => getTags(host, '#_x_extension_overlay_open_in_current_tab_tabs_wrap_2026_unique_ button', 'button');
+    expect(buttons().map((button) => button.dataset.active)).toEqual(['true', 'false']);
+    act(() => buttons()[1]?.click());
+    expect(writes).toContainEqual({ [Settings.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY]: true });
+    store(Settings.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY, false);
+    expect(buttons().map((button) => button.dataset.active)).toEqual(['true', 'false']);
   });
 
   it('saves the overlay and pinyin switches', () => {

@@ -7,11 +7,14 @@ type SearchAction = 'switch' | 'search' | 'open' | 'openNewTab' | 'openBackgroun
 
 type OpenDisposition = 'currentTab' | 'backgroundTab' | 'newTab';
 
-// The keys held when a result is opened.
+// The keys held when a result is opened. `openInCurrentTab` is Option/Alt,
+// which flips a result to the other of the current and a new tab.
 interface OpenModifiers {
   openInCurrentTab?: boolean;
   openSwitchInNewTab?: boolean;
   openInBackgroundTab?: boolean;
+  // The surface opens results in the current tab unless a key says otherwise.
+  currentTabByDefault?: boolean;
 }
 
 // A provider as rows carry it; command rows add display fields.
@@ -64,6 +67,8 @@ interface SearchActionModelOptions {
   simpleMode?: boolean;
   // What Enter does on the primary row.
   enterAction?: string;
+  // Rows say 「前往」 rather than 「新开」: results open in the current tab.
+  currentTabByDefault?: boolean;
 }
 
 interface ActionContextOptions {
@@ -158,23 +163,14 @@ function getModifierAdjustedAction(action: unknown, options?: OpenModifiers | nu
   if (config.openInCurrentTab && rawAction === 'openNewTab') {
     return 'go';
   }
+  if (config.openInCurrentTab && config.currentTabByDefault && rawAction === 'go') {
+    return 'openNewTab';
+  }
   if (config.openInBackgroundTab && !config.openInCurrentTab &&
       (rawAction === 'openNewTab' || rawAction === 'go' || rawAction === 'switch')) {
     return 'openBackgroundTab';
   }
   return rawAction;
-}
-
-function shouldOpenNewTabActionInCurrentTab(
-  suggestion: MaybeSuggestion,
-  options?: (OpenModifiers & { action?: string; shouldSwitchMatchedTab?: boolean }) | null
-): boolean {
-  const config = options || {};
-  if (!config.openInCurrentTab) {
-    return false;
-  }
-  const action = config.action || getVisitButtonAction(suggestion, config);
-  return action === 'openNewTab';
 }
 
 function shouldOpenSwitchActionInNewTab(
@@ -189,15 +185,18 @@ function shouldOpenSwitchActionInNewTab(
   return action === 'switch';
 }
 
+// Option/Alt flips the default tab and wins over Command/Ctrl, which
+// otherwise opens the result in the background.
 function getSearchResultOpenDisposition(options?: OpenModifiers | null): OpenDisposition {
   const config = options || {};
+  const defaultDisposition: OpenDisposition = config.currentTabByDefault ? 'currentTab' : 'newTab';
   if (config.openInCurrentTab) {
-    return 'currentTab';
+    return defaultDisposition === 'currentTab' ? 'newTab' : 'currentTab';
   }
   if (config.openInBackgroundTab) {
     return 'backgroundTab';
   }
-  return 'newTab';
+  return defaultDisposition;
 }
 
 function createSearchActionModel(options?: SearchActionModelOptions | null): SearchActionModel {
@@ -210,7 +209,8 @@ function createSearchActionModel(options?: SearchActionModelOptions | null): Sea
   const isMergedHighlight = Boolean(config.isMergedHighlight);
   const shouldSwitchMatchedTab = Boolean(config.shouldSwitchMatchedTab);
   const simpleMode = Boolean(config.simpleMode);
-  const enterAction = config.enterAction || 'openNewTab';
+  const currentTabByDefault = Boolean(config.currentTabByDefault);
+  const enterAction = currentTabByDefault ? 'go' : (config.enterAction || 'openNewTab');
   const actionTags: ActionTag[] = [];
   const isDirectHighlight = isPrimaryHighlight && isDirectNavigationSuggestion(suggestion);
   const shouldShowPrimaryActionTag = !isPrimarySearchSuggest &&
@@ -231,9 +231,12 @@ function createSearchActionModel(options?: SearchActionModelOptions | null): Sea
     actionTags.push({ action: 'search' });
   }
 
-  const visitButtonAction = getVisitButtonAction(suggestion, {
+  const defaultVisitButtonAction = getVisitButtonAction(suggestion, {
     shouldSwitchMatchedTab
   });
+  const visitButtonAction = currentTabByDefault && defaultVisitButtonAction === 'openNewTab'
+    ? 'go'
+    : defaultVisitButtonAction;
   const alwaysHideVisitButton = simpleMode || !visitButtonAction || Boolean(
     suggestion && (suggestion.type === 'modeSwitch' || suggestion.type === 'zenSwitch')
   );
@@ -426,7 +429,6 @@ export {
   getModifierAdjustedAction,
   getSearchResultOpenDisposition,
   shouldOpenSwitchActionInNewTab,
-  shouldOpenNewTabActionInCurrentTab,
   shouldShowVisitButton,
   getActionContextKey,
   getSuggestionPresentationFingerprint,

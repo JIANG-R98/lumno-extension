@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Web ページで Lumno を開いたとき、開いているすべてのタブを既定で表示"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Web ページの検索バーの結果を開く場所"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Option/Alt を押すともう一方で開きます"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "新しいタブで開く"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "現在のタブで開く"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "アイコンとテーマカラーの拡張取得"
   },

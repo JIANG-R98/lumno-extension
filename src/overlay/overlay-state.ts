@@ -202,6 +202,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayOpenTabsDefaultVisible: true,
     overlayOpenTabsDefaultVisibleLoaded: !parts.storageArea,
     initialOverlayOpenTabsDefaultVisibleReady: Promise.resolve(),
+    overlayOpenInCurrentTab: false,
     enabledSearchResultSourceTypes: ['topSite', 'bookmark', 'history'],
     defaultPlaceholderText: 'Search or enter URL…',
     overlaySearchEngineState,

@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "웹페이지에서 Lumno를 열 때 열린 탭을 기본으로 모두 표시"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "웹페이지 검색창 결과 열기 방식"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Option/Alt를 누르면 다른 방식으로 엽니다"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "새 탭에서 열기"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "현재 탭에서 열기"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "아이콘 및 테마 색상 가져오기 강화"
   },

@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "在网页唤起时，默认展示所有已打开标签页"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "网页搜索栏结果打开方式"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "按住 Option/Alt 可临时换成另一种"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "在新标签页打开"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "在当前页打开"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "增强图标与主题色获取"
   },

@@ -5,6 +5,7 @@ import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
 import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon';
+import type { Disposition } from '../../domain/navigation-disposition';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
@@ -46,6 +47,7 @@ interface SiteSearchProvidersDeps {
   getHelpCenterLocale(): string;
   showOverlayToast(message: string, isError?: boolean): void;
   t: Translate;
+  getSearchResultDisposition(event: ActivationEvent | null): Disposition;
   getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab';
   finishOverlayResultActivation(event: ActivationEvent | null, canOpenInBackground: boolean): boolean;
   getOverlayFaviconUrlResolver(): FaviconUrlResolver | null;
@@ -66,6 +68,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     AGGREGATE_SEARCH_STORE,
     showOverlayToast,
     t,
+    getSearchResultDisposition,
     getSearchResultNewTabDisposition,
     finishOverlayResultActivation,
     getOverlayFaviconUrlResolver,
@@ -160,7 +163,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
         action: 'runSiteSearchProviderQuery',
         provider: provider,
         query: trimmedQuery,
-        disposition: getSearchResultNewTabDisposition(event)
+        disposition: getSearchResultDisposition(event)
       });
       return true;
     }
@@ -171,7 +174,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'createTab',
       url: siteUrl,
-      disposition: getSearchResultNewTabDisposition(event)
+      disposition: getSearchResultDisposition(event)
     });
     return true;
   }

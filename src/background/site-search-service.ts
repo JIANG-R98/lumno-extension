@@ -237,6 +237,25 @@ export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze(
     const forceSearch = Boolean(request.forceSearch);
     const openInBackgroundTab = request.disposition === 'backgroundTab';
     const sourceTab = sender && sender.tab ? sender.tab : null;
+    // The overlay set to open results in its own tab: the query's shortcut,
+    // address or search loads there instead of in a new tab.
+    if (request.disposition === 'currentTab' && sourceTab && typeof sourceTab.id === 'number') {
+      const tabId = sourceTab.id;
+      loadShortcutRules().then((rules) => {
+        const targetUrl = getShortcutUrl(query, rules) || (!forceSearch ? getDirectNavigationUrl(query) : '');
+        if (targetUrl) {
+          chrome.tabs.update(tabId, { url: targetUrl }, () => {
+            sendResponse({ ok: !(chrome.runtime && chrome.runtime.lastError), url: targetUrl });
+          });
+          return;
+        }
+        const fallbackUrl = buildDefaultSearchUrl(query);
+        SEARCH_RESULT_TABS.searchInTab(chrome, { query, tabId, fallbackUrl }, (result) => {
+          sendResponse({ ...result, url: fallbackUrl });
+        });
+      });
+      return true;
+    }
     Promise.all([loadShortcutRules(), resolveSearchResultTabPlacement(sourceTab)]).then(([rules, placement]) => {
       const createResolvedTab = (url: string, callback: CreatedTabCallback): void => {
         createSearchResultTab({

@@ -102,16 +102,11 @@ interface PanelKeysDeps {
   ): void;
   shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
-  getSearchResultCreateDisposition(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: { _xVisitButtonAction?: string } | null
-  ): Disposition;
+  getSearchResultDisposition(event: ActivationEvent | null): Disposition;
   isSlashCommandInput(input: string): boolean;
   // Called with no rows: the list rebuilds from the typed command.
   updateSearchSuggestions(rows: never[], query: string): void;
   isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
-  getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab';
   // The address a query leads straight to, or '' to search it.
   resolveQuickNavigation(query: string): Promise<string>;
   overlayState: PanelKeysState;
@@ -164,11 +159,10 @@ function createPanelKeys(deps: PanelKeysDeps) {
     openMatchedTabSuggestion,
     shouldOpenSearchResultInBackgroundTab,
     recordSearchSuggestionSelectionFromSuggestion,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
     isSlashCommandInput,
     updateSearchSuggestions,
     isAggregateSearchProvider,
-    getSearchResultNewTabDisposition,
     resolveQuickNavigation
   } = deps;
 
@@ -653,7 +647,8 @@ function createPanelKeys(deps: PanelKeysDeps) {
               LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
                 action: 'searchOrNavigate',
                 query: selectedSuggestion.searchQuery,
-                forceSearch: true
+                forceSearch: true,
+                disposition: getSearchResultDisposition(e)
               });
             }
             canKeepOverlayOpen = Boolean(selectedSuggestion.url);
@@ -663,7 +658,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: selectedSuggestion.url || '',
-              disposition: getSearchResultCreateDisposition(selectedSuggestion, e, activeItem)
+              disposition: getSearchResultDisposition(e)
             });
             canKeepOverlayOpen = true;
           }
@@ -707,7 +702,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: inlineSearch.url,
-              disposition: getSearchResultNewTabDisposition(e)
+              disposition: getSearchResultDisposition(e)
             });
           } else {
             return;
@@ -724,7 +719,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'createTab',
             url: overlayState.autocompleteState.url,
-            disposition: getSearchResultNewTabDisposition(e)
+            disposition: getSearchResultDisposition(e)
           });
           finishOverlayResultActivation(e, true);
           return;
@@ -734,19 +729,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: targetUrl,
-              disposition: getSearchResultNewTabDisposition(e)
-            });
-          } else if (shouldOpenSearchResultInBackgroundTab(e)) {
-            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
-              action: 'searchOrNavigate',
-              query: query,
-              disposition: 'backgroundTab'
+              disposition: getSearchResultDisposition(e)
             });
           } else {
             // Handle search or URL navigation
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'searchOrNavigate',
-              query: query
+              query: query,
+              disposition: getSearchResultDisposition(e)
             });
           }
           finishOverlayResultActivation(e, true);

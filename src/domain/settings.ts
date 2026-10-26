@@ -230,6 +230,7 @@ const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = '_x_extension_search_result_disp
 const SEARCH_RESULT_TAB_POSITION_STORAGE_KEY = '_x_extension_search_result_tab_position_2026_unique_';
 const SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY = '_x_extension_search_fuzzy_pinyin_enabled_2026_unique_';
 const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
+const OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY = '_x_extension_overlay_open_in_current_tab_2026_unique_';
 const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY = '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
 const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
@@ -530,6 +531,7 @@ const CHROME_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
   SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
   SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
   OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+  OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
   FALLBACK_SHORTCUT_STORAGE_KEY,
   SITE_SEARCH_STORAGE_KEY,
   SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -927,6 +929,10 @@ function normalizeOverlayOpenTabsDefaultVisible(value: unknown): boolean {
   return value !== false;
 }
 
+function normalizeOverlayOpenInCurrentTab(value: unknown): boolean {
+  return value === true;
+}
+
 function normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean {
   return value !== false;
 }
@@ -1266,6 +1272,7 @@ export {
   SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
   SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
   OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+  OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
   OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
   OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
@@ -1349,6 +1356,7 @@ export {
   normalizeMacosCtrlSuggestionNavigationEnabled,
   normalizeFaviconEnhancedFetchEnabled,
   normalizeOverlayOpenTabsDefaultVisible,
+  normalizeOverlayOpenInCurrentTab,
   normalizeOverlayPageThemeAdaptationEnabled,
   normalizeOverlaySizeMode,
   OVERLAY_SIZE_PRESETS,

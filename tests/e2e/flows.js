@@ -184,6 +184,41 @@ async function overlaySearch({ browser, fixtures }) {
   await web.waitFor(`!document.getElementById('${OVERLAY_HOST_ID}')`, { message: 'Escape did not close the overlay' });
 }
 
+// With the overlay set to open results in the current tab, Enter loads a
+// typed address in the page's own tab and Option/Alt+Enter opens a new one.
+async function overlayCurrentTab({ browser, fixtures }) {
+  const key = SETTINGS.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY;
+  await browser.worker.evaluate(`Promise.all([
+    chrome.storage.sync.set({ ${JSON.stringify(key)}: true }),
+    chrome.storage.local.set({ ${JSON.stringify(key)}: true })
+  ])`);
+  const tabCount = () => browser.worker.evaluate('chrome.tabs.query({}).then((tabs) => tabs.length)');
+  const web = await browser.openPage(fixtures.url('/page.html'));
+  const openOverlayAndType = async (text) => {
+    await focusTab(browser, web);
+    await dispatchCommand(browser, 'show-search');
+    await web.waitForShadow(OVERLAY_HOST_ID, OVERLAY_INPUT, function isFocused() {
+      return this.getRootNode().activeElement === this;
+    }, (results) => results.length === 1 && results[0] === true, { message: 'the overlay input was not focused' });
+    await web.type(text);
+    await delay(800);
+  };
+  const before = await tabCount();
+  const target = fixtures.url('/target.html');
+  await openOverlayAndType(target);
+  await web.press('Enter');
+  await web.waitFor(`location.href === ${JSON.stringify(target)}`, { message: 'Enter did not load the address in the current tab' });
+  assert.strictEqual(await tabCount(), before, 'Enter opened a tab');
+
+  const fixture = fixtures.url('/fixture.html');
+  await openOverlayAndType(fixture);
+  await web.press('Enter', { modifiers: ['Alt'] });
+  await browser.worker.waitFor(`chrome.tabs.query({}).then((tabs) => tabs.some((tab) => tab.url === ${JSON.stringify(fixture)}))`,
+    { message: 'Option/Alt+Enter did not open the address in a new tab' });
+  assert.strictEqual(await web.evaluate('location.href'), target, 'Option/Alt+Enter navigated the current tab');
+  assert.strictEqual(await tabCount(), before + 1);
+}
+
 // The search scope panel opens on a double Tab, in the new tab search box
 // and in the overlay; a click on a scope tags the input with it, and Escape
 // closes the panel only.
@@ -301,6 +336,7 @@ module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
   'overlay-search': overlaySearch,
+  'overlay-current-tab': overlayCurrentTab,
   'search-scope': searchScope,
   'tab-switcher': tabSwitcher,
   'link-preview': linkPreview

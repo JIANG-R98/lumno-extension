@@ -95,16 +95,48 @@ const historySuggestion = {
   title: 'Lumno',
   url: 'https://lumno.example/'
 };
-assert.strictEqual(
-  actionModel.shouldOpenNewTabActionInCurrentTab(historySuggestion, { openInCurrentTab: true }),
-  true,
-  'Alt/Option should make default open-new-tab search results eligible for current-tab navigation'
+const currentTabModel = actionModel.createSearchActionModel({
+  suggestion: historySuggestion,
+  isPrimaryHighlight: true,
+  primaryHighlightReason: 'topSite',
+  currentTabByDefault: true
+});
+assert.deepStrictEqual(
+  [currentTabModel.visitButtonAction, currentTabModel.actionTags],
+  ['go', [{ action: 'go' }]],
+  'A surface that opens results in the current tab should offer go rather than open-new-tab'
 );
 assert.strictEqual(
-  actionModel.shouldOpenNewTabActionInCurrentTab({ type: 'googleSuggest', searchQuery: 'lumno' }, { openInCurrentTab: true }),
-  false,
-  'Alt/Option should not treat search suggestions as open-new-tab result actions'
+  actionModel.createSearchActionModel({ suggestion: { type: 'googleSuggest', searchQuery: 'lumno' }, currentTabByDefault: true })
+    .visitButtonAction,
+  'search',
+  'Opening in the current tab should leave search actions alone'
 );
+assert.strictEqual(
+  actionModel.getModifierAdjustedAction('go', { openInCurrentTab: true, currentTabByDefault: true }),
+  'openNewTab',
+  'Alt/Option should present current-tab results as new-tab opening when the current tab is the default'
+);
+assert.strictEqual(
+  actionModel.getModifierAdjustedAction('go', { openInCurrentTab: true }),
+  'go',
+  'Alt/Option should keep go actions in the current tab when a new tab is the default'
+);
+[
+  [{}, 'newTab'],
+  [{ openInCurrentTab: true }, 'currentTab'],
+  [{ openInBackgroundTab: true }, 'backgroundTab'],
+  [{ currentTabByDefault: true }, 'currentTab'],
+  [{ currentTabByDefault: true, openInCurrentTab: true }, 'newTab'],
+  [{ currentTabByDefault: true, openInBackgroundTab: true }, 'backgroundTab'],
+  [{ currentTabByDefault: true, openInCurrentTab: true, openInBackgroundTab: true }, 'newTab']
+].forEach(([modifiers, disposition]) => {
+  assert.strictEqual(
+    actionModel.getSearchResultOpenDisposition(modifiers),
+    disposition,
+    `Results should open in ${disposition} for ${JSON.stringify(modifiers)}`
+  );
+});
 assert.strictEqual(
   actionModel.shouldOpenSwitchActionInNewTab(
     { ...historySuggestion, _xMatchedTabId: 42 },

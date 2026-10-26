@@ -2799,13 +2799,11 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const newtabSuggestionActionModel = Object.assign({}, SUGGESTION_ACTION_MODEL, {
     createSearchActionModel(input?: SearchActionModelOptions | null): SearchActionModel {
       const openInNewTab = Boolean(pageState.newtabOpenInNewTab && pageState.newtabOpenInNewTab.search === true);
-      const model = SUGGESTION_ACTION_MODEL.createSearchActionModel({
+      return SUGGESTION_ACTION_MODEL.createSearchActionModel({
         ...input,
-        enterAction: openInNewTab ? 'openNewTab' : 'go'
+        enterAction: 'openNewTab',
+        currentTabByDefault: !openInNewTab
       });
-      return !openInNewTab && model.visitButtonAction === 'openNewTab'
-        ? { ...model, visitButtonAction: 'go' }
-        : model;
     }
   });
 

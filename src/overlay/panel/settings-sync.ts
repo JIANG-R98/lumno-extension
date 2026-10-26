@@ -50,6 +50,7 @@ interface SettingsSyncState<Row, Provider> {
   overlayOpenTabsDefaultVisible: boolean;
   overlayOpenTabsDefaultVisibleLoaded: boolean;
   initialOverlayOpenTabsDefaultVisibleReady: Promise<void>;
+  overlayOpenInCurrentTab: boolean;
   documentPipEnabled: boolean;
   overlayTabQuickSwitchEnabled: boolean;
   overlaySizeMode: OverlaySizeMode;
@@ -74,6 +75,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: string;
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
   OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY: string;
+  OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY: string;
   DOCUMENT_PIP_ENABLED_STORAGE_KEY: string;
   OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
   OVERLAY_SIZE_MODE_STORAGE_KEY: string;
@@ -87,7 +89,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
     'normalizeFaviconEnhancedFetchEnabled' | 'normalizeSearchResultPriority' |
     'normalizeSearchResultSourceTypes' | 'normalizeNumberShortcutInstantEnabled' |
     'normalizeMacosCtrlSuggestionNavigationEnabled' | 'normalizeSimpleModeEnabled' |
-    'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeOverlayTabPriorityMode' |
+    'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeOverlayOpenInCurrentTab' | 'normalizeOverlayTabPriorityMode' |
     'normalizeOverlaySizeMode' | 'normalizeOverlayWidth' | 'normalizeOverlayFontFamily' | 'normalizeTabRankScoreDebugMode' |
     'normalizeOverlayEnterAnimation' | 'normalizeMotionEffectsEnabled'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
@@ -160,6 +162,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     setSiteSearchPrefix,
     getImmediateThemeForSuggestion,
     OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+    OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
     requestTabsAndRender,
     clearDefaultOpenTabsSuggestions,
     DOCUMENT_PIP_ENABLED_STORAGE_KEY,
@@ -327,6 +330,13 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     const rawValue = ctrlNavigationChange.newValue;
     overlayState.macosCtrlSuggestionNavigationEnabled =
       SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue);
+  });
+  overlayState.storageChangeListeners.add((changes, areaName) => {
+    const openInCurrentTabChange = changes[OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY];
+    if (!isPrimaryStorageAreaName(areaName) || !openInCurrentTabChange) {
+      return;
+    }
+    overlayState.overlayOpenInCurrentTab = SETTINGS.normalizeOverlayOpenInCurrentTab(openInCurrentTabChange.newValue);
   });
   overlayState.storageChangeListeners.add((changes, areaName) => {
     const simpleModeChange = changes[SIMPLE_MODE_ENABLED_STORAGE_KEY];
@@ -512,6 +522,12 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     );
     return overlayState.macosCtrlSuggestionNavigationEnabled;
   });
+  const initialOverlayOpenInCurrentTabReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.overlayOpenInCurrentTab = SETTINGS.normalizeOverlayOpenInCurrentTab(
+      result[OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY]
+    );
+    return overlayState.overlayOpenInCurrentTab;
+  });
   const initialOverlaySizeReady = initialOverlaySettingsReady.then((result) => {
     overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
     overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(result[OVERLAY_WIDTH_STORAGE_KEY]);
@@ -588,6 +604,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     initialSearchResultDisplayLimitReady,
     initialNumberShortcutInstantReady,
     initialMacosCtrlSuggestionNavigationReady,
+    initialOverlayOpenInCurrentTabReady,
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady
   };

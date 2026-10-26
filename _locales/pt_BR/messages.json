@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Mostrar todas as guias abertas por padrão ao abrir o Lumno em uma página da Web"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Abrir resultados da barra de pesquisa em páginas da Web"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Segure Option/Alt para usar a outra opção"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "Em uma nova guia"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "Na guia atual"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Busca avançada de ícones e cores de tema"
   },

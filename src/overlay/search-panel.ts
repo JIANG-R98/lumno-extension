@@ -375,7 +375,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     openSiteSearchProviderQuery: (...args) => openSiteSearchProviderQuery(...args),
     shouldOpenSearchResultInBackgroundTab: (...args) => shouldOpenSearchResultInBackgroundTab(...args),
     recordSearchSuggestionSelectionFromSuggestion: (...args) => recordSearchSuggestionSelectionFromSuggestion(...args),
-    getSearchResultCreateDisposition: (...args) => getSearchResultCreateDisposition(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),
@@ -465,11 +465,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     openMatchedTabSuggestion: (...args) => openMatchedTabSuggestion(...args),
     shouldOpenSearchResultInBackgroundTab: (...args) => shouldOpenSearchResultInBackgroundTab(...args),
     recordSearchSuggestionSelectionFromSuggestion: (...args) => recordSearchSuggestionSelectionFromSuggestion(...args),
-    getSearchResultCreateDisposition: (...args) => getSearchResultCreateDisposition(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
     isSlashCommandInput: (...args) => isSlashCommandInput(...args),
     updateSearchSuggestions,
     isAggregateSearchProvider: (...args) => isAggregateSearchProvider(...args),
-    getSearchResultNewTabDisposition: (...args) => getSearchResultNewTabDisposition(...args),
     resolveQuickNavigation,
     overlayState
   });
@@ -587,6 +586,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     AGGREGATE_SEARCH_STORE,
     showOverlayToast: (...args) => showOverlayToast(...args),
     t: (...args) => t(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
     getSearchResultNewTabDisposition: (...args) => getSearchResultNewTabDisposition(...args),
     finishOverlayResultActivation: (...args) => finishOverlayResultActivation(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
@@ -643,7 +643,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     finishOverlayResultActivation,
     getOpenDisposition,
     getSearchResultNewTabDisposition,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
     openMatchedTabSuggestion
   } = PANEL_RESULT_ACTIVATION.createResultActivation({
     ensureOverlaySuggestionsView,
@@ -703,6 +703,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = overlayStorageKeys.faviconRequestBlacklist;
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = overlayStorageKeys.faviconEnhancedFetchEnabled;
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = overlayStorageKeys.overlayOpenTabsDefaultVisible;
+  const OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY = overlayStorageKeys.overlayOpenInCurrentTab;
   const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
   const OVERLAY_WIDTH_STORAGE_KEY = overlayStorageKeys.overlayWidth;
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation;
@@ -746,6 +747,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
       SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
       OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+      OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
       NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
       MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
     ]
@@ -1437,6 +1439,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     initialSearchResultDisplayLimitReady,
     initialNumberShortcutInstantReady,
     initialMacosCtrlSuggestionNavigationReady,
+    initialOverlayOpenInCurrentTabReady,
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady
   } = PANEL_SETTINGS_SYNC.createSettingsSync({
@@ -1475,6 +1478,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     setSiteSearchPrefix,
     getImmediateThemeForSuggestion,
     OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+    OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
     requestTabsAndRender,
     clearDefaultOpenTabsSuggestions,
     DOCUMENT_PIP_ENABLED_STORAGE_KEY,
@@ -1945,6 +1949,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }),
     initialMacosCtrlSuggestionNavigationReady.catch(() => {
       overlayState.macosCtrlSuggestionNavigationEnabled = false;
+    }),
+    initialOverlayOpenInCurrentTabReady.catch(() => {
+      overlayState.overlayOpenInCurrentTab = false;
     })
   ]).then((readyStates) => {
     if (!overlayState.overlay || !overlayState.overlay.isConnected) {

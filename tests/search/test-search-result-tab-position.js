@@ -113,6 +113,22 @@ async function run() {
   assert.strictEqual(current.created().length, 0);
   assert.deepStrictEqual(current.updated(), [{ id: 10, url: 'https://example.test/', active: true }], 'current-tab opens reuse the source tab');
 
+  const currentSearch = createWorker({ position: 'afterCurrent' });
+  await currentSearch.send({ action: 'searchOrNavigate', query: 'hello', disposition: 'currentTab' });
+  assert.strictEqual(currentSearch.created().length, 0, 'a current-tab search opens no tab');
+  assert.deepStrictEqual(currentSearch.searched, [{ text: 'hello', tabId: 10 }], 'the browser search fills the source tab');
+
+  const currentUrl = createWorker({ position: 'afterCurrent' });
+  await currentUrl.send({ action: 'searchOrNavigate', query: 'https://example.test/', disposition: 'currentTab' });
+  assert.strictEqual(currentUrl.created().length, 0);
+  assert.deepStrictEqual(currentUrl.updated(), [{ id: 10, url: 'https://example.test/' }], 'a typed URL loads in the source tab');
+
+  const currentFallback = createWorker({ position: 'afterCurrent', noSearchApi: true });
+  await currentFallback.send({ action: 'searchOrNavigate', query: 'hello', disposition: 'currentTab' });
+  const [fallbackUpdate] = currentFallback.updated();
+  assert.ok(fallbackUpdate && fallbackUpdate.id === 10 && /hello/.test(fallbackUpdate.url),
+    'without the search API the engine URL loads in the source tab');
+
   const closed = createWorker({ position: 'afterCurrent', closedSource: true });
   await closed.send({ action: 'createTab', url: 'https://example.test/' });
   assert.strictEqual(closed.created()[0].index, undefined, 'a closed source tab must not leave a stale insertion index');

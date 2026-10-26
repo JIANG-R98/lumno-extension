@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "在網頁叫出時，預設顯示所有已開啟分頁"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "網頁搜尋列結果開啟方式"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "按住 Option/Alt 可暫時改用另一種"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "在新分頁開啟"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "在目前分頁開啟"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "增強圖示與主題色取得"
   },

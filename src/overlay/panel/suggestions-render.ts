@@ -3,6 +3,7 @@
 // state and the open tabs list.
 import type { OverlayTab, WebAppearanceMode } from '../../domain/messages';
 import type { Disposition } from '../../domain/navigation-disposition';
+import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
 import type { LocalSearchScope, SiteSearchProvider } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -54,6 +55,7 @@ interface SuggestionsRenderState {
   currentOverlayTabId: number | null;
   overlayTabScoreDebugEnabled: boolean;
   simpleModeEnabled: boolean;
+  overlayOpenInCurrentTab: boolean;
   overlaySearchResultDisplayLimit: number;
   loadingSessionTrackingActive: boolean;
   defaultTheme: ThemeValue;
@@ -96,11 +98,7 @@ interface SuggestionsRenderDeps {
   openSiteSearchProviderQuery(provider: InputModeProvider | null, query: string, event: ActivationEvent | null): boolean;
   shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
-  getSearchResultCreateDisposition(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: { _xVisitButtonAction?: string } | null
-  ): Disposition;
+  getSearchResultDisposition(event: ActivationEvent | null): Disposition;
   getOverlayFaviconUrlResolver(): {
     getPageFaviconRenderCandidates(url: string, explicitUrl: string, options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }): FaviconCandidates;
   } | null;
@@ -129,7 +127,9 @@ interface SuggestionsRenderDeps {
   getDefaultSearchEngineThemeUrlForOverlay: ViewOption<'getDefaultSearchEngineThemeUrl'>;
   getBrandAccentForUrl: ViewOption<'getBrandAccentForUrl'>;
   buildTheme(accent: unknown): ThemeValue;
-  SUGGESTION_ACTION_MODEL: ViewOption<'actionModel'>;
+  SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel,
+    'createSearchActionModel' | 'getModifierAdjustedAction' | 'shouldShowVisitButton' |
+    'getSuggestionPresentationFingerprint' | 'getSuggestionStructureIdentity'>;
   normalizeSearchResultDisplayLimit(value: unknown): number;
   pauseOverlayAntiTranslateObserverForMutationBurst(): void;
   setOpenTabsResultsViewport(active: boolean, itemCount?: number): void;
@@ -174,7 +174,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     openSiteSearchProviderQuery,
     shouldOpenSearchResultInBackgroundTab,
     recordSearchSuggestionSelectionFromSuggestion,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
     getOverlayFaviconUrlResolver,
     t,
     formatMessage,
@@ -436,7 +436,8 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'searchOrNavigate',
           query: suggestion.searchQuery,
-          forceSearch: true
+          forceSearch: true,
+          disposition: getSearchResultDisposition(event)
         });
       }
     } else {
@@ -448,11 +449,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url || '',
-        disposition: getSearchResultCreateDisposition(
-          suggestion,
-          event,
-          item
-        )
+        disposition: getSearchResultDisposition(event)
       });
     }
     finishOverlayResultActivation(
@@ -493,6 +490,20 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getPageFaviconRenderCandidates(url, explicitUrl, options) : {};
   }
+
+  // While results open in the current tab, rows say 「前往」 and Option/Alt
+  // turns them to 「新开」.
+  const overlayActionModel: ViewOption<'actionModel'> = {
+    ...SUGGESTION_ACTION_MODEL,
+    createSearchActionModel: (input) => SUGGESTION_ACTION_MODEL.createSearchActionModel({
+      ...input,
+      currentTabByDefault: overlayState.overlayOpenInCurrentTab
+    }),
+    getModifierAdjustedAction: (action, modifiers) => SUGGESTION_ACTION_MODEL.getModifierAdjustedAction(action, {
+      ...modifiers,
+      currentTabByDefault: overlayState.overlayOpenInCurrentTab
+    })
+  };
 
   // The view, made on first use from the React islands entry's API.
   function ensureOverlaySuggestionsView(): SuggestionsViewController {
@@ -582,7 +593,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       getDefaultSearchEngineThemeUrl: getDefaultSearchEngineThemeUrlForOverlay,
       getBrandAccentForUrl,
       buildThemeFromAccent: (accent) => buildTheme(accent),
-      actionModel: SUGGESTION_ACTION_MODEL,
+      actionModel: overlayActionModel,
       shouldSwitchMatchedTabSuggestion,
       defaultTheme: overlayState.defaultTheme,
       urlHighlightTheme: overlayState.urlHighlightTheme,

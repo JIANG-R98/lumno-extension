@@ -48,6 +48,7 @@ const STORAGE_KEYS = Object.freeze({
   faviconRequestBlacklist: '_x_extension_favicon_request_blacklist_2026_unique_',
   faviconEnhancedFetchEnabled: '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_',
   overlayOpenTabsDefaultVisible: '_x_extension_overlay_open_tabs_default_visible_2026_unique_',
+  overlayOpenInCurrentTab: '_x_extension_overlay_open_in_current_tab_2026_unique_',
   overlaySizeMode: '_x_extension_overlay_size_mode_2026_unique_',
   overlayWidth: '_x_extension_overlay_width_2026_unique_',
   overlayEnterAnimation: '_x_extension_overlay_enter_animation_2026_unique_',

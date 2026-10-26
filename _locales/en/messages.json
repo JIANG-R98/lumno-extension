@@ -371,6 +371,18 @@
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Show all open tabs by default when Lumno opens on a webpage"
   },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Open webpage search bar results"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Hold Option/Alt to use the other one"
+  },
+  "settings_overlay_open_in_new_tab": {
+    "message": "In a new tab"
+  },
+  "settings_overlay_open_in_current_tab": {
+    "message": "In the current tab"
+  },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Enhanced Icon and Theme Color Fetching"
   },
