@@ -121,14 +121,19 @@ function getSuggestionNavigationKey(
   if (!event || config.macosCtrlEnabled !== true) {
     return '';
   }
+  return isMacControlChord(event, config) ? readEmacsArrow(event) : '';
+}
+
+function isMacControlChord(event: NavigationKeyEvent, config: SuggestionNavigationOptions): boolean {
   const platform = config.platform
     ? String(config.platform).trim().toLowerCase()
     : getPlatformFamily(config.navigatorLike);
-  if (!platform.includes('mac') ||
-      !event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
-    return '';
-  }
-  const normalizedKey = key.trim().toLowerCase();
+  return platform.includes('mac') && Boolean(event.ctrlKey) && !event.metaKey && !event.altKey && !event.shiftKey;
+}
+
+// Control-N and Control-P, read by key or by physical key.
+function readEmacsArrow(event: NavigationKeyEvent): 'ArrowDown' | 'ArrowUp' | '' {
+  const normalizedKey = String(event.key || '').trim().toLowerCase();
   const code = String(event.code || '').trim();
   if (normalizedKey === 'n' || code === 'KeyN') {
     return 'ArrowDown';
@@ -381,94 +386,95 @@ function beginNumberShortcutHold(
   numberShortcutStates.set(container, state);
 }
 
-// Handles a key event for the number shortcuts; true when it opened a row
-// or closed the numbers and was consumed.
-function handleNumberShortcutKeyEvent(
-  event: NumberShortcutKeyEvent | null | undefined,
-  items: ReadonlyArray<NumberShortcutItem | null | undefined> | null | undefined,
-  container: NumberShortcutContainer | null | undefined,
-  options?: NumberShortcutOptions | null
+type NumberShortcutRows = ReadonlyArray<NumberShortcutItem | null | undefined>;
+
+// Releasing the primary modifier after the hold shows the numbers; in
+// instant mode it dismisses them.
+function handleNumberShortcutKeyUp(
+  event: NumberShortcutKeyEvent,
+  rows: NumberShortcutRows,
+  container: NumberShortcutContainer,
+  state: NumberShortcutState | undefined,
+  isPrimaryKey: boolean
 ): boolean {
-  const rows: ReadonlyArray<NumberShortcutItem | null | undefined> = Array.isArray(items) ? items : [];
-  if (!event || !container) {
+  if (!state || !isPrimaryKey) {
     return false;
   }
-  const eventType = String(event.type || 'keydown');
-  const configuredPrimaryModifier = getPrimaryModifier(options);
-  let state = numberShortcutStates.get(container);
-  const primaryModifier = state ? state.primaryModifier : configuredPrimaryModifier;
-  const isPrimaryKey = isPrimaryModifierKey(event, primaryModifier);
-
-  if (eventType === 'keyup') {
-    if (!state || !isPrimaryKey) {
-      return false;
-    }
-    if (state.phase === 'holding') {
-      clearNumberShortcutState(container, { notifyHoldEnd: false });
-      return false;
-    }
-    if (state.phase === 'active' && isNumberShortcutInstantActive(state.options)) {
-      // Instant mode: releasing the primary modifier dismisses the numbers.
-      clearNumberShortcutState(container);
-      return false;
-    }
-    if (state.phase !== 'armed') {
-      return false;
-    }
-    if (rows.length === 0) {
-      clearNumberShortcutState(container);
-      return false;
-    }
-    invokeStateCallback(state, 'onHoldEnd');
-    enterNumberShortcutsActive(container, state.options, state);
-    consumeNumberShortcutEvent(event);
-    return true;
-  }
-
-  if (eventType !== 'keydown') {
+  if (state.phase === 'holding') {
+    clearNumberShortcutState(container, { notifyHoldEnd: false });
     return false;
   }
-
-  if (isPrimaryKey && hasOnlyPrimaryModifier(event, primaryModifier)) {
-    if (rows.length === 0) {
-      clearNumberShortcutState(container);
-      return false;
-    }
-    if (state && (state.phase === 'holding' || state.phase === 'armed' || state.phase === 'active')) {
-      return false;
-    }
-    clearNumberShortcutState(container);
-    if (!event.repeat) {
-      if (isNumberShortcutInstantActive(options)) {
-        enterNumberShortcutsActive(container, options);
-      } else {
-        beginNumberShortcutHold(container, options, primaryModifier);
-      }
-    }
-    return false;
-  }
-
-  state = numberShortcutStates.get(container);
-  if (state && (state.phase === 'holding' || state.phase === 'armed')) {
+  if (state.phase === 'active' && isNumberShortcutInstantActive(state.options)) {
     clearNumberShortcutState(container);
     return false;
   }
-  if (!state || state.phase !== 'active' || !isNumberShortcutsActive(container)) {
+  if (state.phase !== 'armed') {
     return false;
   }
+  if (rows.length === 0) {
+    clearNumberShortcutState(container);
+    return false;
+  }
+  invokeStateCallback(state, 'onHoldEnd');
+  enterNumberShortcutsActive(container, state.options, state);
+  consumeNumberShortcutEvent(event);
+  return true;
+}
+
+// Pressing the primary modifier alone starts the hold, or in instant mode
+// shows the numbers at once.
+function handlePrimaryKeyDown(
+  event: NumberShortcutKeyEvent,
+  rows: NumberShortcutRows,
+  container: NumberShortcutContainer,
+  options: NumberShortcutOptions | null | undefined,
+  primaryModifier: PrimaryModifier
+): boolean {
+  if (rows.length === 0) {
+    clearNumberShortcutState(container);
+    return false;
+  }
+  const state = numberShortcutStates.get(container);
+  if (state) {
+    return false;
+  }
+  clearNumberShortcutState(container);
+  if (event.repeat) {
+    return false;
+  }
+  if (isNumberShortcutInstantActive(options)) {
+    enterNumberShortcutsActive(container, options);
+  } else {
+    beginNumberShortcutHold(container, options, primaryModifier);
+  }
+  return false;
+}
+
+// In instant mode the digit is pressed while the primary modifier is still
+// held, so the modifier keys are allowed there; otherwise digits must be plain.
+function isPlainNumberKey(event: NumberShortcutKeyEvent, key: string, instantActive: boolean): boolean {
+  if (!/^[0-9]$/.test(key)) {
+    return false;
+  }
+  return instantActive
+    ? !event.altKey && !event.shiftKey
+    : !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+}
+
+// While the numbers show, a digit opens its row and any other key closes them.
+function handleActiveKeyDown(
+  event: NumberShortcutKeyEvent,
+  rows: NumberShortcutRows,
+  container: NumberShortcutContainer,
+  state: NumberShortcutState
+): boolean {
   const key = String(event.key || '');
   if (key === 'Escape') {
     cancelNumberShortcuts(container);
     consumeNumberShortcutEvent(event);
     return true;
   }
-  // In instant mode the digit is pressed while the primary modifier is still
-  // held, so the modifier keys are allowed there; otherwise digits must be plain.
-  const instantActive = isNumberShortcutInstantActive(state.options);
-  const plainNumber = /^[0-9]$/.test(key) && (instantActive
-    ? !event.altKey && !event.shiftKey
-    : !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey);
-  if (!plainNumber) {
+  if (!isPlainNumberKey(event, key, isNumberShortcutInstantActive(state.options))) {
     cancelNumberShortcuts(container);
     return false;
   }
@@ -479,6 +485,42 @@ function handleNumberShortcutKeyEvent(
     item.click();
   }
   return true;
+}
+
+// Handles a key event for the number shortcuts; true when it opened a row
+// or closed the numbers and was consumed.
+function handleNumberShortcutKeyEvent(
+  event: NumberShortcutKeyEvent | null | undefined,
+  items: NumberShortcutRows | null | undefined,
+  container: NumberShortcutContainer | null | undefined,
+  options?: NumberShortcutOptions | null
+): boolean {
+  const rows: NumberShortcutRows = Array.isArray(items) ? items : [];
+  if (!event || !container) {
+    return false;
+  }
+  const eventType = String(event.type || 'keydown');
+  const state = numberShortcutStates.get(container);
+  const primaryModifier = state ? state.primaryModifier : getPrimaryModifier(options);
+  const isPrimaryKey = isPrimaryModifierKey(event, primaryModifier);
+  if (eventType === 'keyup') {
+    return handleNumberShortcutKeyUp(event, rows, container, state, isPrimaryKey);
+  }
+  if (eventType !== 'keydown') {
+    return false;
+  }
+  if (isPrimaryKey && hasOnlyPrimaryModifier(event, primaryModifier)) {
+    return handlePrimaryKeyDown(event, rows, container, options, primaryModifier);
+  }
+  if (!state) {
+    return false;
+  }
+  if (state.phase !== 'active') {
+    // Another key during the hold ends it.
+    clearNumberShortcutState(container);
+    return false;
+  }
+  return isNumberShortcutsActive(container) ? handleActiveKeyDown(event, rows, container, state) : false;
 }
 
 function preventNumberShortcutWheel(
