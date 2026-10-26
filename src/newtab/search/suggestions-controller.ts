@@ -32,6 +32,7 @@ import type {
 import type { SiteSearchProviders } from './site-search-providers';
 import { createSuggestionSource } from '../../domain/search/help-center/search';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SearchEngineSuggestions from '../../domain/search/utils/engine-suggestions';
 import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 interface SuggestionsControllerState {
@@ -655,7 +656,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
       ].filter((item): item is Suggestion => Boolean(item));
       let groupedDefaultSuggestions = defaultSuggestions;
       if (pageState.searchResultPriorityMode !== 'search') {
-        groupedDefaultSuggestions = SearchSuggestionSlate.groupSearchSuggestionsByKind(defaultSuggestions, {
+        groupedDefaultSuggestions = SearchEngineSuggestions.groupSearchSuggestionsByKind(defaultSuggestions, {
           searchFirst: false
         });
       }

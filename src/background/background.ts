@@ -25,7 +25,6 @@ import '../domain/search/utils/text-index';
 import '../domain/search/utils/keyboard-layouts';
 import '../domain/search/utils/selection-stats';
 import '../domain/search/utils/result-dedup';
-import '../domain/search/utils/suggestion-slate';
 import '../domain/search/utils/query-intent';
 import '../domain/search/utils/relevance-score';
 import '../domain/search/utils/brand-suggestions';

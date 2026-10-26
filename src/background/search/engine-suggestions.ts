@@ -9,6 +9,7 @@ import { buildBackgroundSearchQueryContext, getBackgroundSearchPolicy, loadSearc
 import { readSuggestionRow } from './types';
 import type { EngineSuggestionOptions, SuggestionRow } from './types';
 import * as SearchBrandSuggestions from '../../domain/search/utils/brand-suggestions';
+import * as SearchEngineSuggestions from '../../domain/search/utils/engine-suggestions';
 import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 // The engine's suggestions as rows, as many as the policy lets in.
@@ -19,12 +20,12 @@ function buildEngineRows(
   policy: Readonly<SearchPolicy>,
   searchFirst: boolean
 ): SuggestionRow[] {
-  const engineSuggestions = SearchSuggestionSlate.normalizeSearchEngineSuggestions(
+  const engineSuggestions = SearchEngineSuggestions.normalizeSearchEngineSuggestions(
     rawEngineSuggestions,
     context.lookupQuery,
     { limit: policy.maxEngineSuggestions }
   );
-  const enginePolicy = SearchSuggestionSlate.getSearchEngineSuggestionPolicy(context, localRows, { ...policy, searchFirst });
+  const enginePolicy = SearchEngineSuggestions.getSearchEngineSuggestionPolicy(context, localRows, { ...policy, searchFirst });
   return engineSuggestions.slice(0, enginePolicy.limit).map((suggestion): SuggestionRow => ({
     type: 'googleSuggest',
     title: suggestion,

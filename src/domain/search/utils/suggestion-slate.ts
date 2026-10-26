@@ -1,452 +1,83 @@
-// The suggestion slate: brand and navigation representations, search
-// engine suggestion scores and limits, and composing and ranking the slate
-// shown under the input.
-import type {
-  SearchClusterInfo,
-  SearchQueryContext,
-  SearchTermCoverage,
-  SiteSearchProvider,
-  SuggestionLike
-} from '../types';
-import { normalizeHost } from './direct-navigation';
+// Composing and ranking the suggestion slate shown under the input.
+import type { SuggestionLike } from '../types';
 import { findSearchOpenTabMatchIndex } from './navigation-matching';
-import type { OpenTabMatchOptions } from './navigation-matching';
-import { getSearchSuggestionClusterInfo, getSearchTermCoverageStats } from './query-intent';
-import type { IntentItem } from './query-intent';
 import { SEARCH_POLICY } from './search-policy';
 import { findProviderForSiteSearchSuggestion } from './site-search-matching';
-import { normalizeSearchText, splitSearchTerms, splitSearchTitleTokens } from './text-normalize';
-import type { TitleMatchOptions } from './text-matching';
-import { getSearchTitleUnitMatch } from './text-matching';
+import { isKeywordSearchSuggestion, isSearchActionSuggestion, isSearchEngineSuggestion } from './engine-suggestions';
+import type { AutocompleteCandidate, PrimaryHighlightReason, RankSlateOptions, RankedSlate } from './slate-types';
 
-type SlateContext = Pick<SearchQueryContext, 'queryLower' | 'queryTerms' | 'intentType' | 'hasSettingsIntent' |
-  'hasInformationalIntent' | 'coreQueryTerms'>;
-
-// The text an autocompletion would put in the input, and its page.
-interface AutocompleteCandidate {
-  url?: string;
-  completion?: string;
-}
-
-// What the overlay and the New Tab search box supply to rank a slate.
-interface SlateMatchers<T> {
-  filterSuggestions?: (items: T[]) => T[];
-  promoteStrongNavigationMatch: (list: T[], rawQuery: string) => T | null;
-  promoteTopSiteMatch: (list: T[], rawQuery: string) => T | null;
-  getSiteSearchTriggerCandidate: (
-    input: unknown,
-    providers: SiteSearchProvider[] | undefined,
-    topSiteMatch: T | null
-  ) => SiteSearchProvider | null;
-  getAutocompleteCandidate: (suggestions: T[] | undefined, rawQuery: string) => AutocompleteCandidate | null;
-  getUrlDisplay: (url: string | undefined) => string;
-}
-
-interface RankSlateOptions<T> {
-  matchers: SlateMatchers<T>;
-  query?: string;
-  rawQuery?: string;
-  triggerInput?: unknown;
-  providers?: SiteSearchProvider[];
-  inlineSuggestion?: T | null;
-  siteSearchActive?: boolean;
-  // false when the reader wants search rows before local results.
-  preferAutocompleteFirst?: boolean;
-  onlyKeywordSuggestions?: boolean;
-  autocompleteSuggestions?: T[];
-  openTabMatch?: OpenTabMatchOptions | null;
-}
-
-type PrimaryHighlightReason =
-  | 'none' | 'navigation' | 'autocomplete' | 'inline' | 'topSite' | 'currentOpenTab' | 'openTab' | 'default';
-
-interface RankedSlate<T> {
-  suggestions: T[];
-  primaryHighlightIndex: number;
-  primaryHighlightReason: PrimaryHighlightReason;
-  primarySuggestion: T | null;
-  mergedProvider: SiteSearchProvider | null;
-  siteSearchTrigger: SiteSearchProvider | null;
-}
-
-interface EngineSuggestionPolicy {
-  hasLocalResults: boolean;
+// The rows picked so far, up to the limit.
+interface SlatePicks<T> {
+  selected: T[];
+  picked: Set<T>;
   limit: number;
-  score: number;
 }
 
-interface EngineSuggestionLimits {
-  maxEngineSuggestions?: number;
-  maxEngineSuggestionsWithLocalResults?: number;
-  searchFirst?: boolean;
-}
-
-const SEARCH_HOME_TITLE_TERMS = new Set([
-  'home',
-  'homepage',
-  'overview',
-  'workspace',
-  'console',
-  'dashboard',
-  '首页',
-  '主页',
-  '概览',
-  '控制台',
-  '工作台'
-]);
-
-function hasSearchHomeTitle(title: unknown): boolean {
-  const titleTerms = splitSearchTerms(String(title || '').toLowerCase());
-  return titleTerms.some((term) => SEARCH_HOME_TITLE_TERMS.has(term));
-}
-
-function isSearchLikelyBrandProductQuery(context: SlateContext | null | undefined): boolean {
-  if (!context || context.intentType !== 'object') {
+function pickSlateRow<T>(picks: SlatePicks<T>, suggestion: T | undefined): boolean {
+  if (!suggestion || picks.picked.has(suggestion) || picks.selected.length >= picks.limit) {
     return false;
   }
-  if (context.hasInformationalIntent || context.hasSettingsIntent) {
-    return false;
-  }
-  // queryTerms also carries the whole phrase, so count the split words.
-  if (!Array.isArray(context.coreQueryTerms) || context.coreQueryTerms.length !== 2) {
-    return false;
-  }
-  return context.queryLower.length <= 28;
+  picks.selected.push(suggestion);
+  picks.picked.add(suggestion);
+  return true;
 }
 
-function isSearchLikelyDirectNavigationQuery(context: SlateContext | null | undefined): boolean {
-  if (!context || context.hasInformationalIntent) {
-    return false;
+// Picks rows in order until the slate has `target` rows.
+function pickSlateRowsUntil<T>(picks: SlatePicks<T>, rows: readonly T[], target: number): void {
+  for (let i = 0; i < rows.length && picks.selected.length < target; i += 1) {
+    pickSlateRow(picks, rows[i]);
   }
-  return context.intentType === 'brand' || isSearchLikelyBrandProductQuery(context);
 }
 
-function getSearchBrandHostMatchScore(host: string, context: SlateContext | null | undefined): number {
-  if (!host || !context || context.intentType !== 'brand') {
-    return 0;
-  }
-  const query = String(context.queryLower || '').trim();
-  if (!query) {
-    return 0;
-  }
-  const hostLabels = normalizeHost(host).split('.').filter(Boolean);
-  let score = 0;
-  hostLabels.forEach((label) => {
-    if (label === query) {
-      score = Math.max(score, 100);
-      return;
+function readSlateLimit(options: { limit?: number } | null | undefined): number {
+  const rawLimit = Number(options && typeof options === 'object' ? options.limit : undefined);
+  const fallbackLimit = Number(SEARCH_POLICY.displaySuggestionLimit) || 10;
+  return Number.isInteger(rawLimit) && rawLimit >= 5 && rawLimit <= 12 ? rawLimit : fallbackLimit;
+}
+
+// Local rows fill the rest, with history and bookmarks each held to half
+// of it; the rows over that cap come back for whatever room is left.
+function pickLocalRows<T extends SuggestionLike>(picks: SlatePicks<T>, localSuggestions: readonly T[], localSlotTarget: number): T[] {
+  const localSourceCap = Math.max(1, Math.ceil(localSlotTarget / 2));
+  const localSourceCounts = new Map<string, number>();
+  const deferred: T[] = [];
+  for (let i = 0; i < localSuggestions.length && picks.selected.length < picks.limit; i += 1) {
+    const suggestion = localSuggestions[i];
+    const sourceType = suggestion && (suggestion.type === 'history' || suggestion.type === 'bookmark') ? suggestion.type : '';
+    const sourceCount = sourceType ? (localSourceCounts.get(sourceType) || 0) : 0;
+    if (sourceType && sourceCount >= localSourceCap) {
+      deferred.push(suggestion);
+    } else if (pickSlateRow(picks, suggestion) && sourceType) {
+      localSourceCounts.set(sourceType, sourceCount + 1);
     }
-    if (query.length >= 2 && label.startsWith(query)) {
-      score = Math.max(score, 60);
-    }
-  });
-  return score;
+  }
+  return deferred;
 }
 
-// Roots, sections and home pages stand for a site.
-function getPageKindBonus(info: SearchClusterInfo, hasHomeTitle: boolean): number {
-  if (info.category === 'site-root' || info.category === 'repo-root') {
-    return 4;
-  }
-  if (info.category === 'section' || info.category === 'landing') {
-    return 3;
-  }
-  if (hasHomeTitle && info.category !== 'utility' && info.category !== 'action') {
-    return 3;
-  }
-  return info.category === 'content' && info.depth <= 2 ? 1 : 0;
-}
-
-// Utility, action and user pages do not, nor does deep content.
-function getPageKindPenalty(info: SearchClusterInfo, hasHomeTitle: boolean): number {
-  if (info.category === 'utility' || info.category === 'action' || info.category === 'user') {
-    return 3;
-  }
-  return info.category === 'content' && info.depth >= 2 && !hasHomeTitle ? 1 : 0;
-}
-
-function getTitleSignal(titleLower: string, context: SlateContext): number {
-  if (titleLower === context.queryLower) {
-    return 4;
-  }
-  if (titleLower.startsWith(context.queryLower)) {
-    return 3;
-  }
-  return context.queryTerms.every((term) => term && titleLower.includes(term)) ? 2 : 0;
-}
-
-// Query terms that name the host, or start one of its labels.
-function getHostTermSignal(url: string, context: SlateContext): number {
-  let hostLabels: string[];
-  try {
-    hostLabels = normalizeHost(new URL(url).hostname).split('.').filter(Boolean);
-  } catch (e) {
-    return 0;
-  }
-  return context.queryTerms.reduce((signal, term) => {
-    if (!term) {
-      return signal;
-    }
-    if (hostLabels.includes(term)) {
-      return signal + 2;
-    }
-    return term.length >= 2 && hostLabels.some((label) => label.startsWith(term)) ? signal + 1 : signal;
-  }, 0);
-}
-
-function getSearchNavigationRepresentativeSignal(item: IntentItem | null | undefined, context: SlateContext): number {
-  if (!item || !item.url) {
-    return 0;
-  }
-  const info = getSearchSuggestionClusterInfo(item.url);
-  const titleLower = normalizeSearchText(item.title);
-  const sourceSignal = item.type === 'topSite' || item.isTopSite || item.type === 'bookmark' ? 1 : 0;
-  const hasHomeTitle = hasSearchHomeTitle(titleLower);
-  return getPageKindBonus(info, hasHomeTitle) - getPageKindPenalty(info, hasHomeTitle) +
-    getTitleSignal(titleLower, context) +
-    getHostTermSignal(item.url, context) +
-    sourceSignal;
-}
-
-// The host and path tokens of a URL; nothing when it does not parse or its
-// path does not decode.
-function readNavigationUrlParts(url: string): { hostname: string; hostLabels: string[]; pathTokens: string[] } {
-  try {
-    const parsedUrl = new URL(url);
-    const hostname = normalizeHost(parsedUrl.hostname);
-    const pathTokens = decodeURIComponent(String(parsedUrl.pathname || '').toLowerCase())
-      .split('/')
-      .filter(Boolean)
-      .flatMap((segment) => segment.split(/[^a-z0-9\u4e00-\u9fff]+/i).filter(Boolean));
-    return { hostname, hostLabels: hostname.split('.').filter(Boolean), pathTokens };
-  } catch (e) {
-    return { hostname: '', hostLabels: [], pathTokens: [] };
-  }
-}
-
-// For a brand or a brand's product, the site's own pages rank up and deep
-// content down.
-function getBrandPageAdjustment(info: SearchClusterInfo, hasHomeTitle: boolean, context: SlateContext): number {
-  const isRoot = info.category === 'site-root' || info.category === 'repo-root';
-  const isDeepContent = info.category === 'content' && info.depth >= 2;
-  if (context.intentType === 'brand') {
-    if (isRoot) return 70;
-    if (info.category === 'section' || info.category === 'landing') return 32;
-    if (hasHomeTitle) return 42;
-    return isDeepContent ? -28 : 0;
-  }
-  if (!isSearchLikelyBrandProductQuery(context)) {
-    return 0;
-  }
-  if (isRoot) return 34;
-  if (info.category === 'section' || info.category === 'landing' || hasHomeTitle) return 28;
-  return isDeepContent ? -12 : 0;
-}
-
-// A site page that misses some of several query terms ranks down.
-function getMissingTermPenalty(info: SearchClusterInfo, coverageStats: SearchTermCoverage, representativeSignal: number): number {
-  if (coverageStats.total < 2 || coverageStats.allMatched) {
-    return 0;
-  }
-  const sitePagePenalty = info.category === 'site-root' || info.category === 'section' || info.category === 'landing'
-    ? Math.min(42, coverageStats.missingCount * 22)
-    : 0;
-  return sitePagePenalty + (representativeSignal >= 6 ? 10 : 0);
-}
-
-function getSearchDirectNavigationAdjustment(
-  item: IntentItem | null | undefined,
-  sourceType: unknown,
-  context: SlateContext,
-  options?: TitleMatchOptions | null
-): number {
-  if (!isSearchLikelyDirectNavigationQuery(context) || !item || !item.url) {
-    return 0;
-  }
-  const url = item.url;
-  const info = getSearchSuggestionClusterInfo(url);
-  const hasHomeTitle = hasSearchHomeTitle(item.title);
-  const representativeSignal = getSearchNavigationRepresentativeSignal(item, context);
-  const coverageStats = getSearchTermCoverageStats(context, {
-    ...readNavigationUrlParts(url),
-    titleLower: normalizeSearchText(item.title),
-    urlLower: url.toLowerCase(),
-    titleTokens: splitSearchTitleTokens(item.title),
-    matchesTitleUnits: (term: string) => Boolean(getSearchTitleUnitMatch(item.title, term, options))
-  });
-  const representativeAdjustment = representativeSignal >= 6 ? 18 : (representativeSignal <= 0 ? -12 : 0);
-  const unrequestedUtilityPenalty = (info.category === 'utility' || info.category === 'action' || info.category === 'user') &&
-    !context.hasSettingsIntent ? 36 : 0;
-  const topSiteHomeBonus = sourceType === 'topSite' && (info.category === 'site-root' || hasHomeTitle) ? 10 : 0;
-  return getBrandPageAdjustment(info, hasHomeTitle, context) +
-    representativeAdjustment -
-    unrequestedUtilityPenalty +
-    topSiteHomeBonus -
-    getMissingTermPenalty(info, coverageStats, representativeSignal);
-}
-
-function getSearchEngineSuggestionScore(
-  context: SlateContext,
-  localSuggestions: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined
-): number {
-  const candidates: ReadonlyArray<SuggestionLike | null | undefined> = Array.isArray(localSuggestions) ? localSuggestions : [];
-  const hasStrongLocalDirectMatch = candidates.some((suggestion) => (
-    suggestion &&
-    suggestion.type !== 'googleSuggest' &&
-    getSearchNavigationRepresentativeSignal(suggestion, context) >= 6
-  ));
-
-  if (context.intentType === 'brand') {
-    return hasStrongLocalDirectMatch ? 18 : 48;
-  }
-  if (isSearchLikelyBrandProductQuery(context)) {
-    return hasStrongLocalDirectMatch ? 34 : 78;
-  }
-  if (context.intentType === 'path' || context.intentType === 'revisit') {
-    return 52;
-  }
-  if (context.hasInformationalIntent) {
-    return 220;
-  }
-  return 160;
-}
-
-function getSearchEngineSuggestionLimit(value: unknown): number {
-  const rawLimit = Number(value);
-  return Number.isFinite(rawLimit) && rawLimit > 0
-    ? Math.floor(rawLimit)
-    : SEARCH_POLICY.maxEngineSuggestions;
-}
-
-function normalizeSearchEngineSuggestionText(value: unknown): string {
-  return String(value || '').trim();
-}
-
-// The engine's suggested queries, trimmed, without the query itself or
-// repeats, up to the limit.
-function normalizeSearchEngineSuggestions(items: unknown, query: unknown, options?: { limit?: number } | null): string[] {
-  const suggestions: unknown[] = Array.isArray(items) ? items : [];
-  const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
-  const limit = getSearchEngineSuggestionLimit(settings.limit);
-  const queryText = normalizeSearchEngineSuggestionText(query);
-  const queryKey = queryText.toLowerCase();
-  const seen = new Set<string>();
-  const normalized: string[] = [];
-  for (let i = 0; i < suggestions.length && normalized.length < limit; i += 1) {
-    const suggestion = normalizeSearchEngineSuggestionText(suggestions[i]);
-    if (!suggestion) {
-      continue;
-    }
-    const suggestionKey = suggestion.toLowerCase();
-    if (suggestionKey === queryKey || seen.has(suggestionKey)) {
-      continue;
-    }
-    seen.add(suggestionKey);
-    normalized.push(suggestion);
-  }
-  return normalized;
-}
-
-function isSearchEngineSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
-  return Boolean(suggestion && suggestion.type === 'googleSuggest');
-}
-
-function isSearchActionSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
-  return Boolean(suggestion && suggestion.type === 'newtab');
-}
-
-function isKeywordSearchSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
-  return isSearchEngineSuggestion(suggestion) || isSearchActionSuggestion(suggestion);
-}
-
-// Navigation rows, then search rows (or the other way round with searchFirst).
-function groupSearchSuggestionsByKind<T extends SuggestionLike>(
-  list: ReadonlyArray<T | null | undefined> | null | undefined,
-  options?: { searchFirst?: boolean } | null
-): T[] {
-  const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
-  const settings: { searchFirst?: boolean } = options && typeof options === 'object' ? options : {};
-  const navigationSuggestions: T[] = [];
-  const keywordSuggestions: T[] = [];
-  suggestions.forEach((suggestion) => {
-    if (isKeywordSearchSuggestion(suggestion)) {
-      keywordSuggestions.push(suggestion);
-    } else {
-      navigationSuggestions.push(suggestion);
-    }
-  });
-  return settings.searchFirst
-    ? [...keywordSuggestions, ...navigationSuggestions]
-    : [...navigationSuggestions, ...keywordSuggestions];
-}
-
+// Search first: the search row and engine suggestions take about 60% of the
+// slate, local rows the rest.
 function composeSearchFirstSuggestionSlate<T extends SuggestionLike>(
   list: ReadonlyArray<T | null | undefined> | null | undefined,
   options?: { limit?: number } | null
 ): T[] {
   const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
-  const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
-  const rawLimit = Number(settings.limit);
-  const fallbackLimit = Number(SEARCH_POLICY.displaySuggestionLimit) || 10;
-  const limit = Number.isInteger(rawLimit) && rawLimit >= 5 && rawLimit <= 12
-    ? rawLimit
-    : fallbackLimit;
+  const limit = readSlateLimit(options);
   const searchSlotTarget = Math.ceil(limit * 0.6);
   const searchActions = suggestions.filter(isSearchActionSuggestion);
   const engineSuggestions = suggestions.filter(isSearchEngineSuggestion);
-  const localSuggestions = suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion));
-  const selected: T[] = [];
-  const selectedSuggestions = new Set<T>();
+  const picks: SlatePicks<T> = { selected: [], picked: new Set(), limit };
 
-  const take = (suggestion: T | undefined) => {
-    if (!suggestion || selectedSuggestions.has(suggestion) || selected.length >= limit) {
-      return false;
-    }
-    selected.push(suggestion);
-    selectedSuggestions.add(suggestion);
-    return true;
-  };
-
-  if (searchActions.length > 0) {
-    take(searchActions[0]);
-  }
-  for (let i = 0; i < engineSuggestions.length && selected.length < searchSlotTarget; i += 1) {
-    take(engineSuggestions[i]);
-  }
-
-  const localSlotTarget = Math.max(0, limit - searchSlotTarget);
-  const localSourceCap = Math.max(1, Math.ceil(localSlotTarget / 2));
-  const localSourceCounts = new Map<string, number>();
-  const deferredLocalSuggestions: T[] = [];
-  for (let i = 0; i < localSuggestions.length && selected.length < limit; i += 1) {
-    const suggestion = localSuggestions[i];
-    const sourceType = suggestion && (suggestion.type === 'history' || suggestion.type === 'bookmark')
-      ? suggestion.type
-      : '';
-    const sourceCount = sourceType ? (localSourceCounts.get(sourceType) || 0) : 0;
-    if (sourceType && sourceCount >= localSourceCap) {
-      deferredLocalSuggestions.push(suggestion);
-      continue;
-    }
-    if (take(suggestion) && sourceType) {
-      localSourceCounts.set(sourceType, sourceCount + 1);
-    }
-  }
-
-  for (let i = 0; i < engineSuggestions.length && selected.length < limit; i += 1) {
-    take(engineSuggestions[i]);
-  }
-  for (let i = 0; i < deferredLocalSuggestions.length && selected.length < limit; i += 1) {
-    take(deferredLocalSuggestions[i]);
-  }
-  for (let i = 1; i < searchActions.length && selected.length < limit; i += 1) {
-    take(searchActions[i]);
-  }
-
-  suggestions.forEach(take);
+  pickSlateRow(picks, searchActions[0]);
+  pickSlateRowsUntil(picks, engineSuggestions, searchSlotTarget);
+  const deferredLocal = pickLocalRows(picks, suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion)),
+    Math.max(0, limit - searchSlotTarget));
+  pickSlateRowsUntil(picks, engineSuggestions, limit);
+  pickSlateRowsUntil(picks, deferredLocal, limit);
+  pickSlateRowsUntil(picks, searchActions.slice(1), limit);
+  suggestions.forEach((suggestion) => pickSlateRow(picks, suggestion));
   return [
-    ...selected,
-    ...suggestions.filter((suggestion) => !selectedSuggestions.has(suggestion))
+    ...picks.selected,
+    ...suggestions.filter((suggestion) => !picks.picked.has(suggestion))
   ];
 }
 
@@ -504,175 +135,174 @@ function moveSuggestionToFront<T>(list: T[], index: number): void {
 // a top site, a matching open tab, or else the first row. Shared by the
 // Overlay and the New Tab search box, which supply their own matchers.
 // Returns a new list; `suggestions` itself is not reordered.
+// The list being ranked and the row Enter will open.
+interface SlateRanking<T> {
+  list: T[];
+  primaryHighlightIndex: number;
+  primaryHighlightReason: PrimaryHighlightReason;
+}
+
+function highlightFirst<T>(ranking: SlateRanking<T>, reason: PrimaryHighlightReason): void {
+  ranking.primaryHighlightIndex = 0;
+  ranking.primaryHighlightReason = reason;
+}
+
+// A strong navigation match moves first and is the row Enter opens; a top
+// site match moves up behind it.
+function promoteLocalMatches<T extends SuggestionLike>(
+  ranking: SlateRanking<T>,
+  config: RankSlateOptions<T>,
+  trimmedRawQuery: string
+): { strongNavigationMatch: T | null; topSiteMatch: T | null } {
+  const strongNavigationMatch = config.matchers.promoteStrongNavigationMatch(ranking.list, trimmedRawQuery);
+  if (strongNavigationMatch) {
+    highlightFirst(ranking, 'navigation');
+  }
+  return { strongNavigationMatch, topSiteMatch: config.matchers.promoteTopSiteMatch(ranking.list, trimmedRawQuery) };
+}
+
+// The row the browser would autocomplete moves first.
+function promoteAutocomplete<T extends SuggestionLike>(ranking: SlateRanking<T>, config: RankSlateOptions<T>, rawQuery: string): void {
+  const autocompleteCandidate = config.matchers.getAutocompleteCandidate(config.autocompleteSuggestions, rawQuery);
+  if (autocompleteCandidate) {
+    moveSuggestionToFront(ranking.list, findAutocompleteCandidateSuggestionIndex(
+      ranking.list,
+      autocompleteCandidate,
+      config.matchers.getUrlDisplay
+    ));
+    highlightFirst(ranking, 'autocomplete');
+  }
+}
+
+// An open tab that matches moves first, so Enter switches to it.
+function promoteOpenTab<T extends SuggestionLike>(ranking: SlateRanking<T>, config: RankSlateOptions<T>, trimmedRawQuery: string): void {
+  if (!config.openTabMatch) {
+    return;
+  }
+  const openTabMatch = findSearchOpenTabMatchIndex(ranking.list, Object.assign({}, config.openTabMatch, {
+    rawQuery: trimmedRawQuery,
+    primaryHighlightIndex: ranking.primaryHighlightIndex
+  }));
+  if (openTabMatch.index >= 0) {
+    moveSuggestionToFront(ranking.list, openTabMatch.index);
+    highlightFirst(ranking, openTabMatch.reason || 'openTab');
+  }
+}
+
+interface RankFlags {
+  rawQuery: string;
+  trimmedRawQuery: string;
+  siteSearchActive: boolean;
+  preferAutocompleteFirst: boolean;
+  onlyKeywordSuggestions: boolean;
+  // Local matches may move first: no site search, no inline row, and the
+  // browser's own suggestion goes first.
+  canPromoteLocalMatches: boolean;
+}
+
+function readRankFlags<T>(config: RankSlateOptions<T>): RankFlags {
+  const rawQuery = String(config.rawQuery || '');
+  const siteSearchActive = Boolean(config.siteSearchActive);
+  const preferAutocompleteFirst = config.preferAutocompleteFirst !== false;
+  return {
+    rawQuery,
+    trimmedRawQuery: rawQuery.trim(),
+    siteSearchActive,
+    preferAutocompleteFirst,
+    onlyKeywordSuggestions: Boolean(config.onlyKeywordSuggestions),
+    canPromoteLocalMatches: !siteSearchActive && !config.inlineSuggestion && preferAutocompleteFirst
+  };
+}
+
+// The local matches that move first, and the top site that matched.
+function rankLocalMatches<T extends SuggestionLike>(ranking: SlateRanking<T>, config: RankSlateOptions<T>, flags: RankFlags): T | null {
+  if (!flags.canPromoteLocalMatches) {
+    return null;
+  }
+  const { strongNavigationMatch, topSiteMatch } = promoteLocalMatches(ranking, config, flags.trimmedRawQuery);
+  if (!strongNavigationMatch && !flags.onlyKeywordSuggestions) {
+    promoteAutocomplete(ranking, config, flags.rawQuery);
+  }
+  if (!strongNavigationMatch && topSiteMatch && !config.inlineSuggestion) {
+    highlightFirst(ranking, 'topSite');
+  }
+  return topSiteMatch;
+}
+
+// The inline completion goes first and is what Enter opens.
+function placeInlineSuggestion<T extends SuggestionLike>(ranking: SlateRanking<T>, config: RankSlateOptions<T>): void {
+  if (!config.inlineSuggestion) {
+    return;
+  }
+  ranking.list.unshift(config.inlineSuggestion);
+  if (typeof config.matchers.filterSuggestions === 'function') {
+    ranking.list = config.matchers.filterSuggestions(ranking.list);
+  }
+  highlightFirst(ranking, 'inline');
+}
+
+function finishRanking<T extends SuggestionLike>(ranking: SlateRanking<T>, config: RankSlateOptions<T>, flags: RankFlags): void {
+  if (flags.preferAutocompleteFirst && !flags.siteSearchActive && config.query && !flags.onlyKeywordSuggestions) {
+    promoteOpenTab(ranking, config, flags.trimmedRawQuery);
+  }
+  if (flags.preferAutocompleteFirst) {
+    ranking.list = pinExactSearchActionSecond(ranking.list);
+  }
+  if (config.query && ranking.primaryHighlightIndex < 0 && ranking.list.length > 0) {
+    highlightFirst(ranking, 'default');
+  }
+}
+
 function rankSearchSuggestionSlate<T extends SuggestionLike>(
   suggestions: readonly T[] | null | undefined,
   options: RankSlateOptions<T>
 ): RankedSlate<T> {
   const config = options;
-  const matchers = config.matchers;
-  const identity = (items: T[]) => items;
-  const filterSuggestions = typeof matchers.filterSuggestions === 'function'
-    ? matchers.filterSuggestions
-    : identity;
-  const rawQuery = String(config.rawQuery || '');
-  const trimmedRawQuery = rawQuery.trim();
-  const inlineSuggestion = config.inlineSuggestion || null;
-  const siteSearchActive = Boolean(config.siteSearchActive);
-  const preferAutocompleteFirst = config.preferAutocompleteFirst !== false;
-  const onlyKeywordSuggestions = Boolean(config.onlyKeywordSuggestions);
-  const canPromoteLocalMatches = !siteSearchActive && !inlineSuggestion && preferAutocompleteFirst;
-  let list: T[] = Array.isArray(suggestions) ? suggestions.slice() : [];
-  let primaryHighlightIndex = -1;
-  let primaryHighlightReason: PrimaryHighlightReason = 'none';
-  let strongNavigationMatch: T | null = null;
-  let topSiteMatch: T | null = null;
-
-  if (canPromoteLocalMatches) {
-    strongNavigationMatch = matchers.promoteStrongNavigationMatch(list, trimmedRawQuery);
-    if (strongNavigationMatch) {
-      primaryHighlightIndex = 0;
-      primaryHighlightReason = 'navigation';
-    }
-    topSiteMatch = matchers.promoteTopSiteMatch(list, trimmedRawQuery);
-  }
-  const siteSearchTrigger = !siteSearchActive && !inlineSuggestion
-    ? matchers.getSiteSearchTriggerCandidate(config.triggerInput, config.providers, topSiteMatch)
+  const flags = readRankFlags(config);
+  const ranking: SlateRanking<T> = {
+    list: Array.isArray(suggestions) ? suggestions.slice() : [],
+    primaryHighlightIndex: -1,
+    primaryHighlightReason: 'none'
+  };
+  const topSiteMatch = rankLocalMatches(ranking, config, flags);
+  const siteSearchTrigger = !flags.siteSearchActive && !config.inlineSuggestion
+    ? config.matchers.getSiteSearchTriggerCandidate(config.triggerInput, config.providers, topSiteMatch)
     : null;
-  if (canPromoteLocalMatches && !strongNavigationMatch && !onlyKeywordSuggestions) {
-    const autocompleteCandidate = matchers.getAutocompleteCandidate(
-      config.autocompleteSuggestions,
-      rawQuery
-    );
-    if (autocompleteCandidate) {
-      moveSuggestionToFront(list, findAutocompleteCandidateSuggestionIndex(
-        list,
-        autocompleteCandidate,
-        matchers.getUrlDisplay
-      ));
-      primaryHighlightIndex = 0;
-      primaryHighlightReason = 'autocomplete';
-    }
-  }
-  if (inlineSuggestion) {
-    list.unshift(inlineSuggestion);
-    list = filterSuggestions(list);
-    primaryHighlightIndex = 0;
-    primaryHighlightReason = 'inline';
-  } else if (!strongNavigationMatch && topSiteMatch && preferAutocompleteFirst) {
-    primaryHighlightIndex = 0;
-    primaryHighlightReason = 'topSite';
-  }
-  if (preferAutocompleteFirst && !siteSearchActive && config.query &&
-      !onlyKeywordSuggestions && config.openTabMatch) {
-    const openTabMatch = findSearchOpenTabMatchIndex(list, Object.assign({}, config.openTabMatch, {
-      rawQuery: trimmedRawQuery,
-      primaryHighlightIndex
-    }));
-    if (openTabMatch.index >= 0) {
-      moveSuggestionToFront(list, openTabMatch.index);
-      primaryHighlightIndex = 0;
-      primaryHighlightReason = openTabMatch.reason || 'openTab';
-    }
-  }
-  if (preferAutocompleteFirst) {
-    list = pinExactSearchActionSecond(list);
-  }
-  if (config.query && primaryHighlightIndex < 0 && list.length > 0) {
-    primaryHighlightIndex = 0;
-    primaryHighlightReason = 'default';
-  }
-  const primarySuggestion = primaryHighlightIndex >= 0
-    ? (list[primaryHighlightIndex] || null)
-    : null;
-  const mergedProvider = primaryHighlightIndex >= 0
-    ? findProviderForSiteSearchSuggestion(primarySuggestion, config.providers)
-    : null;
+  placeInlineSuggestion(ranking, config);
+  finishRanking(ranking, config, flags);
+  const { list, primaryHighlightIndex, primaryHighlightReason } = ranking;
+  const primarySuggestion = primaryHighlightIndex >= 0 ? (list[primaryHighlightIndex] || null) : null;
   return {
     suggestions: list,
     primaryHighlightIndex,
     primaryHighlightReason,
     primarySuggestion,
-    mergedProvider,
+    mergedProvider: primaryHighlightIndex >= 0 ? findProviderForSiteSearchSuggestion(primarySuggestion, config.providers) : null,
     siteSearchTrigger
   };
 }
 
-function hasLocalResultSuggestion(list: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined): boolean {
-  return (Array.isArray(list) ? list : []).some((suggestion) => (
-    suggestion && !isKeywordSearchSuggestion(suggestion)
-  ));
-}
-
-function areOnlyKeywordSearchSuggestions(list: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined): boolean {
-  const suggestions: ReadonlyArray<SuggestionLike | null | undefined> = Array.isArray(list) ? list : [];
-  return suggestions.length > 0 && suggestions.every(isKeywordSearchSuggestion);
-}
-
-function getAutocompleteSearchSuggestionPool<T extends SuggestionLike>(list: readonly T[] | null | undefined): T[] {
-  const suggestions: readonly T[] = Array.isArray(list) ? list : [];
-  if (!hasLocalResultSuggestion(suggestions)) {
-    return suggestions.slice();
-  }
-  return suggestions.filter((suggestion) => !isSearchEngineSuggestion(suggestion));
-}
-
-function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: readonly T[] | null | undefined) {
-  const suggestions: readonly T[] = Array.isArray(list) ? list : [];
-  return {
-    onlyKeywordSuggestions: areOnlyKeywordSearchSuggestions(suggestions),
-    hasLocalResults: hasLocalResultSuggestion(suggestions),
-    autocompleteSuggestions: getAutocompleteSearchSuggestionPool(suggestions)
-  };
-}
-
-function getSearchEngineSuggestionPolicy(
-  context: SlateContext,
-  localSuggestions: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined,
-  policy?: EngineSuggestionLimits | null
-): EngineSuggestionPolicy {
-  const settings: EngineSuggestionLimits = policy && typeof policy === 'object' ? policy : {};
-  const hasLocalResults = hasLocalResultSuggestion(localSuggestions);
-  const baseScore = getSearchEngineSuggestionScore(context, localSuggestions);
-  const maxEngineSuggestions = getSearchEngineSuggestionLimit(settings.maxEngineSuggestions);
-  const rawLocalResultLimit = Number(settings.maxEngineSuggestionsWithLocalResults);
-  const localResultLimit = Number.isFinite(rawLocalResultLimit) && rawLocalResultLimit > 0
-    ? Math.floor(rawLocalResultLimit)
-    : SEARCH_POLICY.maxEngineSuggestionsWithLocalResults;
-  return {
-    hasLocalResults,
-    limit: hasLocalResults && settings.searchFirst !== true
-      ? Math.min(localResultLimit, maxEngineSuggestions)
-      : maxEngineSuggestions,
-    score: hasLocalResults ? Math.min(baseScore, 1) : baseScore
-  };
-}
-
 export {
-  areOnlyKeywordSearchSuggestions,
   composeSearchFirstSuggestionSlate,
-  getAutocompleteSearchSuggestionPool,
-  getKeywordSearchSuggestionState,
-  getSearchBrandHostMatchScore,
-  getSearchDirectNavigationAdjustment,
-  getSearchEngineSuggestionPolicy,
-  getSearchEngineSuggestionScore,
-  getSearchNavigationRepresentativeSignal,
-  groupSearchSuggestionsByKind,
-  hasSearchHomeTitle,
-  isKeywordSearchSuggestion,
-  isSearchEngineSuggestion,
-  isSearchLikelyBrandProductQuery,
-  isSearchLikelyDirectNavigationQuery,
-  normalizeSearchEngineSuggestions,
+  findAutocompleteCandidateSuggestionIndex,
+  finishRanking,
+  highlightFirst,
+  moveSuggestionToFront,
+  pickLocalRows,
+  pickSlateRow,
+  pickSlateRowsUntil,
   pinExactSearchActionSecond,
-  rankSearchSuggestionSlate
+  placeInlineSuggestion,
+  promoteAutocomplete,
+  promoteLocalMatches,
+  promoteOpenTab,
+  rankLocalMatches,
+  rankSearchSuggestionSlate,
+  readRankFlags,
+  readSlateLimit
 };
 export type {
-  AutocompleteCandidate,
-  EngineSuggestionPolicy,
-  PrimaryHighlightReason,
-  RankSlateOptions,
-  RankedSlate,
-  SlateContext,
-  SlateMatchers
+  RankFlags,
+  SlatePicks,
+  SlateRanking
 };

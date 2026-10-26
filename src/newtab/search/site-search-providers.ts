@@ -27,7 +27,7 @@ import type { CachedIconMap, IconCacheOptions } from '../../domain/favicon/short
 import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
 import * as SearchSiteSearchMatching from '../../domain/search/utils/site-search-matching';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
-import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
+import * as SearchEngineSuggestions from '../../domain/search/utils/engine-suggestions';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.
@@ -365,7 +365,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: readonly T[] | null | undefined) {
-    return SearchSuggestionSlate.getKeywordSearchSuggestionState(list);
+    return SearchEngineSuggestions.getKeywordSearchSuggestionState(list);
   }
 
   function matchesTopSitePrefix(suggestion: SuggestionLike | null | undefined, input: unknown): boolean {

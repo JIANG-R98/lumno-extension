@@ -15,7 +15,8 @@ import { buildSearchDedupEntryKey, buildSearchDedupUrlKey } from './result-dedup
 import { DEFAULT_SITE_SEARCH_PROVIDERS, SEARCH_POLICY } from './search-policy';
 import { findSiteSearchProviderByKey } from './site-search-matching';
 import { findSiteSearchProvider } from './site-search-providers';
-import { getSearchBrandHostMatchScore, getSearchNavigationRepresentativeSignal, groupSearchSuggestionsByKind, hasSearchHomeTitle } from './suggestion-slate';
+import { groupSearchSuggestionsByKind } from './engine-suggestions';
+import { getSearchBrandHostMatchScore, getSearchNavigationRepresentativeSignal, hasSearchHomeTitle } from './navigation-signals';
 
 interface BrandDirectOptions extends SearchRankingOptions {
   siteSearchProviders?: readonly SiteSearchProvider[];

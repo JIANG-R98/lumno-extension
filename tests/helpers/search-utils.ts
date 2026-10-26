@@ -16,3 +16,6 @@ export * from '../../src/domain/search/utils/text-index';
 export * from '../../src/domain/search/utils/text-matching';
 export * from '../../src/domain/search/utils/text-normalize';
 export * from '../../src/domain/search/utils/unit-paths';
+export * from '../../src/domain/search/utils/slate-types';
+export * from '../../src/domain/search/utils/navigation-signals';
+export * from '../../src/domain/search/utils/engine-suggestions';

@@ -11,7 +11,7 @@ import type { RemixIconName } from '../../shared/ui/remix-icon';
 import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
 import * as SearchSiteSearchMatching from '../../domain/search/utils/site-search-matching';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
-import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
+import * as SearchEngineSuggestions from '../../domain/search/utils/engine-suggestions';
 
 interface SearchModesState {
   inputModeController: Pick<InputModeController,
@@ -205,7 +205,7 @@ function createSearchModes(deps: SearchModesDeps) {
   }
 
   function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: T[]) {
-    return SearchSuggestionSlate.getKeywordSearchSuggestionState(list);
+    return SearchEngineSuggestions.getKeywordSearchSuggestionState(list);
   }
 
   function matchesTopSitePrefix(suggestion: SuggestionLike | null, input: string): boolean {

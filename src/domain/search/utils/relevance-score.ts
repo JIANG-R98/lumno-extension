@@ -12,9 +12,9 @@ import { getOwnExtensionUtilityPenalty, getSearchSourceAdjustment, getSearchSugg
 import { buildSearchDedupUrlKey, getSearchSuggestionDisplayTitle } from './result-dedup';
 import { SEARCH_POLICY, SEARCH_SELECTION_POLICY } from './search-policy';
 import { getNow, normalizeSearchSelectionQuery } from './selection-stats';
-import { getSearchDirectNavigationAdjustment } from './suggestion-slate';
 import { normalizeSearchText, shouldAllowLooseTextContains, splitSearchTitleTokens } from './text-normalize';
 import { getSearchTitleUnitMatch } from './text-matching';
+import { getSearchDirectNavigationAdjustment } from './navigation-signals';
 
 // What a ranking pass scores: a browser page, with the source it came from.
 type ScoredItem = Pick<BrowserItem, 'url' | 'title' | 'lastVisitTime' | 'visitCount' | 'typedCount' | 'type' | 'isTopSite'>;
