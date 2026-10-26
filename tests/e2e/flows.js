@@ -149,17 +149,33 @@ async function surfaces({ browser }) {
   }
 }
 
+// Types into the New Tab search box until `expression` finds a visible
+// result: text typed before the page has wired the box lists nothing.
+async function searchNewtab(newtab, query, expression) {
+  for (let attempt = 1; ; attempt += 1) {
+    await newtab.evaluate(`(() => {
+      const input = document.getElementById('${NEWTAB_INPUT_ID}');
+      input.focus();
+      input.select();
+    })()`);
+    await newtab.type(query);
+    try {
+      return await elementCenter(newtab, expression);
+    } catch (error) {
+      if (attempt >= 3) throw error;
+    }
+  }
+}
+
 // The new tab search box lists an open tab and switches to it.
 async function newtabSearch({ browser, fixtures }) {
   const fixture = await browser.openPage(fixtures.url('/fixture.html'));
   const newtab = await browser.openPage(browser.extensionUrl('newtab.html'));
   await focusTab(browser, newtab);
   await newtab.waitFor(`Boolean(document.getElementById('${NEWTAB_INPUT_ID}'))`, { message: 'no search box' });
-  await newtab.evaluate(`document.getElementById('${NEWTAB_INPUT_ID}').focus()`);
-  await newtab.type('Lumno fixture');
   const item = `Array.from(document.querySelectorAll('.x-nt-suggestion-item'))
     .find((element) => element.innerText.includes('Lumno fixture page'))`;
-  const center = await elementCenter(newtab, item);
+  const center = await searchNewtab(newtab, 'Lumno fixture', item);
   await newtab.click(center.x, center.y);
   const expected = await fixture.evaluate('location.href');
   await browser.worker.waitFor(`chrome.tabs.query({ active: true, lastFocusedWindow: true })
