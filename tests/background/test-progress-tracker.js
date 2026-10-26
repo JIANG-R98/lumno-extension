@@ -1,7 +1,7 @@
 const assert = require('assert');
 const progressMatch = require('../../src/domain/progress-match.ts');
 const progressHistory = require('../../src/domain/progress-history.ts');
-const { createProgressTracker } = require('../../src/background/progress-tracker.ts');
+const { createProgressTracker } = require('../../src/background/progress/tracker.ts');
 const recentSiteSettings = require('../../src/domain/settings/recent-sites.ts');
 const { createAreaSettingsStore } = require('../helpers/worker-settings');
 
@@ -377,7 +377,7 @@ const otherCard = {
   // Reading a page: next and previous links, episode navigation and metadata.
   {
     const { JSDOM } = require('jsdom');
-    const { readProgressPageHints } = require('../../src/background/progress-tracker.ts');
+    const { readProgressPageHints } = require('../../src/background/progress/page-functions.ts');
     const read = (html, url) => {
       const dom = new JSDOM(html, { url });
       const previous = { document: global.document, location: global.location, navigator: global.navigator };

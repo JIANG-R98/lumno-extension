@@ -59,7 +59,6 @@ import './pip-ownership';
 import '../shared/pip-main-world';
 import '../domain/progress-match';
 import '../domain/progress-history';
-import './progress-tracker';
 import '../domain/recent-sites-store';
 import './popup-recent-pin';
 import { pageShortcutMenuController, startProgressTracking } from './worker-controllers';

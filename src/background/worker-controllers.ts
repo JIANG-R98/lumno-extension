@@ -10,7 +10,6 @@ import * as LumnoProgressMatch from '../domain/progress-match';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoPageShortcutMenu from './page-shortcut-menu';
 import * as LumnoPopupRecentPin from './popup-recent-pin';
-import * as LumnoProgressTracker from './progress-tracker';
 import {
   loadLocaleMessages,
   normalizeHost,
@@ -18,13 +17,14 @@ import {
   workerSettings
 } from './worker-context';
 import * as FaviconCanonical from '../domain/favicon/canonical';
+import * as Tracker from './progress/tracker';
 
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
 function isProgressTrackingEnabled(): boolean {
   return workerSettings.get(LumnoSettings.progressTrackingEnabled);
 }
 
-const progressTracker = LumnoProgressTracker.createProgressTracker({
+const progressTracker = Tracker.createProgressTracker({
   chromeApi: chrome,
   progressMatch: LumnoProgressMatch,
   progressHistory: LumnoProgressHistory,
