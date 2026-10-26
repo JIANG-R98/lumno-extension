@@ -33,160 +33,192 @@ function isSearchKanaCode(code: number): boolean {
 // remember where they sit in the original text for highlighting. Thousands
 // of these stay cached, so each field is one compact value: kinds and
 // segment starts as strings, spans as start/end pairs.
-function buildSearchTextIndex(text: unknown, options?: SearchTextIndexOptions | null): SearchTextIndex {
-  const settings: SearchTextIndexOptions = options && typeof options === 'object' ? options : {};
-  const source = String(text || '');
-  let kinds = '';
-  let segments = '';
-  const texts: string[] = [];
-  const spans: number[] = [];
+// The index while it is being built from a title, character by character.
+interface IndexBuilder {
+  kinds: string;
+  segments: string;
+  texts: string[];
+  spans: number[];
   // Per word: where each of its letters ends, when the letters are not one
   // source character each ("ﬁ", accents typed apart), and its second
   // spelling ("mueller" for Müller).
-  let letterEnds: Record<number, number[]> | null = null;
-  let alternates: Record<number, string> | null = null;
-  let segmentStart = true;
-  let spaceBefore = false;
-  let lastKind = '';
-  let attachable = false;
-  let hasKana = false;
-  let run: WordRun | null = null;
-  const isCjkKind = (kind: string) => kind === SEARCH_UNIT_HAN || kind === SEARCH_UNIT_CHAR;
+  letterEnds: Record<number, number[]> | null;
+  alternates: Record<number, string> | null;
+  segmentStart: boolean;
+  spaceBefore: boolean;
+  lastKind: string;
+  attachable: boolean;
+  hasKana: boolean;
+  run: WordRun | null;
+}
 
-  const pushUnit = (
-    kind: SearchUnitKind,
-    unitText: string,
-    start: number,
-    end: number,
-    ends?: number[] | null,
-    alternate?: string
-  ) => {
-    if (ends) {
-      letterEnds = letterEnds || {};
-      letterEnds[texts.length] = ends;
-    }
-    if (alternate) {
-      alternates = alternates || {};
-      alternates[texts.length] = alternate;
-    }
-    // A space next to Han text separates word groups ("GitHub 仓库",
-    // "微信 读书"); between words of other scripts it only separates words.
-    const startsSegment = segmentStart || (spaceBefore && (isCjkKind(kind) || isCjkKind(lastKind)));
-    kinds += kind;
-    segments += startsSegment ? '1' : '0';
-    texts.push(unitText);
-    spans.push(start, end);
-    segmentStart = false;
-    spaceBefore = false;
-    lastKind = kind;
-    attachable = true;
-  };
-  const flushRun = () => {
-    const current = run;
-    if (!current) {
-      return;
-    }
-    SEARCH_WORD_PART_PATTERN.lastIndex = 0;
-    let match = SEARCH_WORD_PART_PATTERN.exec(current.text);
-    while (match) {
-      const from = match.index;
-      const to = from + match[0].length;
-      const word = match[0].toLowerCase();
-      const alternate = current.hasAlternate ? current.alternates.slice(from, to).join('').toLowerCase() : '';
-      pushUnit(
-        /^\d/.test(match[0]) ? SEARCH_UNIT_DIGIT : SEARCH_UNIT_WORD,
-        word,
-        current.starts[from],
-        current.ends[to - 1],
-        current.simple ? null : current.ends.slice(from, to),
-        alternate && alternate !== word ? alternate : ''
-      );
-      match = SEARCH_WORD_PART_PATTERN.exec(current.text);
-    }
-    run = null;
-  };
-  const extendLastUnit = (end: number, addedText: string) => {
-    const last = texts.length - 1;
-    spans[last * 2 + 1] = end;
-    if (addedText) {
-      texts[last] += addedText;
-    }
-  };
+function isCjkKind(kind: string): boolean {
+  return kind === SEARCH_UNIT_HAN || kind === SEARCH_UNIT_CHAR;
+}
 
+function pushUnit(
+  builder: IndexBuilder,
+  kind: SearchUnitKind,
+  unitText: string,
+  span: readonly [number, number],
+  ends?: number[] | null,
+  alternate?: string
+): void {
+  if (ends) {
+    builder.letterEnds = builder.letterEnds || {};
+    builder.letterEnds[builder.texts.length] = ends;
+  }
+  if (alternate) {
+    builder.alternates = builder.alternates || {};
+    builder.alternates[builder.texts.length] = alternate;
+  }
+  // A space next to Han text separates word groups ("GitHub 仓库",
+  // "微信 读书"); between words of other scripts it only separates words.
+  const startsSegment = builder.segmentStart || (builder.spaceBefore && (isCjkKind(kind) || isCjkKind(builder.lastKind)));
+  builder.kinds += kind;
+  builder.segments += startsSegment ? '1' : '0';
+  builder.texts.push(unitText);
+  builder.spans.push(span[0], span[1]);
+  builder.segmentStart = false;
+  builder.spaceBefore = false;
+  builder.lastKind = kind;
+  builder.attachable = true;
+}
+
+// The word run so far becomes word and digit units.
+function flushRun(builder: IndexBuilder): void {
+  const current = builder.run;
+  if (!current) {
+    return;
+  }
+  SEARCH_WORD_PART_PATTERN.lastIndex = 0;
+  let match = SEARCH_WORD_PART_PATTERN.exec(current.text);
+  while (match) {
+    const from = match.index;
+    const to = from + match[0].length;
+    const word = match[0].toLowerCase();
+    const alternate = current.hasAlternate ? current.alternates.slice(from, to).join('').toLowerCase() : '';
+    pushUnit(
+      builder,
+      /^\d/.test(match[0]) ? SEARCH_UNIT_DIGIT : SEARCH_UNIT_WORD,
+      word,
+      [current.starts[from], current.ends[to - 1]],
+      current.simple ? null : current.ends.slice(from, to),
+      alternate && alternate !== word ? alternate : ''
+    );
+    match = SEARCH_WORD_PART_PATTERN.exec(current.text);
+  }
+  builder.run = null;
+}
+
+// A mark belongs to the letter before it: an accent typed on its own folds
+// away, a Devanagari or Thai vowel sign stays part of it.
+function addMark(builder: IndexBuilder, folded: string, start: number, offset: number): void {
+  if (builder.run) {
+    builder.run.simple = false;
+    builder.run.ends[builder.run.ends.length - 1] = offset;
+  } else if (builder.attachable && builder.texts.length > 0) {
+    const last = builder.texts.length - 1;
+    builder.spans[last * 2 + 1] = offset;
+    builder.texts[last] += folded.toLowerCase();
+  } else if (folded) {
+    pushUnit(builder, SEARCH_UNIT_CHAR, folded.toLowerCase(), [start, offset]);
+  }
+}
+
+function addWordCharacter(builder: IndexBuilder, character: string, folded: string, start: number, offset: number): void {
+  if (!builder.run) {
+    builder.run = { text: '', starts: [], ends: [], alternates: [], simple: true, hasAlternate: false };
+  }
+  const run = builder.run;
+  if (folded.length !== 1 || character.length !== 1) {
+    run.simple = false;
+  }
+  const alternate = SEARCH_LETTER_ALTERNATES.get(character);
+  if (alternate) {
+    run.hasAlternate = true;
+  }
+  run.text += folded;
+  for (let i = 0; i < folded.length; i += 1) {
+    run.starts.push(start);
+    run.ends.push(offset);
+    run.alternates.push(i === 0 && alternate ? alternate : (i === 0 ? folded : ''));
+  }
+}
+
+// A letter of another script becomes a unit of its own; punctuation such as
+// the "-" or "|" in "Home - Visual Studio Code" starts a new segment.
+function addOtherCharacter(builder: IndexBuilder, character: string, folded: string, start: number, offset: number): void {
+  flushRun(builder);
+  const lower = folded.toLowerCase();
+  if (/^[\p{L}\p{N}][\p{L}\p{M}\p{N}]*$/u.test(lower)) {
+    if (isSearchKanaCode(lower.codePointAt(0) ?? 0)) {
+      builder.hasKana = true;
+    }
+    pushUnit(builder, SEARCH_UNIT_CHAR, lower, [start, offset]);
+    return;
+  }
+  builder.attachable = false;
+  if (/[^\s\p{M}]/u.test(character)) {
+    builder.segmentStart = true;
+  } else if (/\s/.test(character)) {
+    builder.spaceBefore = true;
+  }
+}
+
+function addCharacter(builder: IndexBuilder, character: string, start: number, offset: number): void {
+  if (SEARCH_HAN_PATTERN.test(character)) {
+    flushRun(builder);
+    pushUnit(builder, SEARCH_UNIT_HAN, foldSearchCharacter(character), [start, offset]);
+    return;
+  }
+  const folded = foldSearchCharacter(character);
+  if (!folded || /^\p{M}+$/u.test(folded)) {
+    addMark(builder, folded, start, offset);
+  } else if (SEARCH_WORD_CHARACTERS_PATTERN.test(folded)) {
+    addWordCharacter(builder, character, folded, start, offset);
+  } else {
+    addOtherCharacter(builder, character, folded, start, offset);
+  }
+}
+
+function buildSearchTextIndex(text: unknown, options?: SearchTextIndexOptions | null): SearchTextIndex {
+  const settings: SearchTextIndexOptions = options && typeof options === 'object' ? options : {};
+  const source = String(text || '');
+  const builder: IndexBuilder = {
+    kinds: '',
+    segments: '',
+    texts: [],
+    spans: [],
+    letterEnds: null,
+    alternates: null,
+    segmentStart: true,
+    spaceBefore: false,
+    lastKind: '',
+    attachable: false,
+    hasKana: false,
+    run: null
+  };
   let offset = 0;
   Array.from(source).forEach((character) => {
     const start = offset;
     offset += character.length;
-    if (SEARCH_HAN_PATTERN.test(character)) {
-      flushRun();
-      pushUnit(SEARCH_UNIT_HAN, foldSearchCharacter(character), start, offset);
-      return;
-    }
-    const folded = foldSearchCharacter(character);
-    if (!folded || /^\p{M}+$/u.test(folded)) {
-      // A mark belongs to the letter before it: an accent typed on its own
-      // folds away, a Devanagari or Thai vowel sign stays part of it.
-      if (run) {
-        run.simple = false;
-        run.ends[run.ends.length - 1] = offset;
-      } else if (attachable && texts.length > 0) {
-        extendLastUnit(offset, folded.toLowerCase());
-      } else if (folded) {
-        pushUnit(SEARCH_UNIT_CHAR, folded.toLowerCase(), start, offset);
-      }
-      return;
-    }
-    if (SEARCH_WORD_CHARACTERS_PATTERN.test(folded)) {
-      if (!run) {
-        run = { text: '', starts: [], ends: [], alternates: [], simple: true, hasAlternate: false };
-      }
-      if (folded.length !== 1 || character.length !== 1) {
-        run.simple = false;
-      }
-      const alternate = SEARCH_LETTER_ALTERNATES.get(character);
-      if (alternate) {
-        run.hasAlternate = true;
-      }
-      run.text += folded;
-      for (let i = 0; i < folded.length; i += 1) {
-        run.starts.push(start);
-        run.ends.push(offset);
-        run.alternates.push(i === 0 && alternate ? alternate : (i === 0 ? folded : ''));
-      }
-      return;
-    }
-    flushRun();
-    const lower = folded.toLowerCase();
-    if (/^[\p{L}\p{N}][\p{L}\p{M}\p{N}]*$/u.test(lower)) {
-      if (isSearchKanaCode(lower.codePointAt(0) ?? 0)) {
-        hasKana = true;
-      }
-      pushUnit(SEARCH_UNIT_CHAR, lower, start, offset);
-      return;
-    }
-    attachable = false;
-    // Punctuation such as the "-" or "|" in "Home - Visual Studio Code"
-    // starts a new segment.
-    if (/[^\s\p{M}]/u.test(character)) {
-      segmentStart = true;
-    } else if (/\s/.test(character)) {
-      spaceBefore = true;
-    }
+    addCharacter(builder, character, start, offset);
   });
-  flushRun();
+  flushRun(builder);
   return {
     text: source,
-    count: texts.length,
-    kinds,
-    segments,
-    texts: texts.slice(),
-    spans: spans.slice(),
-    letterEnds,
-    alternates,
+    count: builder.texts.length,
+    kinds: builder.kinds,
+    segments: builder.segments,
+    texts: builder.texts.slice(),
+    spans: builder.spans.slice(),
+    letterEnds: builder.letterEnds,
+    alternates: builder.alternates,
     readings: null,
     getHanReadings: typeof settings.getHanReadings === 'function' ? settings.getHanReadings : null,
     // Kanji in a Japanese title are not read as Chinese pinyin.
-    readingsResolved: !kinds.includes(SEARCH_UNIT_HAN) || hasKana
+    readingsResolved: !builder.kinds.includes(SEARCH_UNIT_HAN) || builder.hasKana
   };
 }
 

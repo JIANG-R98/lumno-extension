@@ -194,6 +194,17 @@ function normalizeSearchSelectionStats(rawStats: unknown, options?: SelectionSta
   };
 }
 
+// The entry after one more pick: the newest title and type, one more count.
+function nextSelectionEntry(url: string, picked: SearchSelection, existing: SearchSelectionEntry | null, now: number): SearchSelectionEntry {
+  return {
+    url,
+    title: String(picked.title || (existing && existing.title) || '').trim().slice(0, 180),
+    type: normalizeSearchSelectionType(picked.type || (existing && existing.type)),
+    count: Math.max(1, Math.min(999, (Number(existing && existing.count) || 0) + 1)),
+    lastSelectedAt: now
+  };
+}
+
 function recordSearchSelectionInStats(
   rawStats: unknown,
   selection: SearchSelection | null | undefined,
@@ -203,24 +214,13 @@ function recordSearchSelectionInStats(
   const now = getNow(settings);
   const queryKey = normalizeSearchSelectionQuery(selection && selection.query);
   const url = String(selection && selection.url || '').trim();
-  if (!queryKey || !url) {
-    return normalizeSearchSelectionStats(rawStats, settings);
-  }
-  const urlKey = buildSearchDedupUrlKey(url);
+  const urlKey = queryKey && url ? buildSearchDedupUrlKey(url) : '';
   if (!urlKey) {
     return normalizeSearchSelectionStats(rawStats, settings);
   }
   const stats = normalizeSearchSelectionStats(rawStats, settings);
   const bucket: SearchSelectionBucket = stats.queries[queryKey] || { updatedAt: 0, entries: {} };
-  const existing = bucket.entries[urlKey] || null;
-  const picked: SearchSelection = selection || {};
-  bucket.entries[urlKey] = {
-    url,
-    title: String(picked.title || (existing && existing.title) || '').trim().slice(0, 180),
-    type: normalizeSearchSelectionType(picked.type || (existing && existing.type)),
-    count: Math.max(1, Math.min(999, (Number(existing && existing.count) || 0) + 1)),
-    lastSelectedAt: now
-  };
+  bucket.entries[urlKey] = nextSelectionEntry(url, selection || {}, bucket.entries[urlKey] || null, now);
   bucket.updatedAt = now;
   stats.queries[queryKey] = bucket;
   stats.updatedAt = now;

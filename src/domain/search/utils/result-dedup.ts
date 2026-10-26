@@ -43,6 +43,28 @@ function shouldIgnoreSearchDedupQueryParam(paramName: string): boolean {
   return normalized.startsWith('utm_') || SEARCH_DEDUP_IGNORED_QUERY_PARAM_NAMES.has(normalized);
 }
 
+// The query a page is told apart by: tracking parameters dropped, the rest
+// in a stable order, or none on paths whose parameters never matter.
+function getDedupSearch(parsed: URL, normalizedPathname: string): string {
+  const siteConfig = getSearchSiteConfig(normalizeHost(parsed.hostname));
+  const ignoreAllSearchParamsPaths = siteConfig && siteConfig.ignoreAllSearchParamsPaths
+    ? siteConfig.ignoreAllSearchParamsPaths
+    : null;
+  if (ignoreAllSearchParamsPaths && ignoreAllSearchParamsPaths.has(normalizedPathname)) {
+    return '';
+  }
+  const nextParams = new URLSearchParams();
+  Array.from(parsed.searchParams.entries())
+    .filter(([key]) => !shouldIgnoreSearchDedupQueryParam(key))
+    .sort(([keyA, valueA], [keyB, valueB]) => (keyA === keyB
+      ? String(valueA).localeCompare(String(valueB))
+      : String(keyA).localeCompare(String(keyB))))
+    .forEach(([key, value]) => {
+      nextParams.append(key, value);
+    });
+  return nextParams.toString() ? `?${nextParams.toString()}` : '';
+}
+
 function buildSearchDedupUrlKey(url: unknown): string {
   if (!url || typeof url !== 'string') {
     return '';
@@ -59,29 +81,7 @@ function buildSearchDedupUrlKey(url: unknown): string {
       ? (parsed.pathname.replace(/\/+$/, '') || '/')
       : '/';
     parsed.pathname = normalizedPathname;
-    const normalizedHost = normalizeHost(parsed.hostname);
-    const siteConfig = getSearchSiteConfig(normalizedHost);
-    const ignoreAllSearchParamsPaths = siteConfig && siteConfig.ignoreAllSearchParamsPaths
-      ? siteConfig.ignoreAllSearchParamsPaths
-      : null;
-    const shouldIgnoreAllSearchParams = Boolean(
-      ignoreAllSearchParamsPaths && ignoreAllSearchParamsPaths.has(normalizedPathname)
-    );
-    const nextParams = new URLSearchParams();
-    if (!shouldIgnoreAllSearchParams) {
-      Array.from(parsed.searchParams.entries())
-        .filter(([key]) => !shouldIgnoreSearchDedupQueryParam(key))
-        .sort(([keyA, valueA], [keyB, valueB]) => {
-          if (keyA === keyB) {
-            return String(valueA).localeCompare(String(valueB));
-          }
-          return String(keyA).localeCompare(String(keyB));
-        })
-        .forEach(([key, value]) => {
-          nextParams.append(key, value);
-        });
-    }
-    parsed.search = nextParams.toString() ? `?${nextParams.toString()}` : '';
+    parsed.search = getDedupSearch(parsed, normalizedPathname);
     return parsed.toString();
   } catch (e) {
     return String(url).trim().toLowerCase();
@@ -113,28 +113,26 @@ function getSearchSuggestionDisplayTitle(item: DedupItem | null | undefined, sou
     '';
 }
 
+// What decides between two results for one page, most important first.
+const DEDUP_PREFERENCE: ReadonlyArray<(item: DedupItem) => number> = [
+  (item) => Number(item && item.lastVisitTime) || 0,
+  (item) => Number(item && item.typedCount) || 0,
+  (item) => Number(item && item.visitCount) || 0,
+  (item) => String(item && item.title || '').trim().length
+];
+
 function shouldReplaceDedupedSearchItem(candidate: DedupItem, existing: DedupItem | undefined): boolean {
   if (!existing) {
     return true;
   }
-  const candidateVisit = Number(candidate && candidate.lastVisitTime) || 0;
-  const existingVisit = Number(existing && existing.lastVisitTime) || 0;
-  if (candidateVisit !== existingVisit) {
-    return candidateVisit > existingVisit;
+  for (const read of DEDUP_PREFERENCE) {
+    const candidateValue = read(candidate);
+    const existingValue = read(existing);
+    if (candidateValue !== existingValue) {
+      return candidateValue > existingValue;
+    }
   }
-  const candidateTyped = Number(candidate && candidate.typedCount) || 0;
-  const existingTyped = Number(existing && existing.typedCount) || 0;
-  if (candidateTyped !== existingTyped) {
-    return candidateTyped > existingTyped;
-  }
-  const candidateVisitCount = Number(candidate && candidate.visitCount) || 0;
-  const existingVisitCount = Number(existing && existing.visitCount) || 0;
-  if (candidateVisitCount !== existingVisitCount) {
-    return candidateVisitCount > existingVisitCount;
-  }
-  const candidateTitleLength = String(candidate && candidate.title || '').trim().length;
-  const existingTitleLength = String(existing && existing.title || '').trim().length;
-  return candidateTitleLength > existingTitleLength;
+  return false;
 }
 
 function normalizeSearchDedupTitle(title: unknown): string {
