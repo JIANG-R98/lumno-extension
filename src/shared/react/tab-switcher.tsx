@@ -46,9 +46,13 @@ export interface TabSwitcherViewOptions {
   onClose?: (index: number, event: MouseEvent) => void;
 }
 
+export type TabSwitcherTheme = 'light' | 'dark';
+
 export interface TabSwitcherViewController {
   panel: HTMLElement | null;
   buttons: HTMLButtonElement[];
+  // The panel's scheme, following the page's or the setting.
+  setTheme(theme: TabSwitcherTheme): void;
   updateSelection(index: number): void;
   setTabClosing(tabId: number, closing: boolean): void;
   removeTab(tabId: number): boolean;
@@ -344,11 +348,13 @@ function TabSwitcherView({
   options,
   tabs,
   selectedIndex,
+  theme,
   panelRef
 }: {
   options: NormalizedOptions;
   tabs: InternalTab[];
   selectedIndex: number;
+  theme: TabSwitcherTheme | null;
   panelRef: (node: HTMLElement | null) => void;
 }) {
   return (
@@ -360,7 +366,9 @@ function TabSwitcherView({
       data-visible="true"
       data-close-placement={options.closeButtonPlacement}
       data-react-island="overlay-tab-switcher"
+      data-theme={theme || undefined}
       style={{
+        colorScheme: theme || undefined,
         '--x-tab-count': String(
           Math.max(1, Math.min(5, tabs.length))
         )
@@ -385,6 +393,7 @@ function createNoopController(): TabSwitcherViewController {
   return {
     panel: null,
     buttons: [],
+    setTheme() {},
     updateSelection() {},
     setTabClosing() {},
     removeTab() {
@@ -419,6 +428,7 @@ export function createTabSwitcherView(
     .slice(0, 5)
     .map((tab) => ({ ...tab }));
   let selectedIndex = Number(rawOptions.selectedIndex) || 0;
+  let theme: TabSwitcherTheme | null = null;
   let panel: HTMLElement | null = null;
   let destroyed = false;
   const timers = new Set<number>();
@@ -433,6 +443,12 @@ export function createTabSwitcherView(
             queryHtmlTags(panel, '.x-tab-switcher-card', 'button')
           )
         : [];
+    },
+    setTheme(nextTheme) {
+      if (theme !== nextTheme) {
+        theme = nextTheme;
+        render();
+      }
     },
     updateSelection(index) {
       selectedIndex = Number(index) || 0;
@@ -540,6 +556,7 @@ export function createTabSwitcherView(
           options={options}
           tabs={tabs}
           selectedIndex={selectedIndex}
+          theme={theme}
           panelRef={(node) => {
             panel = node;
           }}

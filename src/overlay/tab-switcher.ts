@@ -1,6 +1,6 @@
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import type { TabSwitcherTab, TabSwitcherThumbnailUpdate } from '../shared/react/tab-switcher';
+import type { TabSwitcherTab, TabSwitcherThumbnailUpdate, TabSwitcherViewController } from '../shared/react/tab-switcher';
 import * as TOAST from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
 import { queryHtmlTags } from '../shared/dom-lookup';
@@ -481,13 +481,13 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     return getSystemSwitcherTheme();
   }
 
-  function applySwitcherTheme(panel: HTMLElement | null, mode: unknown, toastElement: HTMLElement | null): void {
-    if (!panel) {
-      return;
-    }
+  function applySwitcherTheme(
+    view: Pick<TabSwitcherViewController, 'setTheme'>,
+    mode: unknown,
+    toastElement: HTMLElement | null
+  ): void {
     const resolved = resolveSwitcherTheme(mode);
-    panel.setAttribute('data-theme', resolved);
-    panel.style.setProperty('color-scheme', resolved);
+    view.setTheme(resolved);
     if (toastElement) {
       if (resolved === 'dark') {
         toastElement.setAttribute('data-theme', 'dark');
@@ -497,7 +497,10 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     }
   }
 
-  function createSwitcherThemeController(panel: HTMLElement, toastElement: HTMLElement | null) {
+  function createSwitcherThemeController(
+    view: Pick<TabSwitcherViewController, 'panel' | 'setTheme'>,
+    toastElement: HTMLElement | null
+  ) {
     const themeAttrFilter = [
       'class',
       'style',
@@ -522,7 +525,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
 
     function refreshSwitcherTheme(): void {
       if (!destroyed) {
-        applySwitcherTheme(panel, switcherThemeMode, toastElement);
+        applySwitcherTheme(view, switcherThemeMode, toastElement);
       }
     }
 
@@ -532,6 +535,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       }
       pageThemeSyncRaf = requestAnimationFrame(() => {
         pageThemeSyncRaf = null;
+        const panel = view.panel;
         if (destroyed || !panel || !panel.isConnected || switcherThemeMode !== 'system') {
           return;
         }
@@ -1280,7 +1284,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     }
 
     const switcherToast = createSwitcherToast(shadow);
-    const switcherThemeController = createSwitcherThemeController(panel, switcherToast.element);
+    const switcherThemeController = createSwitcherThemeController(view, switcherToast.element);
     switcherThemeController.start();
 
     let didRequestSwitch = false;

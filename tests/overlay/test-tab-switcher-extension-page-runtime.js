@@ -117,6 +117,9 @@ window.LumnoOverlayTabSwitcherView = {
       panel,
       buttons,
       destroy() {},
+      setTheme(theme) {
+        panel.setAttribute('data-theme', theme);
+      },
       updateSelection() {},
       updateThumbnail() {
         return { ok: true };

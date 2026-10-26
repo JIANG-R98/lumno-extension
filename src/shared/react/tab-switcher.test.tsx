@@ -84,6 +84,21 @@ describe('Overlay tab switcher React island', () => {
     ).toBeNull();
   });
 
+  it('takes its scheme from the host and keeps its cards', () => {
+    const { controller } = createView();
+    const first = controller.buttons[0];
+    expect(controller.panel?.dataset.theme).toBeUndefined();
+
+    act(() => controller.setTheme('dark'));
+    expect(controller.panel?.dataset.theme).toBe('dark');
+    expect(controller.panel?.style.colorScheme).toBe('dark');
+    expect(controller.panel?.style.getPropertyValue('--x-tab-count')).toBe('2');
+
+    act(() => controller.setTheme('light'));
+    expect(controller.panel?.dataset.theme).toBe('light');
+    expect(controller.buttons[0]).toBe(first);
+  });
+
   it('updates selection without replacing stable card nodes', () => {
     const { controller, onSelect, onActivate } = createView();
     const first = controller.buttons[0];
