@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contactar con el autor"
   },
-  "settings_diagnostics_title": {
-    "message": "Diagnóstico"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exporta la versión, la configuración y los errores recientes para adjuntarlos a un informe. Los accesos directos, las direcciones web y otro contenido personal no se incluyen en el archivo."
-  },
-  "settings_diagnostics_action": {
-    "message": "Exportar diagnóstico"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnóstico exportado"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "No se pudo exportar el diagnóstico"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "Tour de bienvenida"
   },

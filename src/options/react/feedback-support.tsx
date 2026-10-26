@@ -52,18 +52,9 @@ export interface FeedbackSupportHelp extends FeedbackSupportRowCopy {
   labelKey: string;
 }
 
-/** The diagnostics export: a file to attach to a report. */
-export interface FeedbackSupportDiagnostics extends FeedbackSupportRowCopy {
-  label: string;
-  labelKey: string;
-  /** Saves the file and reports how it went; never rejects. The button stays busy until then. */
-  onExport(): Promise<void>;
-}
-
 export interface FeedbackSupportRenderModel {
   /** The title above the channel tiles, apart from the Help Center. */
   channels?: FeedbackSupportRowCopy | null;
-  diagnostics?: FeedbackSupportDiagnostics | null;
   heading: string;
   headingKey: string;
   help?: FeedbackSupportHelp | null;
@@ -389,33 +380,7 @@ function FeedbackSupportAskDescription({ demo }: { demo: FeedbackSupportAskDemo 
   return rest.length ? <>{before}{trigger}{after}</> : <>{before} {trigger}</>;
 }
 
-function FeedbackSupportDiagnosticsRow({ diagnostics }: { diagnostics: FeedbackSupportDiagnostics }) {
-  const [busy, setBusy] = useState(false);
-  const exportReport = () => {
-    if (busy) {
-      return;
-    }
-    setBusy(true);
-    diagnostics.onExport().finally(() => setBusy(false));
-  };
-  return (
-    <FeedbackSupportRow copy={diagnostics}>
-      <button
-        aria-busy={busy || undefined}
-        className={ACTION_CLASS}
-        data-feedback-support="diagnostics"
-        disabled={busy}
-        onClick={exportReport}
-        type="button"
-      >
-        <span data-i18n={diagnostics.labelKey}>{diagnostics.label}</span>
-        <i className="ri-icon ri-size-14 ri-upload-line" aria-hidden="true" />
-      </button>
-    </FeedbackSupportRow>
-  );
-}
-
-export function FeedbackSupportView({ channels, diagnostics, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
+export function FeedbackSupportView({ channels, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -466,7 +431,6 @@ export function FeedbackSupportView({ channels, diagnostics, heading, headingKey
           </a>
         ))}
       </nav>
-      {diagnostics ? <FeedbackSupportDiagnosticsRow diagnostics={diagnostics} /> : null}
     </section>
   );
 }

@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "聯絡作者"
   },
-  "settings_diagnostics_title": {
-    "message": "診斷資訊"
-  },
-  "settings_diagnostics_desc": {
-    "message": "匯出版本、設定和最近的錯誤記錄，可附在回報裡。捷徑、網址等個人內容不會寫入檔案。"
-  },
-  "settings_diagnostics_action": {
-    "message": "匯出診斷資訊"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "已匯出診斷資訊"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "診斷資訊匯出失敗"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "新手導覽"
   },

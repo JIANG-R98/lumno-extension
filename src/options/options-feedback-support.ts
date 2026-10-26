@@ -1,7 +1,6 @@
 // The "Feedback & support" section on the General tab: the Help Center
 // row (whose description offers the "ask in the search box" demo while the
-// lm site search is on), the community, review, GitHub and contact links,
-// and the diagnostics export.
+// lm site search is on) and the community, review, GitHub and contact links.
 // It also points the open-source licenses link in the Global settings header
 // at the current URL. Links come from the shared remote community-links
 // file, with its bundled fallback first.
@@ -21,8 +20,6 @@ interface FeedbackSupportModelInput {
   webLocale: string;
   helpCenterSearchEnabled: boolean;
   helpIconUrl?: string;
-  // Resolves once the export is reported; no diagnostics row without it.
-  onExportDiagnostics?: (() => Promise<void>) | null;
 }
 
 interface FeedbackSupportSectionOptions {
@@ -35,8 +32,6 @@ interface FeedbackSupportSectionOptions {
   getLocale(): string;
   isHelpCenterSearchEnabled(): boolean;
   helpIconUrl?: string;
-  // Saves the diagnostics file and reports the outcome.
-  exportDiagnostics?: (() => Promise<void>) | null;
 }
 
 // Options locale (zh_CN, zh_TW, ja, other) -> the website's locale.
@@ -57,15 +52,6 @@ function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSu
     channels: {
       title: getMessage('settings_feedback_support_channels_title', '交流与反馈'),
       titleKey: 'settings_feedback_support_channels_title'
-    },
-    diagnostics: !input.onExportDiagnostics ? null : {
-      description: getMessage('settings_diagnostics_desc', '导出版本、设置和最近的错误记录，可附在反馈里。快捷方式、网址等个人内容不会写入文件。'),
-      descriptionKey: 'settings_diagnostics_desc',
-      label: getMessage('settings_diagnostics_action', '导出诊断信息'),
-      labelKey: 'settings_diagnostics_action',
-      onExport: input.onExportDiagnostics,
-      title: getMessage('settings_diagnostics_title', '诊断信息'),
-      titleKey: 'settings_diagnostics_title'
     },
     heading: getMessage('settings_feedback_support_section_title', '反馈与支持'),
     headingKey: 'settings_feedback_support_section_title',
@@ -158,7 +144,6 @@ function createFeedbackSupportSection(options: FeedbackSupportSectionOptions) {
       helpCenterSearchEnabled: options.isHelpCenterSearchEnabled(),
       helpIconUrl: options.helpIconUrl,
       links,
-      onExportDiagnostics: options.exportDiagnostics || null,
       webLocale: getFeedbackSupportWebLocale(options.getLocale())
     }));
   }

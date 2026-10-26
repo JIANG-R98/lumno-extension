@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contact the author"
   },
-  "settings_diagnostics_title": {
-    "message": "Diagnostics"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Export the version, settings and recent errors to attach to a report. Shortcuts, web addresses and other personal content stay out of the file."
-  },
-  "settings_diagnostics_action": {
-    "message": "Export diagnostics"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnostics exported"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Couldn’t export diagnostics"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "Welcome tour"
   },

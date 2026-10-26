@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "作者に連絡"
   },
-  "settings_diagnostics_title": {
-    "message": "診断情報"
-  },
-  "settings_diagnostics_desc": {
-    "message": "バージョン、設定、最近のエラーを書き出して、報告に添付できます。ショートカットや URL などの個人的な内容はファイルに含まれません。"
-  },
-  "settings_diagnostics_action": {
-    "message": "診断情報を書き出す"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "診断情報を書き出しました"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "診断情報を書き出せませんでした"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "初回ガイド"
   },

@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Autor kontaktieren"
   },
-  "settings_diagnostics_title": {
-    "message": "Diagnose"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exportieren Sie Version, Einstellungen und aktuelle Fehler, um sie einem Bericht beizufügen. Verknüpfungen, Webadressen und andere persönliche Inhalte gelangen nicht in die Datei."
-  },
-  "settings_diagnostics_action": {
-    "message": "Diagnose exportieren"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnose exportiert"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Diagnose konnte nicht exportiert werden"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "Einführungstour"
   },

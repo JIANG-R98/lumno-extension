@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "개발자에게 문의"
   },
-  "settings_diagnostics_title": {
-    "message": "진단 정보"
-  },
-  "settings_diagnostics_desc": {
-    "message": "버전, 설정, 최근 오류를 내보내 신고에 첨부할 수 있습니다. 바로가기, 웹 주소 등 개인적인 내용은 파일에 포함되지 않습니다."
-  },
-  "settings_diagnostics_action": {
-    "message": "진단 정보 내보내기"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "진단 정보를 내보냈습니다"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "진단 정보를 내보내지 못했습니다"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "시작 가이드"
   },

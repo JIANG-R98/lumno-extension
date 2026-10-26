@@ -281,21 +281,6 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Написать автору"
   },
-  "settings_diagnostics_title": {
-    "message": "Диагностика"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Экспортируйте версию, настройки и недавние ошибки, чтобы приложить их к отчёту. Ярлыки, веб-адреса и другие личные данные в файл не попадают."
-  },
-  "settings_diagnostics_action": {
-    "message": "Экспорт диагностики"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Диагностика экспортирована"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Не удалось экспортировать диагностику"
-  },
   "settings_onboarding_tutorial_action": {
     "message": "Знакомство"
   },
