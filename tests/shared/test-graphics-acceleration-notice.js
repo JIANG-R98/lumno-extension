@@ -11,8 +11,10 @@ const { ENGAGEMENT_DELAY_MS, engagementStorage } = require('../helpers/newtab-no
 const DISMISS_KEY = featureHints.getFeatureHintLocalDismissKey(graphicsNotice.createGraphicsNoticeDefinition('newtab'));
 
 // The probe asks for a WebGL context that refuses a major performance
-// caveat: one only the GPU can give. It releases the context it got.
-{
+// caveat: one only the GPU can give. It releases the context it got. When
+// WebGL finds no GPU, WebGPU has to agree before the answer is 'software';
+// anything else it cannot be sure of is 'unknown'.
+async function testProbe() {
   let lost = 0;
   const gpuCanvas = {
     getContext(type, attributes) {
@@ -21,11 +23,22 @@ const DISMISS_KEY = featureHints.getFeatureHintLocalDismissKey(graphicsNotice.cr
       return { getExtension: () => ({ loseContext() { lost += 1; } }) };
     }
   };
-  assert.strictEqual(graphics.probeGraphicsRendering(() => gpuCanvas), 'hardware');
+  const noWebgl = () => ({ getContext: () => null });
+  const adapter = (value) => ({ requestAdapter: () => Promise.resolve(value) });
+  assert.strictEqual(await graphics.probeGraphicsRendering(() => gpuCanvas, null), 'hardware');
   assert.strictEqual(lost, 1, 'the probe should release its context');
-  assert.strictEqual(graphics.probeGraphicsRendering(() => ({ getContext: () => null })), 'software');
-  assert.strictEqual(graphics.probeGraphicsRendering(() => null), 'unknown');
-  assert.strictEqual(graphics.probeGraphicsRendering(() => ({ getContext() { throw new Error('lost'); } })), 'unknown');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, adapter(null)), 'software',
+    'no WebGL and no WebGPU adapter is software rendering');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, adapter({ info: { isFallbackAdapter: true } })), 'software',
+    'only the fallback adapter is software rendering too');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, adapter({ info: { vendor: 'nvidia' } })), 'unknown',
+    'a real WebGPU adapter means WebGL alone was turned off');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, null), 'unknown', 'without WebGPU it cannot be sure');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, { requestAdapter: () => Promise.reject(new Error('x')) }), 'unknown');
+  assert.strictEqual(await graphics.probeGraphicsRendering(noWebgl, { requestAdapter: () => new Promise(() => {}) }, 20), 'unknown',
+    'an adapter request that never settles is not software rendering');
+  assert.strictEqual(await graphics.probeGraphicsRendering(() => null, adapter(null)), 'unknown');
+  assert.strictEqual(await graphics.probeGraphicsRendering(() => ({ getContext() { throw new Error('lost'); } }), adapter(null)), 'unknown');
   assert.deepStrictEqual(graphics.normalizeGraphicsProbe({ rendering: 'gpu', checkedAt: -1 }), { rendering: 'unknown', checkedAt: 0 });
   assert.strictEqual(graphics.getGraphicsSettingsUrl('chrome://'), 'chrome://settings/system');
   assert.strictEqual(graphics.getGraphicsSettingsUrl('edge://'), 'edge://settings/system');
@@ -33,17 +46,21 @@ const DISMISS_KEY = featureHints.getFeatureHintLocalDismissKey(graphicsNotice.cr
 }
 
 // A New Tab whose feature hints were seen and whose engagement prompt is due,
-// with the probe's answer stored by the worker.
+// with the probe's answer stored by the worker; the worker's fresh probe
+// answers `fresh` (the stored answer by default).
 async function openNewtab(options) {
   const config = options || {};
   const local = Object.assign({
     [graphics.GRAPHICS_PROBE_STORAGE_KEY]: { rendering: config.rendering || 'software', checkedAt: 1 }
   }, config.local || {});
-  const page = await createNewtabPage(engagementStorage({
+  const fresh = config.fresh || config.rendering || 'software';
+  const page = await createNewtabPage(Object.assign(engagementStorage({
     language: config.language || 'en',
     updateNotice: config.updateNotice,
     sync: config.sync,
     local
+  }), {
+    respond: (message) => (message && message.action === 'checkGraphicsRendering' ? { rendering: fresh } : undefined)
   }));
   await page.settle(ENGAGEMENT_DELAY_MS + 600);
   page.notice = () => page.document.querySelector('.x-lumno-feature-hint--graphics-notice');
@@ -56,6 +73,8 @@ async function openNewtab(options) {
 }
 
 (async () => {
+  await testProbe();
+
   // Without the GPU the capsule shows below the search box, counts the
   // showing and keeps the engagement prompt away for this page view.
   const shown = await openNewtab();
@@ -87,7 +106,18 @@ async function openNewtab(options) {
   assert.strictEqual(restarted.noticeVisible(), false);
   restarted.close();
 
+  // A stale stored answer the fresh probe contradicts shows nothing.
+  const stale = await openNewtab({ fresh: 'hardware' });
+  assert.ok(stale.messages.some((message) => message.action === 'checkGraphicsRendering'), 'it should probe again first');
+  assert.strictEqual(stale.noticeVisible(), false, 'a fresh probe finding the GPU should keep it away');
+  stale.close();
+  const unsure = await openNewtab({ fresh: 'unknown' });
+  assert.strictEqual(unsure.noticeVisible(), false, 'so should one that cannot tell');
+  unsure.close();
+
   const hardware = await openNewtab({ rendering: 'hardware' });
+  assert.ok(!hardware.messages.some((message) => message.action === 'checkGraphicsRendering'),
+    'a stored GPU answer should not cost a probe per page');
   assert.strictEqual(hardware.noticeVisible(), false, 'the GPU drawing should show nothing');
   assert.strictEqual(hardware.engagementVisible(), true, 'and leave the slot to the engagement prompt');
   hardware.close();

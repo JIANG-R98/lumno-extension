@@ -342,7 +342,7 @@ function restoreLocalStorageContentScriptAccess(): void {
 
 chrome.runtime.onInstalled.addListener((details) => {
   restoreLocalStorageContentScriptAccess();
-  refreshGraphicsProbe();
+  void refreshGraphicsProbe();
   // Static manifest content scripts only apply to future document loads. A
   // development-extension reload keeps existing tabs alive, so install the
   // shortcut observer there now instead of waiting for the next shortcut.
@@ -387,7 +387,7 @@ if (chrome && chrome.runtime && chrome.runtime.onStartup) {
   // sweep the open tabs.
   chrome.runtime.onStartup.addListener(() => {
     restoreBackgroundStateOnStartup();
-    refreshGraphicsProbe();
+    void refreshGraphicsProbe();
   });
 }
 // Both loaders settle even when storage is unreadable; the catch only keeps
@@ -659,7 +659,7 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewCancel', 'linkPreviewClose', 'linkPreviewOpenInTab',
   'linkPreviewFrameBind', 'linkPreviewFrameNavigating', 'linkPreviewFrameCommitted', 'linkPreviewFrameRefused',
   'getLocaleMessages', 'openOptionsPage', 'openReleasePage', 'createTab', 'openNewTab',
-  'openGraphicsSettings', 'getFaviconData'
+  'checkGraphicsRendering', 'openGraphicsSettings', 'getFaviconData'
 ]);
 
 const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPolicy({

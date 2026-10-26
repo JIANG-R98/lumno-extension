@@ -1,15 +1,17 @@
 // The capsule under New Tab's search box and above the overlay that suggests
 // turning on graphics acceleration, when the worker's probe found the browser
-// drawing without the GPU. New installs and people updating keep seeing it
-// until they close it; opening the setting only hides it for this page view.
-// Its data lives in platform/graphics-acceleration.ts.
+// drawing without the GPU and a fresh probe agrees. New installs and people
+// updating keep seeing it until they close it; opening the setting only hides
+// it for this page view. Its data lives in platform/graphics-acceleration.ts.
 import * as LumnoFeatureHints from './ui/feature-hints';
+import * as LumnoMessaging from '../platform/messaging';
 import {
   GRAPHICS_PROBE_STORAGE_KEY,
   getStoredGraphicsProbe,
-  normalizeGraphicsProbe
+  normalizeGraphicsProbe,
+  normalizeGraphicsRendering
 } from '../platform/graphics-acceleration';
-import type { GraphicsChromeApi } from '../platform/graphics-acceleration';
+import type { GraphicsChromeApi, GraphicsRendering } from '../platform/graphics-acceleration';
 import type { StorageChanges } from '../domain/storage-port';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
 
@@ -29,6 +31,8 @@ interface GraphicsNoticeOptions {
   // Return false while the page has something else to show.
   canShow?(): boolean;
   onOpenSettings?(event: MouseEvent): void;
+  // Probes again before showing; the worker's by default.
+  checkRendering?(): Promise<GraphicsRendering>;
   // The notice showed, so other notices this page view should wait.
   onSessionSlotClaimed?(): void;
 }
@@ -74,6 +78,24 @@ function createGraphicsNoticeDefinition(surface: unknown): Readonly<FeatureHintD
     linkFallback: 'Turn on',
     closeLabelKey: 'graphics_notice_close',
     closeLabelFallback: 'Dismiss graphics acceleration tip'
+  });
+}
+
+// Asks the worker to probe now, so a stale answer (from a browser start
+// before the GPU was ready, say) never shows the notice.
+function askWorkerForRendering(): Promise<GraphicsRendering> {
+  const runtime = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime : null;
+  if (!runtime) {
+    return Promise.resolve('unknown');
+  }
+  return new Promise((resolve) => {
+    try {
+      LumnoMessaging.sendBackgroundMessage(runtime, { action: 'checkGraphicsRendering' }, (reply) => {
+        resolve(runtime.lastError || !reply ? 'unknown' : normalizeGraphicsRendering(reply.rendering));
+      });
+    } catch (_error) {
+      resolve('unknown');
+    }
   });
 }
 
@@ -127,9 +149,13 @@ function createGraphicsNotice(options?: GraphicsNoticeOptions | null): GraphicsN
     hint.ready,
     Promise.resolve(config.exposureGate).catch(() => null)
   ]).then(([probe]) => {
-    if (probe.rendering !== 'software' ||
-        hint.isDismissed() ||
-        !canShowNow()) {
+    if (probe.rendering !== 'software' || hint.isDismissed()) {
+      return false;
+    }
+    const checkRendering = typeof config.checkRendering === 'function' ? config.checkRendering : askWorkerForRendering;
+    return checkRendering().then((rendering) => rendering === 'software', () => false);
+  }).then((software) => {
+    if (!software || hint.isDismissed() || !canShowNow()) {
       return false;
     }
     hint.setVisible(true);

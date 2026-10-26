@@ -17,7 +17,7 @@ import {
   openReleasePage,
   openSiteSearchOptionsPage
 } from './extension-pages';
-import { getGraphicsSettingsUrl } from './graphics-probe';
+import { getGraphicsSettingsUrl, refreshGraphicsProbe } from './graphics-probe';
 import { checkFileSchemeAccess, swapNewtabForFocus } from './newtab-fallback';
 import { SHOW_SEARCH_COMMAND_NAME, loadLocaleMessages, loadShortcutRules, logHotkeyDebug } from './worker-context';
 import {
@@ -85,7 +85,7 @@ type ExtensionPageAction =
   | 'probeProgressSeries' | 'openOptionsPage' | 'openOnboardingPage' | 'openReleasePage'
   | 'openExtensionShortcutsPage' | 'openSiteSearchOptionsPage' | 'openBookmarkManager'
   | 'openBookmarkFolderInNewTabGroup' | 'createTab' | 'openNewTab' | 'openExtensionDetailsPage'
-  | 'openGraphicsSettings';
+  | 'checkGraphicsRendering' | 'openGraphicsSettings';
 type FaviconAction = 'resolveFaviconCandidates' | 'getFaviconData' | 'getShortcutFaviconData' | 'resolveSiteThemeColor';
 type PopupAction =
   | 'popupOpenDocumentPipPicker' | 'popupShowSearch' | 'popupShowPageToast' | 'popupAddPageShortcut'
@@ -508,6 +508,12 @@ export const EXTENSION_PAGE_MESSAGE_HANDLERS: HandlersFor<ExtensionPageAction> =
       active: request.disposition !== 'backgroundTab'
     }, sender && sender.tab ? sender.tab : null, (_tab, info) => {
       sendResponse({ ok: Boolean(info && info.ok), url: detailsUrl });
+    });
+    return true;
+  },
+  checkGraphicsRendering(request, sender, sendResponse) {
+    refreshGraphicsProbe().then((rendering) => {
+      sendResponse({ rendering });
     });
     return true;
   },
