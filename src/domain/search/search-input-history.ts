@@ -60,167 +60,172 @@ function getShortcutDirection(
   return '';
 }
 
-interface InputHistoryContext {
-  readonly config: SearchInputHistoryOptions;
-  readonly storage: StoredValuePort | null;
-  readonly maxEntries: number;
-  entries: string[];
-  cursor: number;
-  draft: string;
-  hydrated: boolean;
-  destroyed: boolean;
-  loadPromise: Promise<string[]> | null;
-  pendingRecords: string[];
-  unsubscribe: (() => void) | null;
-}
+// Moving through the entries with Alt+Up and Alt+Down: the position, and
+// what was typed before the first step back.
+class HistoryNavigation {
+  entries: string[] = [];
+  private cursor = 0;
+  private draft = '';
+  private readonly maxEntries: number;
 
-function resetNavigation(ctx: InputHistoryContext) {
-  ctx.cursor = ctx.entries.length;
-  ctx.draft = '';
-}
-
-function replaceEntries(ctx: InputHistoryContext, value: unknown): string[] {
-  ctx.entries = normalizeEntries(value, ctx.maxEntries);
-  resetNavigation(ctx);
-  return ctx.entries.slice();
-}
-
-function applyRecord(ctx: InputHistoryContext, value: unknown): string {
-  const entry = normalizeEntry(value);
-  if (!entry) {
-    return '';
+  constructor(maxEntries: number) {
+    this.maxEntries = maxEntries;
   }
-  const next = ctx.entries.filter((item) => item !== entry);
-  next.push(entry);
-  ctx.entries = next.slice(-ctx.maxEntries);
-  resetNavigation(ctx);
-  return entry;
-}
 
-function persist(ctx: InputHistoryContext) {
-  if (!ctx.storage || ctx.destroyed) {
-    return;
+  reset(): void {
+    this.cursor = this.entries.length;
+    this.draft = '';
   }
-  // Input history is best-effort and must never block search.
-  ctx.storage.write(ctx.entries.slice()).catch(() => {});
-}
 
-function readStorage(ctx: InputHistoryContext): Promise<unknown> {
-  return ctx.storage ? ctx.storage.read().catch(() => []) : Promise.resolve([]);
-}
-
-function load(ctx: InputHistoryContext): Promise<string[]> {
-  if (ctx.loadPromise) {
-    return ctx.loadPromise;
+  replace(value: unknown): void {
+    this.entries = normalizeEntries(value, this.maxEntries);
+    this.reset();
   }
-  ctx.loadPromise = readStorage(ctx).then((result) => {
-    if (ctx.destroyed) {
-      return ctx.entries.slice();
+
+  // Adds the entry as the newest; returns it, or '' for nothing to add.
+  add(value: unknown): string {
+    const entry = normalizeEntry(value);
+    if (!entry) {
+      return '';
     }
-    const queued = ctx.pendingRecords.slice();
-    ctx.pendingRecords = [];
-    replaceEntries(ctx, result);
-    queued.forEach(((value: unknown) => applyRecord(ctx, value)));
-    ctx.hydrated = true;
+    const next = this.entries.filter((item) => item !== entry);
+    next.push(entry);
+    this.entries = next.slice(-this.maxEntries);
+    this.reset();
+    return entry;
+  }
+
+  move(direction: HistoryDirection, currentValue: unknown): HistoryMove {
+    const current = String(currentValue || '');
+    if (this.entries.length === 0 || !direction) {
+      return { handled: false, value: current };
+    }
+    return direction === 'previous' ? this.back(current) : this.forward(current);
+  }
+
+  private back(current: string): HistoryMove {
+    if (this.cursor >= this.entries.length) {
+      this.cursor = this.entries.length;
+      this.draft = current;
+    }
+    this.cursor = Math.max(0, this.cursor - 1);
+    return { handled: true, value: this.entries[this.cursor] };
+  }
+
+  private forward(current: string): HistoryMove {
+    if (this.cursor >= this.entries.length) {
+      return { handled: false, value: current };
+    }
+    if (this.cursor < this.entries.length - 1) {
+      this.cursor += 1;
+      return { handled: true, value: this.entries[this.cursor] };
+    }
+    this.cursor = this.entries.length;
+    return { handled: true, value: this.draft };
+  }
+}
+
+// The history of searches typed into a search box, kept in storage. Entries
+// recorded before storage is read join what it holds once it is.
+class SearchInputHistory {
+  private readonly navigation: HistoryNavigation;
+  private readonly storage: StoredValuePort | null;
+  private hydrated = false;
+  private destroyed = false;
+  private loadPromise: Promise<string[]> | null = null;
+  private pendingRecords: string[] = [];
+  private unsubscribe: (() => void) | null = null;
+
+  constructor(storage: StoredValuePort | null, maxEntries: number) {
+    this.navigation = new HistoryNavigation(maxEntries);
+    this.storage = storage;
+    if (storage) {
+      this.unsubscribe = storage.subscribe((value) => {
+        if (this.destroyed) {
+          return;
+        }
+        this.navigation.replace(value);
+        this.hydrated = true;
+      });
+    }
+    void this.load();
+  }
+
+  getEntries(): string[] {
+    return this.navigation.entries.slice();
+  }
+
+  load(): Promise<string[]> {
+    if (!this.loadPromise) {
+      const read = this.storage ? this.storage.read().catch(() => []) : Promise.resolve([]);
+      this.loadPromise = read.then((result) => this.hydrate(result));
+    }
+    return this.loadPromise;
+  }
+
+  record(value: unknown): boolean {
+    const entry = normalizeEntry(value);
+    if (!entry) {
+      return false;
+    }
+    if (!this.hydrated) {
+      this.pendingRecords.push(entry);
+    }
+    this.navigation.add(entry);
+    if (this.hydrated) {
+      this.persist();
+    } else {
+      void this.load();
+    }
+    return true;
+  }
+
+  move(direction: HistoryDirection, currentValue: unknown): HistoryMove {
+    return this.navigation.move(direction, currentValue);
+  }
+
+  resetNavigation(): void {
+    this.navigation.reset();
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+  }
+
+  private hydrate(result: unknown): string[] {
+    if (this.destroyed) {
+      return this.getEntries();
+    }
+    const queued = this.pendingRecords.slice();
+    this.pendingRecords = [];
+    this.navigation.replace(result);
+    queued.forEach((value) => this.navigation.add(value));
+    this.hydrated = true;
     if (queued.length > 0) {
-      persist(ctx);
+      this.persist();
     }
-    return ctx.entries.slice();
-  });
-  return ctx.loadPromise;
+    return this.getEntries();
+  }
+
+  private persist(): void {
+    if (!this.storage || this.destroyed) {
+      return;
+    }
+    // Input history is best-effort and must never block search.
+    this.storage.write(this.getEntries()).catch(() => {});
+  }
 }
 
-function record(ctx: InputHistoryContext, value: unknown): boolean {
-  const entry = normalizeEntry(value);
-  if (!entry) {
-    return false;
-  }
-  if (!ctx.hydrated) {
-    ctx.pendingRecords.push(entry);
-  }
-  applyRecord(ctx, entry);
-  if (ctx.hydrated) {
-    persist(ctx);
-  } else {
-    load(ctx);
-  }
-  return true;
-}
-
-function move(ctx: InputHistoryContext, direction: HistoryDirection, currentValue: unknown): HistoryMove {
-  if (ctx.entries.length === 0) {
-    return { handled: false, value: String(currentValue || '') };
-  }
-  if (direction === 'previous') {
-    if (ctx.cursor >= ctx.entries.length) {
-      ctx.cursor = ctx.entries.length;
-      ctx.draft = String(currentValue || '');
-    }
-    ctx.cursor = Math.max(0, ctx.cursor - 1);
-    return { handled: true, value: ctx.entries[ctx.cursor] };
-  }
-  if (direction === 'next') {
-    if (ctx.cursor >= ctx.entries.length) {
-      return { handled: false, value: String(currentValue || '') };
-    }
-    if (ctx.cursor < ctx.entries.length - 1) {
-      ctx.cursor += 1;
-      return { handled: true, value: ctx.entries[ctx.cursor] };
-    }
-    ctx.cursor = ctx.entries.length;
-    return { handled: true, value: ctx.draft };
-  }
-  return { handled: false, value: String(currentValue || '') };
-}
-
-function createSearchInputHistoryController(options?: SearchInputHistoryOptions) {
+function createSearchInputHistoryController(options?: SearchInputHistoryOptions): SearchInputHistory {
   const config: SearchInputHistoryOptions = options && typeof options === 'object' ? options : {};
-  const storage = config.storage || null;
   const maxEntries = Number.isFinite(Number(config.maxEntries))
     ? Math.max(1, Math.round(Number(config.maxEntries)))
     : DEFAULT_MAX_ENTRIES;
-  const ctx: InputHistoryContext = {
-    config,
-    storage,
-    maxEntries,
-    entries: [],
-    cursor: 0,
-    draft: '',
-    hydrated: false,
-    destroyed: false,
-    loadPromise: null,
-    pendingRecords: [],
-    unsubscribe: null
-  };
-
-  if (ctx.storage) {
-    ctx.unsubscribe = ctx.storage.subscribe((value) => {
-      if (ctx.destroyed) {
-        return;
-      }
-      replaceEntries(ctx, value);
-      ctx.hydrated = true;
-    });
-  }
-
-  load(ctx);
-
-  return Object.freeze({
-    destroy() {
-      ctx.destroyed = true;
-      if (ctx.unsubscribe) {
-        ctx.unsubscribe();
-        ctx.unsubscribe = null;
-      }
-    },
-    getEntries() {
-      return ctx.entries.slice();
-    },
-    load: () => load(ctx),
-    move: (direction: HistoryDirection, currentValue: unknown) => move(ctx, direction, currentValue),
-    record: (value: unknown) => record(ctx, value),
-    resetNavigation: () => resetNavigation(ctx)
-  });
+  return new SearchInputHistory(config.storage || null, maxEntries);
 }
 
 export {
@@ -229,4 +234,4 @@ export {
   getShortcutDirection,
   normalizeEntries
 };
-export type { HistoryDirection, HistoryMove, SearchInputHistoryOptions };
+export type { HistoryDirection, HistoryMove, SearchInputHistory, SearchInputHistoryOptions };
