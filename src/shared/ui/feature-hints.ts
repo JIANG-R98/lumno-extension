@@ -1,11 +1,11 @@
 // The controller that shows one feature hint through the React feature hint
-// view (getFeatureHintViewApi()): its visibility, dismissal, labels and
+// view (react/feature-hint-view.tsx): its visibility, dismissal, labels and
 // alignment.
 import type { FeatureHintViewController, FeatureHintViewLabels, FeatureHintViewModel } from '../../types/view-apis';
 import { createFeatureHintAlignment, destroyAlignment, disconnectAlignmentObserver, scheduleContentAlignmentUpdate } from './feature-hint-alignment';
 import type { FeatureHintAlignment } from './feature-hint-alignment';
 import type { NavigatorLike } from '../../domain/shortcut-display';
-import { getFeatureHintViewApi } from '../react/feature-hint-view';
+import { createFeatureHintView } from '../react/feature-hint-view';
 import { formatShortcutText, getDomIdPart, getFeatureHint, getMessage, normalizeAlignMode, normalizeArrowAlign, normalizeArrowSide, normalizeDismissStorage, normalizeWidthMode } from './feature-hint-catalog';
 import type {
   FeatureHintActionItem,
@@ -227,9 +227,8 @@ function buildViewModel(setup: FeatureHintSetup): FeatureHintViewModel {
 }
 
 function createHintView(setup: FeatureHintSetup, onDismiss: () => void): FeatureHintViewController | null {
-  const featureHintView = getFeatureHintViewApi();
   const { config, hint, actions } = setup;
-  return featureHintView.createFeatureHintView({
+  return createFeatureHintView({
     documentObj: setup.page,
     model: buildViewModel(setup),
     labels: { actions: {}, badge: '', close: '', connector: '', link: '', text: '', trailing: '' },
@@ -414,7 +413,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
   const config: FeatureHintOptions = options || {};
   const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
   const definition = getFeatureHint(config.definition || config.id || config.hint);
-  if (!definition || !documentObj || !getFeatureHintViewApi()) {
+  if (!definition || !documentObj) {
     return null;
   }
   const setup = readSetup(config, definition, documentObj);

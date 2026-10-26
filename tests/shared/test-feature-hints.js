@@ -155,7 +155,7 @@ const featureHintView = {
 
 // The module under test draws through this stand-in for its React view.
 global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {}, {
-  'src/shared/react/feature-hint-view.tsx': { getFeatureHintViewApi: () => featureHintView }
+  'src/shared/react/feature-hint-view.tsx': { createFeatureHintView: (options) => featureHintView.createFeatureHintView(options) }
 });
 require('../../src/domain/shortcut-display.ts');
 const featureHints = require('../helpers/feature-hints.ts');

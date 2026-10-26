@@ -98,7 +98,3 @@ export interface FeatureHintViewController {
   updateLabels(labels: FeatureHintViewLabels): void;
 }
 
-export interface FeatureHintViewApi {
-  readonly implementation: string;
-  createFeatureHintView(options: FeatureHintViewOptions): FeatureHintViewController | null;
-}

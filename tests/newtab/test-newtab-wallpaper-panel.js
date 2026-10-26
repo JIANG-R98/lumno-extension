@@ -25,7 +25,7 @@ const REAL_WALLPAPER_DEPENDENCIES = {
   LumnoNewtabWallpaperLocalStore: LumnoNewtabWallpaperLocalStore,
   // No React views unless a test hands one in.
   LumnoNewtabWallpaperViewModule: { getWallpaperViewApi: () => null },
-  LumnoFeatureHintViewModule: { getFeatureHintViewApi: () => null }
+  LumnoFeatureHintViewModule: { createFeatureHintView: () => null }
 };
 
 const WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
