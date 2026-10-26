@@ -279,12 +279,8 @@ async function createOptionsPage(options) {
   // Polls until condition() is truthy, for state the page fills in
   // asynchronously and a busy machine may take longer than a fixed wait for.
   const waitFor = async (condition, message, timeoutMs) => {
-    const deadline = Date.now() + (timeoutMs || 5000);
-    while (Date.now() < deadline) {
-      const value = condition();
-      if (value) return value;
-      await settle(10);
-    }
+    const value = await timers.waitFor(condition, timeoutMs || 5000);
+    if (value) return value;
     throw new Error(`${message || 'condition not met'}${errors.length ? `\npage errors: ${errors.join('\n')}` : ''}`);
   };
 
