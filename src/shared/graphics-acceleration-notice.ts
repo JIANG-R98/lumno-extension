@@ -1,16 +1,13 @@
 // The capsule under New Tab's search box and above the overlay that suggests
 // turning on graphics acceleration, when the worker's probe found the browser
-// drawing without the GPU. New installs and people updating see it up to
-// three times, until they close it or open the setting. Its data lives in
-// platform/graphics-acceleration.ts.
+// drawing without the GPU. New installs and people updating keep seeing it
+// until they close it; opening the setting only hides it for this page view.
+// Its data lives in platform/graphics-acceleration.ts.
 import * as LumnoFeatureHints from './ui/feature-hints';
 import {
-  GRAPHICS_NOTICE_MAX_DISPLAY_COUNT,
   GRAPHICS_PROBE_STORAGE_KEY,
-  getStoredGraphicsNoticeDisplayCount,
   getStoredGraphicsProbe,
-  normalizeGraphicsProbe,
-  setStoredGraphicsNoticeDisplayCount
+  normalizeGraphicsProbe
 } from '../platform/graphics-acceleration';
 import type { GraphicsChromeApi } from '../platform/graphics-acceleration';
 import type { StorageChanges } from '../domain/storage-port';
@@ -102,9 +99,10 @@ function createGraphicsNotice(options?: GraphicsNoticeOptions | null): GraphicsN
     t: config.t,
     getRiSvg: config.getRiSvg,
     initiallyVisible: false,
+    // Still drawing without the GPU after a restart, it comes back.
     onLinkClick(event) {
       if (controller) {
-        controller.dismiss();
+        controller.setVisible(false);
       }
       if (typeof config.onOpenSettings === 'function') {
         config.onOpenSettings(event);
@@ -126,12 +124,10 @@ function createGraphicsNotice(options?: GraphicsNoticeOptions | null): GraphicsN
 
   const readyPromise: Promise<boolean> = Promise.all([
     getStoredGraphicsProbe(chromeApi),
-    getStoredGraphicsNoticeDisplayCount(chromeApi),
     hint.ready,
     Promise.resolve(config.exposureGate).catch(() => null)
-  ]).then(([probe, displayCount]) => {
+  ]).then(([probe]) => {
     if (probe.rendering !== 'software' ||
-        displayCount >= GRAPHICS_NOTICE_MAX_DISPLAY_COUNT ||
         hint.isDismissed() ||
         !canShowNow()) {
       return false;
@@ -141,7 +137,6 @@ function createGraphicsNotice(options?: GraphicsNoticeOptions | null): GraphicsN
       return false;
     }
     sessionSlotClaimed = true;
-    setStoredGraphicsNoticeDisplayCount(chromeApi, displayCount + 1);
     if (typeof config.onSessionSlotClaimed === 'function') {
       config.onSessionSlotClaimed();
     }

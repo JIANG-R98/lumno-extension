@@ -61,15 +61,24 @@ async function openNewtab(options) {
   const shown = await openNewtab();
   assert.strictEqual(shown.noticeVisible(), true, 'software rendering should show the notice');
   assert.ok(shown.notice().textContent.includes('Graphics acceleration is off'));
-  assert.strictEqual(shown.storage.local.data[graphics.GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY], 1);
   assert.strictEqual(shown.engagementVisible(), false, 'the notice should take the session slot');
   await shown.click(shown.notice().querySelector('.x-lumno-feature-hint__link'));
   await shown.settle(50);
   assert.ok(shown.messages.some((message) => message.action === 'openGraphicsSettings' && message.disposition === 'newTab'),
     'its link should open the browser setting');
-  assert.strictEqual(shown.noticeVisible(), false, 'and close it');
-  assert.strictEqual(shown.storage.local.data[DISMISS_KEY], true, 'for good on this computer');
+  assert.strictEqual(shown.noticeVisible(), false, 'and hide it for this page view');
+  assert.strictEqual(shown.storage.local.data[DISMISS_KEY], undefined, 'but not for good');
   shown.close();
+
+  // It keeps showing on later page views until closed, then never again on
+  // this computer.
+  const again = await openNewtab();
+  assert.strictEqual(again.noticeVisible(), true, 'an unclosed notice should show again');
+  await again.click(again.notice().querySelector('.x-lumno-feature-hint__close'));
+  await again.settle(20);
+  assert.strictEqual(again.noticeVisible(), false);
+  assert.strictEqual(again.storage.local.data[DISMISS_KEY], true, 'closing it should be remembered on this computer');
+  again.close();
 
   // A restart with the GPU back hides an open notice.
   const restarted = await openNewtab();
@@ -83,9 +92,9 @@ async function openNewtab(options) {
   assert.strictEqual(hardware.engagementVisible(), true, 'and leave the slot to the engagement prompt');
   hardware.close();
 
-  const exhausted = await openNewtab({ local: { [graphics.GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY]: 3 } });
-  assert.strictEqual(exhausted.noticeVisible(), false, 'three showings should be the limit');
-  exhausted.close();
+  const closed = await openNewtab({ local: { [DISMISS_KEY]: true } });
+  assert.strictEqual(closed.noticeVisible(), false, 'a closed notice should stay closed');
+  closed.close();
 
   const zhMessages = JSON.parse(fs.readFileSync('_locales/zh_CN/messages.json', 'utf8'));
   const zh = await openNewtab({ language: 'zh-CN' });

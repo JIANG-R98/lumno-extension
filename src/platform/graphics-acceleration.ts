@@ -1,7 +1,6 @@
-// Whether the browser draws with the GPU: the worker's probe, the answer it
-// stores for New Tab and the overlay, and how many times their notice
-// suggesting graphics acceleration was shown. shared/graphics-acceleration-
-// notice.ts shows it.
+// Whether the browser draws with the GPU: the worker's probe and the answer
+// it stores for New Tab and the overlay, whose notice suggests graphics
+// acceleration (shared/graphics-acceleration-notice.ts).
 import type { StorageAreaLike, StorageChangeEventLike } from '../domain/storage-port';
 
 // 'software' when WebGL only runs without the GPU (or not at all): graphics
@@ -26,8 +25,6 @@ interface ProbeCanvas {
 }
 
 const GRAPHICS_PROBE_STORAGE_KEY = '_x_lumno_graphics_probe_2026_unique_';
-const GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY = '_x_lumno_graphics_notice_display_count_2026_unique_';
-const GRAPHICS_NOTICE_MAX_DISPLAY_COUNT = 3;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -47,10 +44,6 @@ function normalizeGraphicsProbe(value: unknown): GraphicsProbe {
 
 function isWebglContext(value: unknown): value is Pick<WebGLRenderingContext, 'getExtension'> {
   return isRecord(value) && typeof value.getExtension === 'function';
-}
-
-function normalizeDisplayCount(value: unknown): number {
-  return Math.max(0, Math.floor(Number(value) || 0));
 }
 
 // A WebGL context that refuses a major performance caveat exists only when
@@ -122,14 +115,6 @@ function setStoredGraphicsProbe(chromeApi: GraphicsChromeApi | null | undefined,
   });
 }
 
-function getStoredGraphicsNoticeDisplayCount(chromeApi: GraphicsChromeApi | null | undefined): Promise<number> {
-  return readLocalValue(chromeApi, GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY).then(normalizeDisplayCount);
-}
-
-function setStoredGraphicsNoticeDisplayCount(chromeApi: GraphicsChromeApi | null | undefined, count: number): void {
-  writeLocalValue(chromeApi, GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY, normalizeDisplayCount(count));
-}
-
 // The browser's own settings page with the graphics acceleration switch.
 function getGraphicsSettingsUrl(internalScheme: string): string {
   if (internalScheme === 'edge://' || internalScheme === 'brave://') {
@@ -140,15 +125,11 @@ function getGraphicsSettingsUrl(internalScheme: string): string {
 
 export type { GraphicsChromeApi, GraphicsProbe, GraphicsRendering, ProbeCanvas };
 export {
-  GRAPHICS_NOTICE_DISPLAY_COUNT_STORAGE_KEY,
-  GRAPHICS_NOTICE_MAX_DISPLAY_COUNT,
   GRAPHICS_PROBE_STORAGE_KEY,
   getGraphicsSettingsUrl,
-  getStoredGraphicsNoticeDisplayCount,
   getStoredGraphicsProbe,
   normalizeGraphicsProbe,
   normalizeGraphicsRendering,
   probeGraphicsRendering,
-  setStoredGraphicsNoticeDisplayCount,
   setStoredGraphicsProbe
 };
