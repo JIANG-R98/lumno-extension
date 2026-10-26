@@ -52,7 +52,6 @@ import './selection-target';
 import './selection-quick-action-provider';
 import * as LumnoSelectionScriptRegistration from './selection-script-registration';
 import * as LumnoPipPageBridgeRegistration from './pip-page-bridge-registration';
-import * as LumnoLinkPreview from './link-preview';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router';
 import './newtab-fallback';
 import '../platform/browser-profile';
@@ -148,6 +147,8 @@ import { recoverFromPageHotkeyNewtab, triggerCopyCurrentUrlForTab, triggerShowSe
 import { getBackgroundFaviconCacheRuntime } from './favicon/candidates';
 import { SITE_SEARCH_SHORTCUT_ICON_SETTINGS } from './favicon/site-search-icons';
 import { markFaviconDirtyForUrl } from './favicon/visit-dirty';
+import * as FrameRules from './link-preview/frame-rules';
+import * as Service from './link-preview/service';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
@@ -537,7 +538,7 @@ const handleWebDavMessage: BackgroundHandler<'webdav'> = (message, sender, sendR
 if (pageShortcutMenuController) pageShortcutMenuController.start();
 
 // Link preview: Shift+click opens a link in a small window over the page.
-const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome, settingsStore: workerSettings });
+const linkPreviewService = Service.createLinkPreviewService({ chromeApi: chrome, settingsStore: workerSettings });
 linkPreviewService.attach();
 
 // Firefox's website appearance setting, behind the /appearance command.
@@ -595,10 +596,10 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
       request.url,
       chrome.runtime.getURL('')
     ),
-    linkPreviewPrepare: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
-    linkPreviewOpen: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
-    linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
-    linkPreviewFrameNavigating: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    linkPreviewPrepare: (request) => FrameRules.isPreviewableUrl(request.url),
+    linkPreviewOpen: (request) => FrameRules.isPreviewableUrl(request.url),
+    linkPreviewOpenInTab: (request) => FrameRules.isPreviewableUrl(request.url),
+    linkPreviewFrameNavigating: (request) => FrameRules.isPreviewableUrl(request.url),
     setWebAppearance: (request) => Boolean(LumnoWebAppearance.normalizeMode(request.mode)),
     runSiteSearchProviderQuery: (request) => {
       const entryUrl = getSiteSearchProviderEntryUrl(readSiteSearchProvider(request.provider), request.query);

@@ -1,7 +1,11 @@
 const assert = require('assert');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { moduleScript } = require('../helpers/module-script');
-const linkPreview = require('../../src/background/link-preview.ts');
+const linkPreview = {
+  ...require('../../src/background/link-preview/service.ts'),
+  ...require('../../src/background/link-preview/constants.ts'),
+  ...require('../../src/background/link-preview/frame-rules.ts')
+};
 const settings = require('../../src/domain/settings/index.ts');
 const { toPreviewFrameUrl } = require('../../src/domain/link-preview-frame-url.ts');
 const { linkPreviewSessions } = require('../../src/domain/settings/features.ts');
