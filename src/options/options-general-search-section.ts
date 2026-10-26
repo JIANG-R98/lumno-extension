@@ -1,8 +1,8 @@
-// The General tab's search results section: whether the overlay opens
-// results in the current tab, where result tabs open, which
-// result comes first, the browser content types shown and their order, how
-// many results show, the overlay's open tabs, and fuzzy pinyin. One React
-// view draws the rows; this keeps their values in step with storage.
+// The General tab's search results section, shared by the webpage overlay
+// and the New Tab search box: where result tabs open, which result comes
+// first, the browser content types shown and their order, how many results
+// show, and fuzzy pinyin. One React view draws the rows; this keeps their
+// values in step with storage.
 import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
@@ -22,11 +22,9 @@ interface GeneralSearchSectionDeps {
   SETTINGS: Pick<typeof Settings,
     'SEARCH_RESULT_TAB_POSITION_STORAGE_KEY' | 'SEARCH_RESULT_PRIORITY_STORAGE_KEY' |
     'SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY' | 'SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY' |
-    'OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY' | 'SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY' |
-    'OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY' |
+    'SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY' |
     'normalizeSearchResultTabPosition' | 'normalizeSearchResultPriority' | 'normalizeSearchResultSourceTypes' |
-    'normalizeSearchResultDisplayLimit' | 'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeSearchFuzzyPinyinEnabled' |
-    'normalizeOverlayOpenInCurrentTab'>;
+    'normalizeSearchResultDisplayLimit' | 'normalizeSearchFuzzyPinyinEnabled'>;
   orderController: Pick<ReturnType<typeof createSearchSourceOrderController>,
     'sortLocalSourceTypes' | 'moveLocal' | 'resetLocal' | 'isLocalDefault' | 'attachLocalDrag'>;
   getMessage: GetMessage;
@@ -55,10 +53,6 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   const SOURCE_TYPES_KEY = SETTINGS.SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY;
 
   const render = (): void => controller.render({ rows: getRows() });
-  const openInCurrentTab = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayOpenInCurrentTab
-  }, storageArea, () => render());
   const tabPosition = createSectionSetting({
     storageKey: SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
     normalize: SETTINGS.normalizeSearchResultTabPosition,
@@ -76,15 +70,10 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     storageKey: SETTINGS.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     normalize: SETTINGS.normalizeSearchResultDisplayLimit
   }, storageArea, () => render());
-  const openTabsDefault = createSectionSetting({
-    storageKey: SETTINGS.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayOpenTabsDefaultVisible
-  }, storageArea, () => render());
   const fuzzyPinyin = createSectionSetting({
     storageKey: SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
     normalize: SETTINGS.normalizeSearchFuzzyPinyinEnabled
   }, storageArea, () => render());
-  const toggles = [openTabsDefault, fuzzyPinyin];
   let sourceTypes: SearchSourceType[] = SETTINGS.normalizeSearchResultSourceTypes(undefined);
 
   function saveSourceTypes(value: unknown): void {
@@ -102,12 +91,12 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
 
   const controller = view({
     onToggle(key, checked) {
-      toggles.find((entry) => entry.storageKey === key)?.change(checked);
+      if (key === fuzzyPinyin.storageKey) {
+        fuzzyPinyin.change(checked);
+      }
     },
     onSelect(key, value) {
-      if (key === openInCurrentTab.storageKey) {
-        openInCurrentTab.change(value === 'currentTab');
-      } else if (key === tabPosition.storageKey) {
+      if (key === tabPosition.storageKey) {
         tabPosition.change(SETTINGS.normalizeSearchResultTabPosition(value));
       } else if (key === priority.storageKey) {
         priority.change(SETTINGS.normalizeSearchResultPriority(value));
@@ -151,32 +140,6 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     };
     return [
       { type: 'header', key: 'header', title: getMessage('settings_search_results_section_title', '搜索结果设置') },
-      {
-        type: 'segmented',
-        key: openInCurrentTab.storageKey,
-        title: {
-          text: getMessage('settings_overlay_open_in_current_tab_title', '网页搜索栏结果打开方式'),
-          info: getMessage('settings_overlay_open_in_current_tab_desc', '按住 Option/Alt 可临时换成另一种')
-        },
-        groupId: '_x_extension_overlay_open_in_current_tab_tabs_wrap_2026_unique_',
-        ariaLabel: getMessage('settings_overlay_open_in_current_tab_title', '网页搜索栏结果打开方式'),
-        segmented: {
-          activeValue: openInCurrentTab.get() ? 'currentTab' : 'newTab',
-          dataAttribute: 'data-overlay-open-target',
-          items: [
-            {
-              value: 'newTab',
-              labelKey: 'settings_overlay_open_in_new_tab',
-              label: getMessage('settings_overlay_open_in_new_tab', '在新标签页打开')
-            },
-            {
-              value: 'currentTab',
-              labelKey: 'settings_overlay_open_in_current_tab',
-              label: getMessage('settings_overlay_open_in_current_tab', '在当前页打开')
-            }
-          ]
-        }
-      },
       {
         type: 'select',
         key: tabPosition.storageKey,
@@ -278,15 +241,6 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
       },
       {
         type: 'toggle',
-        key: openTabsDefault.storageKey,
-        title: { text: getMessage('settings_overlay_open_tabs_default_visible_title', '在网页唤起时，默认展示所有已打开标签页') },
-        toggle: {
-          id: '_x_extension_overlay_open_tabs_default_visible_toggle_2026_unique_',
-          checked: openTabsDefault.get()
-        }
-      },
-      {
-        type: 'toggle',
         key: fuzzyPinyin.storageKey,
         title: { text: getMessage('settings_search_fuzzy_pinyin_title', '拼音模糊音') },
         toggle: {
@@ -301,7 +255,7 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   // The stored types are read once and written back when they were missing
   // or not in their normal form; later changes are only followed.
   function bindSettings(settingBinder: SectionSettingBinder): void {
-    [openInCurrentTab, tabPosition, priority, displayLimit, ...toggles].forEach((entry) => entry.bind(settingBinder));
+    [tabPosition, priority, displayLimit, fuzzyPinyin].forEach((entry) => entry.bind(settingBinder));
     settingBinder.bindSetting({
       key: SOURCE_TYPES_KEY,
       normalize: SETTINGS.normalizeSearchResultSourceTypes,

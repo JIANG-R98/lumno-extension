@@ -372,7 +372,7 @@
     "message": "Показывать все открытые вкладки при вызове Lumno на веб-странице"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Открытие результатов поисковой строки на веб-страницах"
+    "message": "Открытие результатов при вызове Lumno на веб-странице"
   },
   "settings_overlay_open_in_current_tab_desc": {
     "message": "Удерживайте Option/Alt, чтобы открыть другим способом"
@@ -382,6 +382,12 @@
   },
   "settings_overlay_open_in_current_tab": {
     "message": "В текущей вкладке"
+  },
+  "settings_overlay_result_open_title": {
+    "message": "Открытие результатов"
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Показывать все открытые вкладки"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Расширенная загрузка значков и цветов темы"

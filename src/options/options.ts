@@ -26,6 +26,7 @@ import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
 import * as OPTIONS_GENERAL_GLOBAL_SECTION from './options-general-global-section';
 import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
+import * as OPTIONS_GENERAL_OVERLAY_SECTION from './options-general-overlay-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_GENERAL_SHORTCUTS_SECTION from './options-general-shortcuts-section';
 import * as OPTIONS_GENERAL_TAB from './options-general-tab';
@@ -307,6 +308,7 @@ import * as OPTIONS_STATE from './options-state';
       generalGlobalSection.render();
       generalFeaturesSection.render();
       generalSearchSection.render();
+      generalOverlaySection.render();
       generalNewtabSection.render();
       generalShortcutsSection.render();
       appearanceGlobalSection.render();
@@ -402,6 +404,12 @@ import * as OPTIONS_STATE from './options-state';
   });
   const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
     view: generalTab.newtab,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage
+  });
+  const generalOverlaySection = OPTIONS_GENERAL_OVERLAY_SECTION.createGeneralOverlaySection({
+    view: generalTab.overlay,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage
@@ -926,6 +934,7 @@ import * as OPTIONS_STATE from './options-state';
   generalGlobalSection.bindSettings(settingBinder);
   generalFeaturesSection.bindSettings(settingBinder);
   generalSearchSection.bindSettings(settingBinder);
+  generalOverlaySection.bindSettings(settingBinder);
   generalNewtabSection.bindSettings(settingBinder);
   generalShortcutsSection.bindSettings(settingBinder);
   appearanceGlobalSection.bindSettings(settingBinder);

@@ -372,7 +372,7 @@
     "message": "Beim Öffnen von Lumno auf einer Webseite standardmäßig alle offenen Tabs anzeigen"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Ergebnisse der Webseiten-Suchleiste öffnen"
+    "message": "Ergebnisse öffnen, wenn Lumno auf einer Webseite geöffnet wird"
   },
   "settings_overlay_open_in_current_tab_desc": {
     "message": "Mit Option/Alt die andere Variante"
@@ -382,6 +382,12 @@
   },
   "settings_overlay_open_in_current_tab": {
     "message": "Im aktuellen Tab"
+  },
+  "settings_overlay_result_open_title": {
+    "message": "Ergebnisse öffnen"
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Standardmäßig alle offenen Tabs anzeigen"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Erweiterter Abruf von Symbolen und Designfarben"

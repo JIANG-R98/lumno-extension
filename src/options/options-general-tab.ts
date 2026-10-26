@@ -8,11 +8,11 @@ import type { SettingsRowsHandlers, SettingsSectionModel } from './react/setting
 import type { SectionView } from './options-section-view';
 
 function createGeneralTab(controller: Pick<GeneralTabController, 'render'>) {
-  const model: GeneralTabModel = { global: null, features: null, search: null, newtab: null, shortcuts: null };
+  const model: GeneralTabModel = { global: null, features: null, search: null, overlay: null, newtab: null, shortcuts: null };
   const render = (): void => controller.render({ ...model });
 
   function rowsView(
-    key: 'features' | 'search' | 'newtab',
+    key: 'features' | 'search' | 'overlay' | 'newtab',
     handlers: SettingsRowsHandlers
   ): SectionView<SettingsSectionModel> {
     return {
@@ -42,6 +42,7 @@ function createGeneralTab(controller: Pick<GeneralTabController, 'render'>) {
     },
     features: (handlers: SettingsRowsHandlers) => rowsView('features', handlers),
     search: (handlers: SettingsRowsHandlers) => rowsView('search', handlers),
+    overlay: (handlers: SettingsRowsHandlers) => rowsView('overlay', handlers),
     newtab: (handlers: SettingsRowsHandlers) => rowsView('newtab', handlers),
     shortcuts(handlers: GeneralShortcutsSectionHandlers): SectionView<GeneralShortcutsSectionModel> {
       return {

@@ -372,7 +372,7 @@
     "message": "Afficher par défaut tous les onglets ouverts lorsque Lumno s’ouvre sur une page Web"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Ouvrir les résultats de la barre de recherche des pages Web"
+    "message": "Ouverture des résultats lorsque Lumno s’ouvre sur une page Web"
   },
   "settings_overlay_open_in_current_tab_desc": {
     "message": "Maintenez Option/Alt pour utiliser l’autre option"
@@ -382,6 +382,12 @@
   },
   "settings_overlay_open_in_current_tab": {
     "message": "Dans l’onglet actuel"
+  },
+  "settings_overlay_result_open_title": {
+    "message": "Ouvrir les résultats"
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Afficher par défaut tous les onglets ouverts"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Récupération avancée des icônes et couleurs de thème"

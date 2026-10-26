@@ -372,7 +372,7 @@
     "message": "Mostrar todas las pestañas abiertas al abrir Lumno en una página web"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Abrir resultados de la barra de búsqueda en páginas web"
+    "message": "Abrir resultados al abrir Lumno en una página web"
   },
   "settings_overlay_open_in_current_tab_desc": {
     "message": "Mantén Option/Alt para usar la otra opción"
@@ -382,6 +382,12 @@
   },
   "settings_overlay_open_in_current_tab": {
     "message": "En la pestaña actual"
+  },
+  "settings_overlay_result_open_title": {
+    "message": "Abrir resultados"
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Mostrar todas las pestañas abiertas"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Obtención mejorada de iconos y colores de tema"
